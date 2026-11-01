@@ -1014,14 +1014,12 @@ function renderOrdersList(c) {
 function renderReturnsList(c) {
   const hasPermission = checkModulePermission('returns');
 
-  // Khởi tạo state ngày từ - đến cho Đổi Trả Hàng
   if (!state.returnsFromDate) state.returnsFromDate = getFirstDayOfMonthStr();
   if (!state.returnsToDate) state.returnsToDate = getLastDayOfMonthStr();
 
   const filtered = db.returns.filter(r => {
     const matchStatus = (state.filter === 'all' || r.status === state.filter);
 
-    // Lọc theo khoảng ngày đổi trả (date)
     const dateStr = r.date || '';
     const matchDate = dateStr >= state.returnsFromDate && dateStr <= state.returnsToDate;
 
@@ -1050,9 +1048,8 @@ function renderReturnsList(c) {
   const startIndex = (state.page - 1) * state.pageSize;
   const paginatedItems = filtered.slice(startIndex, startIndex + state.pageSize);
 
-  // ĐỒNG BỘ ĐỔI TRẢ HÀNG BÁN: ĐÃ XỬ LÝ -> HOÀN THÀNH
   const kpiHtml = [
-    { label: 'Tổng số lượt đổi trả', val: db.returns.length, color: 'var(--foreground)' },
+    { label: 'Tổng số phiếu', val: db.returns.length, color: 'var(--foreground)' },
     { label: 'Hoàn thành', val: db.returns.filter(r => ['processed', 'hoàn thành', 'đã xử lý'].includes((r.status || '').toLowerCase())).length, color: '#60a5fa' },
     { label: 'Duyệt', val: db.returns.filter(r => ['approved', 'duyệt', 'đã duyệt'].includes((r.status || '').toLowerCase())).length, color: '#34d399' },
     { label: 'Chờ duyệt', val: db.returns.filter(r => ['pending', 'chờ duyệt'].includes((r.status || '').toLowerCase())).length, color: 'var(--foreground)' },
@@ -1065,8 +1062,8 @@ function renderReturnsList(c) {
   `).join('');
 
   const columnConfig = [
-    { title: 'Mã Đổi Trả', width: '30px', align: 'center' },
-    { title: 'Ngày Đổi Trả', width: '30px', align: 'center' },
+    { title: 'Mã Nhận Trả', width: '30px', align: 'center' },
+    { title: 'Ngày Nhận Trả', width: '30px', align: 'center' },
     { title: 'Đơn Hàng Bán', width: '30px', align: 'center' },
     { title: 'Khách Hàng', width: '50px', align: 'center' },
     { title: 'Lý Do', width: '50px', align: 'center' },
@@ -1092,8 +1089,8 @@ function renderReturnsList(c) {
     const totalLines = (r.lineItems || r.lineitems || []).length;
     return `
       <tr style="border-bottom: 1px solid var(--border);" class="hover-row" ondblclick="navigate('returns', '${hasPermission ? 'edit' : 'view'}', '${r.id}')" onclick="navigate('returns', 'view', '${r.id}')">
-        <td data-label="Mã Đổi Trả" style="padding: 12px 16px; font-family: var(--font-dm-mono); font-size: 12px; text-align: left; color: var(--primary);">${r.id}</td>
-        <td data-label="Ngày Đổi Trả" style="padding: 12px 16px; font-family: var(--font-dm-mono); font-size: 12px; text-align: center; color: var(--muted-foreground);">${r.date}</td>
+        <td data-label="Mã Nhận Trả" style="padding: 12px 16px; font-family: var(--font-dm-mono); font-size: 12px; text-align: left; color: var(--primary);">${r.id}</td>
+        <td data-label="Ngày Nhận Trả" style="padding: 12px 16px; font-family: var(--font-dm-mono); font-size: 12px; text-align: center; color: var(--muted-foreground);">${r.date}</td>
         <td data-label="Đơn Hàng Bán" style="padding: 12px 16px; font-family: var(--font-dm-mono); font-size: 12px; text-align: center; color: var(--muted-foreground);">${r.orderId || '—'}</td>
         <td data-label="Khách Hàng" style="padding: 12px 16px; font-size: 13px; font-weight: 500;">${r.customer}</td>        
         <td data-label="Lý Do" style="padding: 12px 16px; font-size: 13px;">${r.reason}</td>
@@ -2226,10 +2223,10 @@ function renderReturnForm(c) {
 
   c.innerHTML = `
     <div style="max-width: 1050px;">
-      ${getBreadcrumb('Đổi trả hàng bán', isView ? `Xem ${d.id}` : (isEdit ? `Chỉnh sửa ${d.id}` : 'Tạo phiếu đổi trả mới'), 'returns')}
+      ${getBreadcrumb('Nhận Hàng Bán Trả Lại', isView ? `Xem ${d.id}` : (isEdit ? `Chỉnh sửa ${d.id}` : 'Tạo phiếu nhận trả mới'), 'returns')}
       <form onsubmit="event.preventDefault(); saveForm('returns');">
         <div class="section-panel">
-          <div class="section-header"><span class="section-num">01</span><span class="section-title">Thông tin phiếu đổi trả</span></div>
+          <div class="section-header"><span class="section-num">01</span><span class="section-title">Thông tin phiếu nhận trả</span></div>
           <div class="section-body grid-3">
             <div class="form-group">
               <label class="form-label">Đơn hàng bán (Tùy chọn)</label>
@@ -2258,7 +2255,7 @@ function renderReturnForm(c) {
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label">Ngày đổi trả *</label>
+              <label class="form-label">Ngày nhận trả *</label>
               <input type="date" class="form-input" value="${d.date || getTodayDateStr()}" ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'date\', this.value)"'} required>
             </div>
             <div class="form-group">
@@ -2279,7 +2276,7 @@ function renderReturnForm(c) {
 
         <div class="section-panel">
           <div class="section-header" style="justify-content: space-between;">
-            <div style="display:flex; gap:10px;"><span class="section-num">02</span><span class="section-title">Danh sách hàng đổi trả</span></div>
+            <div style="display:flex; gap:10px;"><span class="section-num">02</span><span class="section-title">Danh sách hàng nhận trả</span></div>
             ${getAddLineButton('returns', isDetailsDisabled, 'header')}
           </div>
           <div style="overflow-x: auto;">
@@ -2321,7 +2318,7 @@ function renderReturnForm(c) {
               <button type="button" class="btn-action" style="padding: 8px 16px; font-size: 13px;" event.preventDefault(); onclick="navigate('returns', 'edit', '${d.id}')">${Icons.edit} Sửa</button>
               <button type="button" class="btn-action btn-action-del" style="padding: 8px 16px; font-size: 13px;" onclick="deleteItem('returns', '${d.id}')">${Icons.trash} Xóa</button>
             ` : ''}
-            ${!isView ? `<button type="submit" class="btn-submit" style="padding: 8px 16px; font-size: 13px;" ${isDetailsDisabled ? 'disabled style="opacity: 0.5; cursor: not-allowed; pointer-events: none;"' : ''}>${state.mode === 'add' ? 'Tạo phiếu đổi trả' : 'Cập nhật'}</button>` : ''}
+            ${!isView ? `<button type="submit" class="btn-submit" style="padding: 8px 16px; font-size: 13px;" ${isDetailsDisabled ? 'disabled style="opacity: 0.5; cursor: not-allowed; pointer-events: none;"' : ''}>${state.mode === 'add' ? 'Tạo phiếu nhận trả' : 'Cập nhật'}</button>` : ''}
           </div>
         </div>
       </form>
@@ -3068,7 +3065,7 @@ function renderReportSales(c) {
       <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background-color: var(--border);" class="kpi-grid">
         <div class="kpi-card"><span class="kpi-label">Doanh Thu Lũy Kế Năm</span><div class="kpi-value-row"><span class="kpi-value">${fmtUSD(ytdRevenue)}</span></div><span class="kpi-sub">Năm ${currentYear}</span></div>
         <div class="kpi-card"><span class="kpi-label">Tổng Đơn Bán</span><div class="kpi-value-row"><span class="kpi-value">${fmt(ytdOrders)}</span></div><span class="kpi-sub">Năm ${currentYear}</span></div>
-        <div class="kpi-card"><span class="kpi-label">Tỷ Lệ Trả Hàng</span><div class="kpi-value-row"><span class="kpi-value">${returnRatePercent}%</span></div><span class="kpi-sub">theo số lượt đổi trả</span></div>
+        <div class="kpi-card"><span class="kpi-label">Tỷ Lệ Trả Hàng</span><div class="kpi-value-row"><span class="kpi-value">${returnRatePercent}%</span></div><span class="kpi-sub">theo số lượt nhận trả</span></div>
         <div class="kpi-card"><span class="kpi-label">Giá Trị Đơn Trung Bình</span><div class="kpi-value-row"><span class="kpi-value">${fmtUSD(avgOrderValue)}</span></div><span class="kpi-sub">AOV năm ${currentYear}</span></div>
       </div>
 

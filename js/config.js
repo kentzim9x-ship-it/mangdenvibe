@@ -26,7 +26,7 @@ const viewMeta = {
   warehouses: { tag: 'DỮ LIỆU DANH MỤC', title: 'Danh Sách Kho Hàng' },
   quotations: { tag: 'GIAO DỊCH', title: 'Bảng Báo Giá' },
   'sales-orders': { tag: 'GIAO DỊCH', title: 'Đơn Bán Hàng' },
-  returns: { tag: 'GIAO DỊCH', title: 'Đổi Trả Hàng Bán' },
+  returns: { tag: 'GIAO DỊCH', title: 'Hàng Bán Trả Lại' },
   grn: { tag: 'GIAO DỊCH', title: 'Phiếu Nhập Kho' },
   'report-inventory': { tag: 'BÁO CÁO', title: 'Báo Cáo Tồn Kho' },
   'report-sales': { tag: 'BÁO CÁO', title: 'Báo Cáo Bán Hàng' },
@@ -433,7 +433,7 @@ function getStatusLabel(status) {
     'expired': 'Hết hạn',
     'draft': 'Bản nháp',
 
-    // Đổi trả hàng bán
+    // Nhận hàng bán trả lại
     'processed': 'Hoàn thành',
 
     // Phiếu nhập kho (GRN)
@@ -553,7 +553,7 @@ function generateAutoId(module) {
     const now = new Date();
     const yy = String(now.getFullYear()).slice(-2);
     const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const prefix = `DTHB-${yy}${mm}`;
+    const prefix = `HBTL-${yy}${mm}`;
 
     const maxNum = collection.reduce((m, x) => {
       if (!x.id) return m;
