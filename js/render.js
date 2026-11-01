@@ -1451,7 +1451,7 @@ function renderCustomerForm(c) {
   c.innerHTML = `
     <div style="max-width: 900px;">
       ${getBreadcrumb('Khách hàng', isView ? `Xem ${d.id}` : (state.mode === 'edit' ? `Chỉnh sửa ${d.id}` : 'Thêm mới khách hàng'), 'customers')}
-      <form onsubmit="event.preventDefault(); saveForm('customers');">
+      <form onsubmit="event.preventDefault(); handleSaveCustomer();">
         <input type="hidden" value="${d.id || ''}">
 
         <div class="section-panel">
@@ -1484,10 +1484,24 @@ function renderCustomerForm(c) {
               <label class="form-label">Email</label>
               <input type="email" class="form-input" value="${d.email || ''}" ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'email\', this.value.trim())"'} placeholder="example@domain.com">
             </div>
+
+            <!-- Ô SỐ ĐIỆN THOẠI: BẮT BUỘC NHẬP + ĐỊNH DẠNG SĐT VIỆT NAM -->
             <div class="form-group">
-              <label class="form-label">Số điện thoại</label>
-              <input type="tel" inputmode="tel" class="form-input" value="${d.phone || ''}" ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'phone\', this.value.trim())"'} placeholder="090x xxx xxx">
+              <label class="form-label">Số điện thoại *</label>
+              <input 
+                type="tel" 
+                inputmode="tel" 
+                class="form-input" 
+                id="customer-phone-input"
+                value="${d.phone || ''}" 
+                pattern="^(0[3|5|7|8|9])[0-9]{8}$"
+                title="Vui lòng nhập đúng định dạng số điện thoại Việt Nam (10 chữ số, bắt đầu bằng 03, 05, 07, 08, 09)"
+                ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'phone\', this.value.trim())"'} 
+                placeholder="090x xxx xxx" 
+                required
+              >
             </div>
+
             <div class="form-group" style="grid-column: span 3;">
               <label class="form-label">Địa chỉ</label>
               <input type="text" class="form-input" value="${d.address || ''}" ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'address\', this.value.trim())"'} placeholder="Nhập địa chỉ trụ sở/giao hàng...">
@@ -2010,7 +2024,7 @@ function renderSalesOrderForm(c) {
   }).join('');
 
   c.innerHTML = `
-    <div style="max-width: 1050px;">
+    <div class="full-screen-modal-mobile" style="max-width: 1050px;">
       ${getBreadcrumb('Đơn bán hàng', isView ? `Xem ${d.id || ''}` : (isEdit ? `Chỉnh sửa ${d.id || ''}` : 'Tạo đơn bán hàng mới'), 'sales-orders')}
       <form onsubmit="event.preventDefault(); saveForm('sales-orders');">
 
@@ -2223,7 +2237,7 @@ function renderReturnForm(c) {
 
   c.innerHTML = `
     <div style="max-width: 1050px;">
-      ${getBreadcrumb('Nhận Hàng Bán Trả Lại', isView ? `Xem ${d.id}` : (isEdit ? `Chỉnh sửa ${d.id}` : 'Tạo phiếu nhận trả mới'), 'returns')}
+      ${getBreadcrumb('Nhận Hàng Trả Lại', isView ? `Xem ${d.id}` : (isEdit ? `Chỉnh sửa ${d.id}` : 'Tạo phiếu nhận trả mới'), 'returns')}
       <form onsubmit="event.preventDefault(); saveForm('returns');">
         <div class="section-panel">
           <div class="section-header"><span class="section-num">01</span><span class="section-title">Thông tin phiếu nhận trả</span></div>

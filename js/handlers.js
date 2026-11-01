@@ -1412,6 +1412,220 @@ async function handleCustomerSelectInOrder(customerName) {
   render();
 }
 
+// 1. Khi chọn khách hàng từ ô select
+function handleSelectSOCustomer(customerId) {
+  const phoneInput = document.getElementById('so-phone-input');
+  const checkBtn = document.getElementById('btn-check-so-phone');
+
+  if (customerId) {
+    const cust = (db.customers || []).find(c => String(c.id) === String(customerId));
+    const phone = cust ? (cust.phone || '') : '';
+    
+    // Cập nhật giá trị vào state & input
+    updateField('customerId', customerId);
+    updateField('customerPhone', phone);
+    if (phoneInput) phoneInput.value = phone;
+
+    // Reset nút về 'Kiểm tra' và Disable nút
+    if (checkBtn) {
+      checkBtn.innerText = 'Kiểm tra';
+      checkBtn.disabled = true;
+    }
+  } else {
+    updateField('customerId', '');
+    updateField('customerPhone', phoneInput ? phoneInput.value : '');
+    handleSOPhoneInput(phoneInput ? phoneInput.value : '');
+  }
+}
+
+// 2. Khi nhập trực tiếp ô Số điện thoại
+function handleSOPhoneInput(phoneVal) {
+  const selectCust = document.getElementById('so-customer-select');
+  const checkBtn = document.getElementById('btn-check-so-phone');
+  const trimmedPhone = phoneVal.trim();
+
+  updateField('customerPhone', trimmedPhone);
+
+  // Nếu chọn từ select thì disable nút
+  if (selectCust && selectCust.value) {
+    if (checkBtn) {
+      checkBtn.innerText = 'Kiểm tra';
+      checkBtn.disabled = true;
+    }
+    return;
+  }
+
+  // Chưa chọn khách hàng: kiểm tra ô SĐT có dữ liệu hay không
+  if (checkBtn) {
+    checkBtn.innerText = 'Kiểm tra'; // Reset label
+    checkBtn.disabled = !trimmedPhone; // Enable nếu có chuỗi SĐT
+  }
+}
+
+// 3. Xử lý khi nhấn nút "Kiểm tra" / "Thêm mới"
+async function handleCheckOrAddCustomer() {
+  const checkBtn = document.getElementById('btn-check-so-phone');
+  const phoneInput = document.getElementById('so-phone-input');
+  const phone = phoneInput ? phoneInput.value.trim() : '';
+
+  if (!phone) return;
+
+  // Nếu nút đang ở trạng thái "Thêm mới", mở Drawer
+  if (checkBtn && checkBtn.innerText.trim() === 'Thêm mới') {
+    openQuickCustomerDrawer(phone);
+    return;
+  }
+
+  // Thực hiện KIỂM TRA SĐT trong danh mục khách hàng
+  const foundCust = (db.customers || []).find(c => c.phone === phone);
+
+  if (foundCust) {
+    // Nếu ĐÃ CÓ: Chọn khách hàng đó tại ô select
+    const selectCust = document.getElementById('so-customer-select');
+    if (selectCust) {
+      selectCust.value = foundCust.id;
+      handleSelectSOCustomer(foundCust.id);
+    }
+    showAlert(`Đã tìm thấy khách hàng: ${foundCust.name}`, 'Thông báo');
+  } else {
+    // Nếu CHƯA CÓ: Đổi tên nút thành "Thêm mới"
+    if (checkBtn) {
+      checkBtn.innerText = 'Thêm mới';
+    }
+    showAlert(`Số điện thoại "${phone}" chưa có trong hệ thống. Vui lòng bấm "Thêm mới" để tạo khách hàng.`, 'Thông báo');
+  }
+}
+
+// 4. Bật/Tắt Drawer trượt từ bên phải
+function openQuickCustomerDrawer(phone) {
+  const drawer = document.getElementById('quick-customer-drawer');
+  const phoneInput = document.getElementById('quick-cust-phone');
+  
+  if (phoneInput) phoneInput.value = phone;
+  if (drawer) drawer.classList.add('open');
+}
+
+function closeQuickCustomerDrawer() {
+  const drawer = document.getElementById('quick-customer-drawer');
+  if (drawer) drawer.classList.remove('open');
+}
+
+// 5. Lưu thông tin thêm nhanh khách hàng
+async function submitQuickCustomer() {
+  const nameInput = document.getElementById('quick-cust-name');
+  const phoneInput = document.getElementById('quick-cust-phone');
+  const addressInput = document.getElementById('quick-cust-address');
+
+  const name = nameInput ? nameInput.value.trim() : '';
+  const phone = phoneInput ? phoneInput.value.trim() : '';
+  const address = addressInput ? addressInput.value.trim() : '';
+
+  if (!name || !phone) {
+    showAlert('Vui lòng điền đầy đủ thông tin bắt buộc!', 'Cảnh báo');
+    return;
+  }
+
+  // Chuẩn bị payload theo đúng yêu cầu
+  const newCustomerData = {
+    name: name,               // Tên công ty / khách hàng
+    contact: name,            // Người đại diện trùng với tên KH
+    phone: phone,             // SĐT vừa nhập
+    address: address,         // Địa chỉ
+    type: 'Khách vãng lai',    // Mặc định
+    paymentTerms: 'Thanh toán ngay', // Mặc định
+    status: 'active',         // Đang hoạt động
+    creditLimit: 0
+  };
+
+  try {
+    // Lưu vào Database (Supabase)
+    const { data, error } = await supabaseClient
+      .from('customers')
+      .insert([newCustomerData])
+      .select();
+
+    if (error) throw error;
+
+    const savedCust = data[0];
+
+    // Cập nhật bộ nhớ cục bộ local DB
+    if (!db.customers) db.customers = [];
+    db.customers.push(savedCust);
+
+    // Tự động chọn khách hàng mới tạo cho đơn hàng hiện tại
+    const selectCust = document.getElementById('so-customer-select');
+    if (selectCust) {
+      const opt = document.createElement('option');
+      opt.value = savedCust.id;
+      opt.textContent = savedCust.name;
+      selectCust.appendChild(opt);
+      selectCust.value = savedCust.id;
+      
+      handleSelectSOCustomer(savedCust.id);
+    }
+
+    closeQuickCustomerDrawer();
+    showAlert('Thêm mới khách hàng thành công!', 'Thành công');
+  } catch (err) {
+    console.error('Lỗi khi thêm nhanh khách hàng:', err);
+    showAlert('Không thể thêm mới khách hàng. Vui lòng thử lại!', 'Lỗi');
+  }
+}
+
+async function handleSaveCustomer() {
+  const phone = (state.formData?.phone || '').trim();
+  const currentId = state.formData?.id || '';
+
+  if (!phone) {
+    showAlert('Vui lòng nhập số điện thoại khách hàng!', 'Thông báo');
+    return;
+  }
+
+  // Kiếm tra định dạng SĐT Việt Nam
+  const phoneRegex = /^(0[3|5|7|8|9])[0-9]{8}$/;
+  if (!phoneRegex.test(phone)) {
+    showAlert('Số điện thoại không đúng định dạng Việt Nam! (Ví dụ: 0901234567)', 'Cảnh báo định dạng');
+    return;
+  }
+
+  // 1. Check nhanh trong bộ nhớ Local DB
+  const isDuplicateLocal = (db.customers || []).some(c => 
+    c.phone === phone && String(c.id) !== String(currentId)
+  );
+
+  if (isDuplicateLocal) {
+    showAlert(`Số điện thoại "${phone}" đã có trong hệ thống!`, 'Cảnh báo trùng lặp');
+    return;
+  }
+
+  // 2. Check chính xác trên CSDL Supabase
+  try {
+    let query = supabaseClient
+      .from('customers')
+      .select('id, phone')
+      .eq('phone', phone);
+
+    // Nếu đang chỉnh sửa thì bỏ qua bản ghi hiện tại
+    if (state.mode === 'edit' && currentId) {
+      query = query.neq('id', currentId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    if (data && data.length > 0) {
+      showAlert(`Số điện thoại "${phone}" đã có trong hệ thống!`, 'Cảnh báo trùng lặp');
+      return;
+    }
+  } catch (err) {
+    console.error('Lỗi kiểm tra số điện thoại:', err);
+  }
+
+  // Nếu không trùng thì gọi tiến trình lưu Form tiêu chuẩn
+  saveForm('customers');
+}
+
 function getSalesAnalyticsData() {
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
