@@ -2,7 +2,7 @@
 // 1. CẤU HÌNH, STATE & GIAO DIỆN CƠ BẢN
 // ==========================================
 
-const BASE_PATH = '/mangden'; // Đường dẫn gốc trên GitHub Pages
+const BASE_PATH = '/mangdenvibe'; // Đường dẫn gốc trên GitHub Pages
 
 function getResponsivePageSize() {
   return window.innerWidth <= 768 ? 7 : 15;
@@ -75,8 +75,8 @@ function toggleMobileMenu() {
 // ==========================================
 
 // Supabase Client Initialization
-const SUPABASE_URL = 'https://gzmczqeczlrujhzleaoa.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_oBZ4Z1bekEMIjq_wmPFsyg_V68Y3dWE';
+const SUPABASE_URL = 'https://ezwqfgqgcbvfsuizqvev.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_ChwXzrCOxWNf5OxgCCiNOA_U8Drmc4j';
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Bổ sung users vào db toàn cục
