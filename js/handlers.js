@@ -958,67 +958,6 @@ async function saveForm(module) {
     const warehouseCode = rawData.warehouseCode || (db.warehouses[0] ? (db.warehouses[0].code || db.warehouses[0].id) : '');
     const lineItems = Array.isArray(rawData.lineItems) ? rawData.lineItems : [];
 
-    // =========================================================================
-    // TỰ ĐỘNG CẬP NHẬT TRẠNG THÁI HÀNG HÓA (MATERIALS) KHI LƯU ĐƠN BÁN HÀNG
-    // =========================================================================
-    if (lineItems.length > 0 && Array.isArray(db.materials)) {
-      const updatedMaterialsToSync = [];
-
-      lineItems.forEach(l => {
-        const matSku = l.sku;
-        const matName = l.name;
-        if (!matSku && !matName) return;
-
-        // Tìm sản phẩm trong danh mục
-        const matIndex = db.materials.findIndex(m => 
-          (matSku && m.id === matSku) || (matName && m.name.toLowerCase() === matName.toLowerCase())
-        );
-
-        if (matIndex !== -1) {
-          const isSale = Boolean(l.sale_yn);
-          // Tích chọn Hàng bán -> Hết Hàng ('out'), Không tích -> Cho Thuê ('rent')
-          const newStatus = isSale ? 'out' : 'rent';
-
-          // Cập nhật bộ nhớ Local memory
-          db.materials[matIndex].status = newStatus;
-          db.materials[matIndex].user_id2 = currentUserId;
-          db.materials[matIndex].date2 = currentDate;
-          db.materials[matIndex].time2 = currentTime;
-
-          updatedMaterialsToSync.push({
-            id: db.materials[matIndex].id,
-            status: newStatus,
-            user_id2: currentUserId,
-            date2: currentDate,
-            time2: currentTime
-          });
-        }
-      });
-
-      // Đưa query cập nhật trạng thái các sản phẩm lên CSDL Supabase chạy nền
-      if (updatedMaterialsToSync.length > 0) {
-        asyncBackgroundTasks.push(
-          (async () => {
-            try {
-              for (const matItem of updatedMaterialsToSync) {
-                await supabaseClient
-                  .from('materials')
-                  .update({ 
-                    status: matItem.status, 
-                    user_id2: matItem.user_id2, 
-                    date2: matItem.date2, 
-                    time2: matItem.time2 
-                  })
-                  .eq('id', matItem.id);
-              }
-            } catch (err) {
-              console.error('Lỗi tự động cập nhật trạng thái sản phẩm trong materials:', err);
-            }
-          })()
-        );
-      }
-    }
-
     dbPayload.warehouseCode = warehouseCode;
     dbPayload.warehouse_code = warehouseCode;
     dbPayload.lineItems = lineItems;
@@ -1374,8 +1313,6 @@ function handleMaterialSelectInLine(lineId, selectedName) {
   if (!valStr) {
     line.name = '';
     line.sku = '';
-    line.sale_yn = false;
-    line.unitPrice = 0;
     render();
     return;
   }
@@ -1394,16 +1331,56 @@ function handleMaterialSelectInLine(lineId, selectedName) {
   if (mat) {
     line.name = mat.name || '';
     line.sku = mat.id || '';
-    // Mặc định khi chọn sản phẩm: KHÔNG TÍCH HÀNG BÁN -> ĐƠN GIÁ BẰNG 0
-    line.sale_yn = false;
-    line.unitPrice = 0;
+
+    // Đơn giá mặc định lấy từ Danh mục sản phẩm (Giá vốn/Giá niêm yết)
+    let finalUnitPrice = mat.cost || 0;
+
+    // KIỂM TRA ƯU TIÊN LẤY GIÁ TỪ BẢNG BÁO GIÁ ĐÃ DUYỆT CỦA KHÁCH HÀNG (cho Sales Orders & Returns)
+    if (['sales-orders', 'returns'].includes(state.view)) {
+      const currentCustomer = (state.formData.customer || '').trim();
+      const orderDate = state.formData.date || getTodayDateStr();
+
+      if (currentCustomer) {
+        // Tìm Báo giá có trạng thái "Duyệt" và còn hiệu lực của Khách hàng hiện tại
+        const activeQuotation = (db.quotations || [])
+          .filter(q => {
+            if (!q || !q.customer) return false;
+            if (q.customer.trim().toLowerCase() !== currentCustomer.toLowerCase()) return false;
+
+            const status = (q.status || '').toLowerCase();
+            const isAccepted = ['accepted', 'approved', 'duyệt', 'đã duyệt'].includes(status);
+            if (!isAccepted) return false;
+
+            const vBegin = q.validbegin || q.validBegin || q.date || '';
+            const vUntil = q.validUntil || q.validuntil || '';
+
+            if (vBegin && vUntil) {
+              return orderDate >= vBegin && orderDate <= vUntil;
+            }
+            return true; // Nếu không cài ngày hết hạn thì mặc định hiểu là có hiệu lực
+          })
+          .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))[0];
+
+        // Nếu tìm thấy Báo giá hợp lệ -> Tìm sản phẩm trong Báo giá đó
+        if (activeQuotation && Array.isArray(activeQuotation.lineItems)) {
+          const quotedItem = activeQuotation.lineItems.find(item =>
+            (item.sku && item.sku === mat.id) ||
+            (item.name && item.name.toLowerCase() === mat.name.toLowerCase())
+          );
+
+          if (quotedItem && quotedItem.unitPrice !== undefined && quotedItem.unitPrice !== null) {
+            finalUnitPrice = Number(quotedItem.unitPrice) || 0;
+          }
+        }
+      }
+    }
+
+    line.unitPrice = finalUnitPrice;
+    line.unitCost = mat.cost || 0;
   } else {
     line.name = cleanName;
-    line.sale_yn = false;
-    line.unitPrice = 0;
   }
 
-  updateLine(lineId, 'unitPrice', 0, 'number');
   render();
 }
 
@@ -3457,24 +3434,4 @@ async function checkAndAddNewCustomerFromOrder() {
     // Mở Modal thêm nhanh Khách hàng mới với Tên đã được tự động viết hoa chữ cái đầu
     openQuickAddCustomerModal(formattedName);
   }
-}
-
-function toggleSaleYnInOrderLine(lineId, isChecked) {
-  if (!state.formData || !Array.isArray(state.formData.lineItems)) return;
-  const line = state.formData.lineItems.find(l => l.lineId === lineId);
-  if (!line) return;
-
-  line.sale_yn = Boolean(isChecked);
-
-  if (isChecked) {
-    // Lấy đơn giá niêm yết từ danh mục hàng hóa (db.materials)
-    const mat = (db.materials || []).find(m => (line.sku && m.id === line.sku) || (line.name && m.name === line.name));
-    line.unitPrice = mat ? (mat.cost || mat.price || 0) : 0;
-  } else {
-    // Không tích chọn -> Mặc định Đơn giá bằng 0
-    line.unitPrice = 0;
-  }
-
-  updateLine(lineId, 'unitPrice', line.unitPrice, 'number');
-  render();
 }
