@@ -763,3 +763,23 @@ async function downloadOrShareXLSX(workbook, fileName) {
     showAlert('Có lỗi xảy ra trong quá trình tạo file Excel!', 'Lỗi');
   }
 }
+
+function generateAutoSku() {
+  const now = new Date();
+  const yy = String(now.getFullYear()).slice(-2);
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const prefix = `SKU${yy}${mm}`;
+
+  let maxNum = 0;
+  (db.materials || []).forEach(m => {
+    const idStr = String(m.id || '');
+    if (idStr.startsWith(prefix)) {
+      const numPart = parseInt(idStr.substring(prefix.length), 10);
+      if (!isNaN(numPart) && numPart > maxNum) {
+        maxNum = numPart;
+      }
+    }
+  });
+
+  return `${prefix}${String(maxNum + 1).padStart(4, '0')}`;
+}
