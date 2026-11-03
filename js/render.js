@@ -356,96 +356,53 @@ function renderDashboard(c) {
 }
 
 function renderMaterialsList(c) {
-  const hasPermission = checkModulePermission('materials');
+  const searchKey = normalizeSearchText(state.search || '');
+  const filterCat = state.filter || 'all';
 
-  const filtered = db.materials.filter(m => {
-    if (state.filter !== 'all' && m.status !== state.filter) return false;
-    const searchKey = normalizeSearchText(state.search);
-    if (searchKey && !normalizeSearchText(m.name).includes(searchKey) && !normalizeSearchText(m.id).includes(searchKey)) return false;
-    return true;
+  let list = (db.materials || []).filter(m => {
+    const matchSearch = !searchKey || normalizeSearchText(m.id).includes(searchKey) || normalizeSearchText(m.name).includes(searchKey);
+    const matchCat = filterCat === 'all' || m.category === filterCat;
+    return matchSearch && matchCat;
   });
 
-  const totalItems = filtered.length;
-  const totalPages = Math.ceil(totalItems / state.pageSize) || 1;
-  if (state.page > totalPages) state.page = totalPages;
-  if (state.page < 1) state.page = 1;
+  list.sort((a, b) => String(b.id || '').localeCompare(String(a.id || ''), undefined, { numeric: true, sensitivity: 'base' }));
 
-  const startIndex = (state.page - 1) * state.pageSize;
-  const paginatedItems = filtered.slice(startIndex, startIndex + state.pageSize);
+  const totalPages = Math.ceil(list.length / ITEMS_PER_PAGE) || 1;
+  state.page = Math.min(state.page, totalPages);
+  const pagedList = list.slice((state.page - 1) * ITEMS_PER_PAGE, state.page * ITEMS_PER_PAGE);
 
-  const totalSku = db.materials.length;
-  const availableCount = db.materials.filter(i => (i.status || '').toLowerCase() === 'ok' || (i.status || '') === 'Còn Hàng').length;
-  const rentCount = db.materials.filter(i => (i.status || '').toLowerCase() === 'rent' || (i.status || '') === 'Cho Thuê').length;
-  const outCount = db.materials.filter(i => (i.status || '').toLowerCase() === 'out' || (i.status || '') === 'Hết Hàng').length;
+  const hasPermission = checkModulePermission('materials');
 
-  const kpiHtml = [
-    { label: 'TỔNG SỐ SKU', value: fmt(totalSku), color: 'var(--foreground)' },
-    { label: 'CÒN HÀNG', value: fmt(availableCount), color: '#34d399' },
-    { label: 'CHO THUÊ', value: fmt(rentCount), color: '#fbbf24' },
-    { label: 'HẾT HÀNG', value: fmt(outCount), color: '#f87171' }
-  ].map(s => `
-    <div style="background-color: var(--card); padding: 16px 20px;">
-      <div style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">${s.label}</div>
-      <div style="font-family: var(--font-dm-mono); font-size: 24px; font-weight: 300; color: ${s.color};">${s.value}</div>
-    </div>
-  `).join('');
-
-  const columnConfig = [
-    { title: 'Mã Hàng (SKU)', width: '30px', align: 'center' },
-    { title: 'Tên Hàng', width: '100px', align: 'center' },
-    { title: 'Đơn Vị', width: '20px', align: 'center' },
-    { title: 'Danh Mục', width: '40px', align: 'center' },
-    { title: 'Vị Trí Lưu Kho', width: '40px', align: 'center' },
-    { title: 'Ghi Chú', width: '60px', align: 'center' }, // Thay cột Tồn kho ban đầu bằng Ghi chú
-    { title: 'Đơn Giá', width: '30px', align: 'center' },
-    { title: 'Trạng Thái', width: '50px', align: 'center' },
-    { title: 'Người Tạo', width: '50px', align: 'center' },
-    { title: 'Ngày Tạo', width: '30px', align: 'center' },
-    { title: 'Giờ Tạo', width: '20px', align: 'center' },
-    { title: 'Người Sửa', width: '50px', align: 'center' },
-    { title: 'Ngày Sửa', width: '30px', align: 'center' },
-    { title: 'Giờ Sửa', width: '20px', align: 'center' },
-    { title: 'Hành Động', width: '80px', align: 'center' }
-  ];
-
-  const headersHtml = columnConfig.map(col => `
-  <th style="width: ${col.width}; min-width: ${col.width}; padding: 9px 16px; text-align: ${col.align}; font-family: var(--font-dm-mono); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted-foreground); font-weight: 400; white-space: nowrap;">
-    ${col.title}
-  </th>
-`).join('');
-
-  const rowsHtml = paginatedItems.map(m => {
-    let statusBadge = '<span class="badge badge-success">Còn Hàng</span>';
+  const rows = pagedList.map(m => {
+    // XỬ LÝ TRẠNG THÁI HÀNG HÓA VỚI MÀU SẮC
+    let statusBadge = '<span class="status-tag status-ok">Còn Hàng</span>';
     const st = (m.status || '').toLowerCase();
+    
     if (st === 'rent' || st === 'cho thuê') {
-      statusBadge = '<span class="badge" style="background: rgba(240, 160, 48, 0.15); color: #f0a030; border: 1px solid rgba(240, 160, 48, 0.3);">Cho Thuê</span>';
-    } else if (st === 'out' || st === 'hết hàng') {
-      statusBadge = '<span class="badge badge-danger">Hết Hàng</span>';
+      statusBadge = '<span class="status-tag" style="background: rgba(240, 160, 48, 0.15); color: #f0a030; border: 1px solid rgba(240, 160, 48, 0.3);">Cho Thuê</span>';
+    } else if (st === 'out' || st === 'hết hàng' || Number(m.stock || 0) <= 0) {
+      statusBadge = '<span class="status-tag" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);">Hết Hàng</span>';
     }
 
     return `
-      <tr style="border-bottom: 1px solid var(--border);" class="hover-row" ondblclick="navigate('materials', '${hasPermission ? 'edit' : 'view'}', '${m.id}')" onclick="navigate('materials', 'view', '${m.id}')">
-        <td data-label="Mã Hàng" style="padding: 11px 16px; font-family: var(--font-dm-mono); font-size: 12px; text-align: left; color: var(--primary);">${m.id}</td>
-        <td data-label="Tên Hàng" style="padding: 11px 16px; font-size: 13px;">${m.name}</td>
-        <td data-label="Đơn Vị" style="padding: 11px 16px; font-family: var(--font-dm-mono); font-size: 12px; text-align: center; color: var(--foreground);">${m.unit || '—'}</td>
-        <td data-label="Danh Mục" style="padding: 11px 16px; font-family: var(--font-dm-mono); font-size: 11px; text-align: center; color: var(--muted-foreground);">${m.category || '—'}</td>
-        <td data-label="Vị Trí Lưu Kho" style="padding: 11px 16px; font-family: var(--font-dm-mono); font-size: 12px; text-align: center;">${m.location || '—'}</td>
-        <td data-label="Ghi Chú" style="padding: 11px 16px; font-size: 12px; text-align: left; color: var(--muted-foreground); max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${m.notes || ''}">${m.notes || '—'}</td>
-        <td data-label="Đơn Giá" style="padding: 11px 16px; font-family: var(--font-dm-mono); font-size: 12px; text-align: right;">${fmtUSD(m.cost || 0)}</td>
-        <td data-label="Trạng Thái" style="padding: 11px 16px; text-align: center;">${statusBadge}</td>
+      <tr style="border-bottom: 1px solid var(--border); cursor: pointer;" class="hover-row" onclick="navigate('materials', 'view', '${m.id}')">
+        <td data-label="Mã SKU" style="padding: 10px 14px; font-family: var(--font-dm-mono); font-size: 12px; color: var(--primary); font-weight: 500;">${m.id}</td>
+        <td data-label="Tên Sản Phẩm" style="padding: 10px 14px; font-size: 13px; font-weight: 500;">${m.name}</td>
+        <td data-label="Danh Mục" style="padding: 10px 14px; font-size: 12px; color: var(--muted-foreground);">${m.category || '—'}</td>
+        <td data-label="ĐVT" style="padding: 10px 14px; font-size: 12px; text-align: center; font-family: var(--font-dm-mono); color: var(--muted-foreground);">${m.unit || '—'}</td>
+        <td data-label="Đơn Giá" style="padding: 10px 14px; font-family: var(--font-dm-mono); font-size: 12px; text-align: right;">${fmtUSD(m.cost || 0)}</td>
         
-        <td data-label="Người Tạo" style="padding: 11px 16px; font-size: 12px;">${getUserFullName(m.user_id0)}</td>
-        <td data-label="Ngày Tạo" style="padding: 11px 16px; font-family: var(--font-dm-mono); font-size: 11px; text-align: center; color: var(--muted-foreground);">${fmtDateStr(m.date0)}</td>
-        <td data-label="Giờ Tạo" style="padding: 11px 16px; font-family: var(--font-dm-mono); font-size: 11px; text-align: center; color: var(--muted-foreground);">${fmtTimeStr(m.time0)}</td>
-        <td data-label="Người Sửa" style="padding: 11px 16px; font-size: 12px;">${getUserFullName(m.user_id2)}</td>
-        <td data-label="Ngày Sửa" style="padding: 11px 16px; font-family: var(--font-dm-mono); font-size: 11px; text-align: center; color: var(--muted-foreground);">${fmtDateStr(m.date2)}</td>
-        <td data-label="Giờ Sửa" style="padding: 11px 16px; font-family: var(--font-dm-mono); font-size: 11px; text-align: center; color: var(--muted-foreground);">${fmtTimeStr(m.time2)}</td>
-
-        <td data-label="Hành Động" style="padding: 8px 16px; text-align: center; white-space: nowrap;">
-          <div style="display: flex; gap: 6px; justify-content: flex-end; align-items: center;">
-            <button class="btn-action" onclick="event.stopPropagation(); navigate('materials', 'view', '${m.id}')">${Icons.view} Xem</button>
-            ${hasPermission ? `<button class="btn-action" onclick="event.stopPropagation(); navigate('materials', 'edit', '${m.id}')">${Icons.edit} Sửa</button>` : ''}
-            ${hasPermission ? `<button class="btn-action btn-action-del" onclick="event.stopPropagation(); deleteItem('materials', '${m.id}')">${Icons.trash} Xóa</button>` : ''}
+        <!-- CỘT GHI CHÚ THAY THẾ CỘT TỒN KHO BAN ĐẦU -->
+        <td data-label="Ghi Chú" style="padding: 10px 14px; font-size: 12px; color: var(--muted-foreground); max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${m.notes || ''}">${m.notes || '—'}</td>
+        
+        <td data-label="Trạng Thái" style="padding: 10px 14px; text-align: center;">${statusBadge}</td>
+        <td style="padding: 10px 14px; text-align: right;" onclick="event.stopPropagation();">
+          <div style="display: flex; gap: 4px; justify-content: flex-end;">
+            <button class="btn-table-action" onclick="navigate('materials', 'view', '${m.id}')" title="Xem chi tiết">${Icons.view}</button>
+            ${hasPermission ? `
+              <button class="btn-table-action" onclick="navigate('materials', 'edit', '${m.id}')" title="Sửa">${Icons.edit}</button>
+              <button class="btn-table-action btn-del" onclick="deleteItem('materials', '${m.id}')" title="Xóa">${Icons.trash}</button>
+            ` : ''}
           </div>
         </td>
       </tr>
@@ -453,49 +410,55 @@ function renderMaterialsList(c) {
   }).join('');
 
   c.innerHTML = `
-    <div style="display: flex; flex-direction: column; gap: 16px;">
-      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background-color: var(--border);" class="kpi-grid">
-        ${kpiHtml}
-      </div>
-      <div class="filter-search-container" style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
-        ${getFilterBar([['all', 'TẤT CẢ'], ['ok', 'CÒN HÀNG'], ['rent', 'CHO THUÊ'], ['out', 'HẾT HÀNG']])}
-        <div class="mobile-search-action-group" style="display: flex; gap: 8px; flex-wrap: wrap; width: 100%; max-width: 550px;">
-          <div style="display: flex; align-items: center; gap: 8px; border: 1px solid var(--border); background: var(--card); padding: 0 12px; flex: 1; min-width: 200px; height: 38px; box-sizing: border-box;">
-            <span style="color: var(--muted-foreground); display: flex; align-items: center;">${Icons.search}</span>
-            <input type="text" id="global-search" placeholder="Tìm kiếm..." value="${state.search || ''}" oninput="state.search=this.value; state.page=1; render();" style="background: transparent; border: none; outline: none; color: var(--foreground); font-family: var(--font-jost); font-size: 13px; width: 100%; height: 100%; padding: 0;">
+    <div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; flex: 1;">
+          <div class="search-box" style="width: 260px;">
+            ${Icons.search}
+            <input type="text" placeholder="Tìm tên, mã SKU..." value="${state.search || ''}" oninput="state.search = this.value; state.page = 1; render();">
           </div>
-          ${hasPermission ? `<button class="btn-primary" onclick="navigate('materials', 'add')">${Icons.plus} Thêm Mới</button>` : ''}
-          <button class="btn-action pc-only-print-btn" onclick="openPrintLabelDrawer()" style="height: 38px; padding: 0 14px; background: var(--card); border: 1px solid var(--border); color: var(--foreground); font-family: var(--font-jost); font-size: 13px; font-weight: 500; cursor: pointer; align-items: center; gap: 6px; white-space: nowrap;">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-            In Tem Sản Phẩm
+          <select class="form-select" style="width: 140px; height: 38px;" onchange="state.filter = this.value; state.page = 1; render();">
+            <option value="all" ${filterCat === 'all' ? 'selected' : ''}>Tất cả danh mục</option>
+            <option value="Áo" ${filterCat === 'Áo' ? 'selected' : ''}>Áo</option>
+            <option value="Quần" ${filterCat === 'Quần' ? 'selected' : ''}>Quần</option>
+            <option value="Váy" ${filterCat === 'Váy' ? 'selected' : ''}>Váy</option>
+            <option value="Phụ Kiện" ${filterCat === 'Phụ Kiện' ? 'selected' : ''}>Phụ Kiện</option>
+            <option value="Khác" ${filterCat === 'Khác' ? 'selected' : ''}>Khác</option>
+          </select>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn-primary" onclick="openPrintLabelDrawer()" style="background: var(--secondary); color: var(--foreground); border: 1px solid var(--border);">
+            ${Icons.print || ''} In Tem Sản Phẩm
           </button>
+          ${hasPermission ? `
+            <button class="btn-primary" onclick="navigate('materials', 'add')">
+              ${Icons.plus} Thêm Hàng Hóa
+            </button>
+          ` : ''}
         </div>
       </div>
 
-      <div style="border: 1px solid var(--border); background: var(--card); overflow-x: auto;">
-        <table style="width: 100%; border-collapse: collapse;">
+      <div class="table-container">
+        <table class="data-table">
           <thead>
-            <tr style="border-bottom: 1px solid var(--border); background: var(--secondary);">
-              ${headersHtml}
+            <tr>
+              <th style="width: 120px;">MÃ SKU</th>
+              <th>TÊN SẢN PHẨM</th>
+              <th style="width: 110px;">DANH MỤC</th>
+              <th style="width: 70px; text-align: center;">ĐVT</th>
+              <th style="width: 110px; text-align: right;">ĐƠN GIÁ</th>
+              <th style="width: 180px;">GHI CHÚ</th>
+              <th style="width: 110px; text-align: center;">TRẠNG THÁI</th>
+              <th style="width: 100px; text-align: right;">THAO TÁC</th>
             </tr>
           </thead>
           <tbody>
-            ${rowsHtml}
+            ${list.length > 0 ? rows : `<tr><td colspan="8" style="text-align: center; padding: 40px; color: var(--muted-foreground);">Không tìm thấy dữ liệu hàng hóa nào.</td></tr>`}
           </tbody>
         </table>
-        ${filtered.length === 0 ? `<div style="padding: 40px; text-align: center; color: var(--muted-foreground); font-family: var(--font-dm-mono); font-size: 12px;">Không tìm thấy dữ liệu</div>` : ''}
       </div>
 
-      <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: var(--card); border: 1px solid var(--border); flex-wrap: wrap; gap: 10px;">
-        <span style="font-family: var(--font-dm-mono); font-size: 11px; color: var(--muted-foreground);">
-          Hiển thị ${totalItems === 0 ? 0 : startIndex + 1} - ${Math.min(startIndex + state.pageSize, totalItems)} / Tổng ${totalItems} mục
-        </span>
-        <div style="display: flex; gap: 6px; align-items: center;">
-          <button ${state.page <= 1 ? 'disabled style="opacity:0.4; cursor:not-allowed;"' : ''} class="btn-action" onclick="state.page--; render();">❮ Trước</button>
-          <span style="font-family: var(--font-dm-mono); font-size: 11px; padding: 0 8px; color: var(--foreground);">Trang ${state.page} / ${totalPages}</span>
-          <button ${state.page >= totalPages ? 'disabled style="opacity:0.4; cursor:not-allowed;"' : ''} class="btn-action" onclick="state.page++; render();">Sau ❯</button>
-        </div>
-      </div>
+      ${renderPagination(totalPages)}
     </div>
   `;
 }
@@ -1380,10 +1343,8 @@ function renderMaterialForm(c) {
 
   if (isAdd && !d.id) {
     d.id = generateAutoSku();
-    d.stock = d.stock ?? 1;
+    d.stock = d.stock ?? 1; // Mặc định tồn kho ban đầu là 1
   }
-
-  const categories = ['Áo', 'Quần', 'Váy', 'Phụ Kiện', 'Khác'];
 
   c.innerHTML = `
     <div style="max-width: 900px;">
@@ -1409,7 +1370,11 @@ function renderMaterialForm(c) {
             <div class="form-group">
               <label class="form-label">Danh mục sản phẩm</label>
               <select class="form-select" ${isView ? 'disabled style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'category\', this.value)"'}>
-                ${categories.map(cat => `<option value="${cat}" ${d.category === cat ? 'selected' : ''}>${cat}</option>`).join('')}
+                <option value="Áo" ${d.category === 'Áo' ? 'selected' : ''}>Áo</option>
+                <option value="Quần" ${d.category === 'Quần' ? 'selected' : ''}>Quần</option>
+                <option value="Váy" ${d.category === 'Váy' ? 'selected' : ''}>Váy</option>
+                <option value="Phụ Kiện" ${d.category === 'Phụ Kiện' ? 'selected' : ''}>Phụ Kiện</option>
+                <option value="Khác" ${d.category === 'Khác' ? 'selected' : ''}>Khác</option>
               </select>
             </div>
 
@@ -1451,15 +1416,17 @@ function renderMaterialForm(c) {
         </div>
 
         <div class="action-bar" style="display: flex; justify-content: space-between; align-items: center;">
-          <button type="button" class="btn-cancel" style="padding: 8px 16px; font-size: 13px;" onclick="state.mode === 'edit' ? navigate('materials', 'view', '${d.id}') : navigate('materials')">
+          <button type="button" class="btn-cancel" onclick="isEdit ? navigate('materials', 'view', '${d.id}') : navigate('materials')">
             ${isView ? 'Quay Lại' : 'Hủy'}
           </button>
           <div style="display: flex; gap: 8px;">
-            ${isView && hasPermission ? `
-              <button type="button" class="btn-action" style="padding: 8px 16px; font-size: 13px;" onclick="navigate('materials', 'edit', '${d.id}')">${Icons.edit} Sửa</button>
-              <button type="button" class="btn-action btn-action-del" style="padding: 8px 16px; font-size: 13px;" onclick="deleteItem('materials', '${d.id}')">${Icons.trash} Xóa</button>
+            ${isView ? `
+              ${hasPermission ? `
+                <button type="button" class="btn-action" onclick="navigate('materials', 'edit', '${d.id}')">${Icons.edit} Sửa</button>
+                <button type="button" class="btn-action btn-action-del" onclick="deleteItem('materials', '${d.id}')">${Icons.trash} Xóa</button>
+              ` : ''}
             ` : ''}
-            ${!isView ? `<button type="submit" class="btn-submit" style="padding: 8px 16px; font-size: 13px;">${state.mode === 'add' ? 'Thêm mới' : 'Cập nhật'}</button>` : ''}
+            ${!isView ? `<button type="submit" class="btn-submit">${isAdd ? 'Thêm mới' : 'Cập nhật'}</button>` : ''}
           </div>
         </div>
       </form>
