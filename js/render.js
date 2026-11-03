@@ -811,11 +811,17 @@ function renderQuotationsList(c) {
           <div class="date-filter-group">
             <div class="date-input-item">
               <label style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--muted-foreground); text-transform: uppercase;">Từ ngày:</label>
-              <input type="date" class="form-input" style="width: 125px; padding: 4px 6px; font-size: 12px; height: 38px; box-sizing: border-box;" value="${state.quotationsFromDate}" onchange="state.quotationsFromDate=this.value; state.page=1; render();">
+              <input type="date" class="form-input" style="width: 125px; padding: 4px 6px; font-size: 12px; height: 38px; box-sizing: border-box;" 
+                value="${state.quotationsFromDate}" 
+                onkeydown="if(event.key === 'Enter') { state.quotationsFromDate=this.value; state.page=1; render(); this.blur(); }"
+                onblur="if(state.quotationsFromDate !== this.value) { state.quotationsFromDate=this.value; state.page=1; render(); }">
             </div>
             <div class="date-input-item">
               <label style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--muted-foreground); text-transform: uppercase;">Đến ngày:</label>
-              <input type="date" class="form-input" style="width: 125px; padding: 4px 6px; font-size: 12px; height: 38px; box-sizing: border-box;" value="${state.quotationsToDate}" onchange="state.quotationsToDate=this.value; state.page=1; render();">
+              <input type="date" class="form-input" style="width: 125px; padding: 4px 6px; font-size: 12px; height: 38px; box-sizing: border-box;" 
+                value="${state.quotationsToDate}" 
+                onkeydown="if(event.key === 'Enter') { state.quotationsToDate=this.value; state.page=1; render(); this.blur(); }"
+                onblur="if(state.quotationsToDate !== this.value) { state.quotationsToDate=this.value; state.page=1; render(); }">
             </div>
           </div>
         </div>
@@ -973,11 +979,17 @@ function renderOrdersList(c) {
           <div class="date-filter-group">
             <div class="date-input-item">
               <label style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--muted-foreground); text-transform: uppercase;">Từ ngày:</label>
-              <input type="date" class="form-input" style="width: 125px; padding: 4px 6px; font-size: 12px; height: 38px; box-sizing: border-box;" value="${state.ordersFromDate}" onchange="state.ordersFromDate=this.value; state.page=1; render();">
+              <input type="date" class="form-input" style="width: 125px; padding: 4px 6px; font-size: 12px; height: 38px; box-sizing: border-box;" 
+                value="${state.ordersFromDate}" 
+                onkeydown="if(event.key === 'Enter') { state.ordersFromDate=this.value; state.page=1; render(); this.blur(); }"
+                onblur="if(state.ordersFromDate !== this.value) { state.ordersFromDate=this.value; state.page=1; render(); }">
             </div>
             <div class="date-input-item">
               <label style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--muted-foreground); text-transform: uppercase;">Đến ngày:</label>
-              <input type="date" class="form-input" style="width: 125px; padding: 4px 6px; font-size: 12px; height: 38px; box-sizing: border-box;" value="${state.ordersToDate}" onchange="state.ordersToDate=this.value; state.page=1; render();">
+              <input type="date" class="form-input" style="width: 125px; padding: 4px 6px; font-size: 12px; height: 38px; box-sizing: border-box;" 
+                value="${state.ordersToDate}" 
+                onkeydown="if(event.key === 'Enter') { state.ordersToDate=this.value; state.page=1; render(); this.blur(); }"
+                onblur="if(state.ordersToDate !== this.value) { state.ordersToDate=this.value; state.page=1; render(); }">
             </div>
           </div>
         </div>
@@ -1137,11 +1149,17 @@ function renderReturnsList(c) {
           <div class="date-filter-group">
             <div class="date-input-item">
               <label style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--muted-foreground); text-transform: uppercase;">Từ ngày:</label>
-              <input type="date" class="form-input" style="width: 125px; padding: 4px 6px; font-size: 12px; height: 38px; box-sizing: border-box;" value="${state.returnsFromDate}" onchange="state.returnsFromDate=this.value; state.page=1; render();">
+              <input type="date" class="form-input" style="width: 125px; padding: 4px 6px; font-size: 12px; height: 38px; box-sizing: border-box;" 
+                value="${state.returnsFromDate}" 
+                onkeydown="if(event.key === 'Enter') { state.returnsFromDate=this.value; state.page=1; render(); this.blur(); }"
+                onblur="if(state.returnsFromDate !== this.value) { state.returnsFromDate=this.value; state.page=1; render(); }">
             </div>
             <div class="date-input-item">
               <label style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--muted-foreground); text-transform: uppercase;">Đến ngày:</label>
-              <input type="date" class="form-input" style="width: 125px; padding: 4px 6px; font-size: 12px; height: 38px; box-sizing: border-box;" value="${state.returnsToDate}" onchange="state.returnsToDate=this.value; state.page=1; render();">
+              <input type="date" class="form-input" style="width: 125px; padding: 4px 6px; font-size: 12px; height: 38px; box-sizing: border-box;" 
+                value="${state.returnsToDate}" 
+                onkeydown="if(event.key === 'Enter') { state.returnsToDate=this.value; state.page=1; render(); this.blur(); }"
+                onblur="if(state.returnsToDate !== this.value) { state.returnsToDate=this.value; state.page=1; render(); }">
             </div>
           </div>
         </div>
@@ -1302,11 +1320,17 @@ function renderGRNList(c) {
           <div class="date-filter-group">
             <div class="date-input-item">
               <label style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--muted-foreground); text-transform: uppercase;">Từ ngày:</label>
-              <input type="date" class="form-input" style="width: 125px; padding: 4px 6px; font-size: 12px; height: 38px; box-sizing: border-box;" value="${state.grnFromDate}" onchange="state.grnFromDate=this.value; state.page=1; render();">
+              <input type="date" class="form-input" style="width: 125px; padding: 4px 6px; font-size: 12px; height: 38px; box-sizing: border-box;" 
+                value="${state.grnFromDate}" 
+                onkeydown="if(event.key === 'Enter') { state.grnFromDate=this.value; state.page=1; render(); this.blur(); }"
+                onblur="if(state.grnFromDate !== this.value) { state.grnFromDate=this.value; state.page=1; render(); }">
             </div>
             <div class="date-input-item">
               <label style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--muted-foreground); text-transform: uppercase;">Đến ngày:</label>
-              <input type="date" class="form-input" style="width: 125px; padding: 4px 6px; font-size: 12px; height: 38px; box-sizing: border-box;" value="${state.grnToDate}" onchange="state.grnToDate=this.value; state.page=1; render();">
+              <input type="date" class="form-input" style="width: 125px; padding: 4px 6px; font-size: 12px; height: 38px; box-sizing: border-box;" 
+                value="${state.grnToDate}" 
+                onkeydown="if(event.key === 'Enter') { state.grnToDate=this.value; state.page=1; render(); this.blur(); }"
+                onblur="if(state.grnToDate !== this.value) { state.grnToDate=this.value; state.page=1; render(); }">
             </div>
           </div>
         </div>
@@ -2028,11 +2052,11 @@ function renderSalesOrderForm(c) {
   const initialPhone = currentCustObj ? (currentCustObj.phone || '') : (d.phone || '');
 
   // HELPER FUNCTIONS XỬ LÝ TRỰC TIẾP TRÊN INTERFACE
-  window.handleOrderCustomerSelect = function(val) {
+  window.handleOrderCustomerSelect = function (val) {
     const cust = (db.customers || []).find(c => c.name === val);
     const phoneInput = document.getElementById('so-phone-input');
     const checkBtn = document.getElementById('so-check-phone-btn');
-    
+
     if (cust) {
       if (phoneInput) phoneInput.value = cust.phone || '';
       if (checkBtn) {
@@ -2055,7 +2079,7 @@ function renderSalesOrderForm(c) {
     handleCustomerSelectInOrder(val);
   };
 
-  window.handleOrderPhoneInput = function(phoneVal) {
+  window.handleOrderPhoneInput = function (phoneVal) {
     d.phone = phoneVal;
     const selectCust = d.customer;
     const checkBtn = document.getElementById('so-check-phone-btn');
@@ -2073,7 +2097,7 @@ function renderSalesOrderForm(c) {
     }
   };
 
-  window.handleCheckOrAddCustomerPhone = function() {
+  window.handleCheckOrAddCustomerPhone = function () {
     const phoneInput = document.getElementById('so-phone-input');
     const checkBtn = document.getElementById('so-check-phone-btn');
     if (!phoneInput || !checkBtn) return;
@@ -2096,7 +2120,7 @@ function renderSalesOrderForm(c) {
     }
   };
 
-  window.openQuickCustomerDrawer = function(phone) {
+  window.openQuickCustomerDrawer = function (phone) {
     let drawer = document.getElementById('quick-customer-drawer');
     if (!drawer) {
       drawer = document.createElement('div');
@@ -2138,14 +2162,14 @@ function renderSalesOrderForm(c) {
     setTimeout(() => drawer.classList.add('open'), 10);
   };
 
-  window.closeQuickCustomerDrawer = function() {
+  window.closeQuickCustomerDrawer = function () {
     const drawer = document.getElementById('quick-customer-drawer');
     if (drawer) {
       drawer.classList.remove('open');
     }
   };
 
-  window.saveQuickCustomer = function() {
+  window.saveQuickCustomer = function () {
     const nameVal = (document.getElementById('quick-cust-name')?.value || '').trim();
     const phoneVal = (document.getElementById('quick-cust-phone')?.value || '').trim();
     const addressVal = (document.getElementById('quick-cust-address')?.value || '').trim();
@@ -2542,50 +2566,61 @@ function renderGRNForm(c) {
 
   d.totalValue = d.lineItems.reduce((s, l) => s + ((l.receivedQty || l.qtyImport || 0) * (l.unitCost || 0)), 0);
 
-  let datalistEl = document.getElementById('global-materials-list');
-  if (!datalistEl) {
-    datalistEl = document.createElement('datalist');
-    datalistEl.id = 'global-materials-list';
-    document.body.appendChild(datalistEl);
-  }
-
-  const sortedMaterials = JSON.parse(JSON.stringify(db.materials || [])).sort((a, b) =>
-    (a.id || '').localeCompare(b.id || '', undefined, { numeric: true, sensitivity: 'base' })
-  );
-
-  datalistEl.innerHTML = sortedMaterials.map(m =>
-    `<option value="${m.name}">${m.id} - ${m.name} (${fmtUSD(m.cost || 0)})</option>`
-  ).join('');
-
   const warehouseOptions = (db.warehouses || []).map(w => {
     const wCode = w.code || w.id;
     return `<option value="${wCode}" ${d.warehouseCode === wCode ? 'selected' : ''}>${wCode} - ${w.name}</option>`;
   }).join('');
 
-  const gridLayout = isView ? "10px 100px 1fr 60px 70px 65px 65px 100px 100px" : "10px 100px 1fr 60px 70px 65px 65px 100px 100px 32px";
+  // LƯỚI ẢN CỘT MÃ HÀNG VÀ CỘT TỒN KHO: (STT, Tên Hàng, Đơn Vị, Mã Kho, SL Nhập, Giá Nhập, Thành Tiền)
+  const gridLayout = isView 
+    ? "10px 1.8fr 70px 70px 75px 100px 110px" 
+    : "10px 1.8fr 70px 70px 75px 100px 110px 32px";
 
   const linesHtml = d.lineItems.map((l, idx) => {
-    const mat = (db.materials || []).find(m => m.id === l.sku || m.name === l.name);
-    const unitName = mat ? (mat.unit || '—') : '—';
-    const stockQty = calculateRealtimeStock(l.sku, d.warehouseCode, d.id);
     const qtyVal = l.receivedQty ?? l.qtyImport ?? 1;
+    const unitVal = l.unit || '';
 
     return `
       <div style="display: grid; grid-template-columns: ${gridLayout}; gap: 6px; padding: 10px 16px 10px 10px; border-bottom: 1px solid var(--border); align-items: center; ${isDetailsDisabled ? 'opacity: 0.5; pointer-events: none;' : ''}">
         <span style="font-family: var(--font-dm-mono, monospace); font-size: 10px; font-weight: 400; color: var(--muted-foreground); min-width: 14px; text-align: right; user-select: none;">
           ${idx + 1}.
         </span>
-        <input type="text" id="line-item-${l.lineId}-sku" class="form-input" style="padding: 6px 8px; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; color: var(--primary);" value="${l.sku || ''}" readonly title="Mã hàng tự động điền theo tên hàng">
         
-        <input type="text" id="line-item-${l.lineId}-name" autocomplete="off" ${(isView || isDetailsDisabled) ? '' : 'list="global-materials-list"'} class="form-input" style="padding: 6px 8px; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" value="${l.name || ''}" ${(isView || isDetailsDisabled) ? 'readonly' : 'onkeydown="handleLineItemKeyDown(event, \'grn\', ' + idx + ', \'name\')" onchange="handleMaterialSelectInLine(\'' + l.lineId + '\', this.value)"'} placeholder="${isDetailsDisabled ? 'Vui lòng nhập nhà cung cấp...' : 'Chọn/nhập tên hàng...'}" required>
+        <!-- CỘT TÊN HÀNG: Nhập tay tự động viết hoa chữ cái đầu -->
+        <input 
+          type="text" 
+          id="line-item-${l.lineId}-name" 
+          class="form-input" 
+          style="padding: 6px 8px; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" 
+          value="${l.name || ''}" 
+          ${(isView || isDetailsDisabled) ? 'readonly' : `
+            onkeydown="handleLineItemKeyDown(event, 'grn', ${idx}, 'name')" 
+            oninput="this.value = toTitleCase(this.value); updateLine('${l.lineId}', 'name', this.value);"
+            onchange="this.value = toTitleCase(this.value.trim()); updateLine('${l.lineId}', 'name', this.value.trim());"
+          `} 
+          placeholder="${isDetailsDisabled ? 'Vui lòng nhập nhà cung cấp...' : 'Nhập tên sản phẩm...'}" 
+          required
+        >
         
-        <input type="text" id="line-item-${l.lineId}-unit" class="form-input" style="padding: 6px 8px; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; text-align: center;" value="${unitName}" readonly title="Đơn vị tính lấy từ danh mục">
+        <!-- CỘT ĐƠN VỊ TÍNH: Nhập tay tự động VIẾT HOA TẤT CẢ, tối đa 10 kí tự -->
+        <input 
+          type="text" 
+          id="line-item-${l.lineId}-unit" 
+          class="form-input" 
+          maxlength="10"
+          style="padding: 6px 8px; font-family: var(--font-dm-mono); text-align: center; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" 
+          value="${unitVal}" 
+          ${(isView || isDetailsDisabled) ? 'readonly' : `
+            onkeydown="handleLineItemKeyDown(event, 'grn', ${idx}, 'unit')" 
+            oninput="this.value = toUpperCaseStr(this.value); updateLine('${l.lineId}', 'unit', this.value);"
+            onchange="this.value = toUpperCaseStr(this.value.trim()); updateLine('${l.lineId}', 'unit', this.value.trim());"
+          `} 
+          placeholder="KG, CÁI..."
+        >
         
         <input type="text" id="line-item-${l.lineId}-warehouseCode" class="form-input" style="padding: 6px 8px; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; text-align: center;" value="${d.warehouseCode || '—'}" readonly title="Mã kho từ mục 01 xuống">
         
         <input type="number" id="line-item-${l.lineId}-receivedQty" step="any" inputmode="decimal" class="form-input" style="padding: 6px 6px; text-align: right; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" value="${qtyVal}" ${(isView || isDetailsDisabled) ? 'readonly' : `onkeydown="handleLineItemKeyDown(event, 'grn', ${idx}, 'receivedQty')" onchange="updateLine('${l.lineId}', 'receivedQty', this.value, 'number'); updateLine('${l.lineId}', 'qtyImport', this.value, 'number');"`}>
-        
-        <input type="text" id="line-item-${l.lineId}-stock" class="form-input" style="padding: 6px 6px; text-align: right; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; color: ${stockQty < 0 ? '#f87171' : 'var(--foreground)'};" value="${stockQty}" readonly title="Tồn thực tế tính tự động">
         
         <input 
           type="text" 
@@ -2618,17 +2653,17 @@ function renderGRNForm(c) {
             <div class="form-group" style="grid-column: span 2;">
               <label class="form-label">Nhà cung cấp *</label>
               <input 
-                  type="text" 
-                  class="form-input" 
-                  value="${d.supplier || ''}" 
-                  ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : `
-                    oninput="this.value = toTitleCase(this.value); updateField('supplier', this.value.trim());" 
-                    onblur="if(this.value.trim()) render();"
-                    onchange="this.value = toTitleCase(this.value.trim()); updateField('supplier', this.value.trim()); render();"
-                  `} 
-                  placeholder="Nhập tên nhà cung cấp..." 
-                  required
-                >
+                type="text" 
+                class="form-input" 
+                value="${d.supplier || ''}" 
+                ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : `
+                  oninput="this.value = toTitleCase(this.value); updateField('supplier', this.value.trim());" 
+                  onblur="if(this.value.trim()) render();"
+                  onchange="this.value = toTitleCase(this.value.trim()); updateField('supplier', this.value.trim()); render();"
+                `} 
+                placeholder="Nhập tên nhà cung cấp..." 
+                required
+              >
             </div>
             <div class="form-group">
               <label class="form-label">Mã kho *</label>
@@ -2661,27 +2696,22 @@ function renderGRNForm(c) {
             ${getAddLineButton('grn', isDetailsDisabled, 'header')}
           </div>
           <div style="overflow-x: auto;">
-            <!-- HEADER BẢNG: ĐỒNG BỘ MIN-WIDTH 850PX, GAP 6PX VÀ PADDING 10PX 16PX -->
             <div style="display: grid; grid-template-columns: ${gridLayout}; gap: 6px; padding: 10px 16px 10px 10px; background: var(--secondary); border-bottom: 1px solid var(--border); align-items: center; min-width: 850px; box-sizing: border-box;">
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;"></span>
-              <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Mã Hàng</span>
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Tên Hàng</span>
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Đơn Vị</span>
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Mã Kho</span>
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">SL Nhập</span>
-              <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Tồn</span>
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Giá nhập</span>
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Thành tiền</span>
               ${!isView ? `<span></span>` : ''}
             </div>
 
-            <!-- DANH SÁCH CÁC DÒNG SẢN PHẨM -->
             <div style="min-width: 850px;">
               ${linesHtml}
             </div>
           </div>
 
-          <!-- BỐ TRÍ KHU VỰC TỔNG TIỀN VÀ NÚT THÊM DÒNG TRÊN PC -->
           <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 26px 10px 26px; flex-wrap: wrap; gap: 12px;">
             <div style="width: 110px; flex-shrink: 0;">
               ${getAddLineButton('grn', isDetailsDisabled, 'footer')}
@@ -2695,20 +2725,27 @@ function renderGRNForm(c) {
         </div>
 
         <div class="action-bar" style="display: flex; justify-content: space-between; align-items: center;">
-          <button type="button" class="btn-cancel" style="padding: 8px 16px; font-size: 13px;" event.preventDefault(); onclick="state.mode === 'edit' ? navigate('grn', 'view', '${d.id}') : navigate('grn')">
+          <button type="button" class="btn-cancel" style="padding: 8px 16px; font-size: 13px;" onclick="state.mode === 'edit' ? navigate('grn', 'view', '${d.id}') : navigate('grn')">
             ${isView ? 'Quay Lại' : 'Hủy'}
           </button>
           <div style="display: flex; gap: 8px;">
-            ${isView && hasPermission ? `
-              <button type="button" class="btn-action" style="padding: 8px 16px; font-size: 13px;" event.preventDefault(); onclick="navigate('grn', 'edit', '${d.id}')">${Icons.edit} Sửa</button>
-              <button type="button" class="btn-action btn-action-del" style="padding: 8px 16px; font-size: 13px;" onclick="deleteItem('grn', '${d.id}')">${Icons.trash} Xóa</button>
+            ${isView ? `
+              ${hasPermission ? `
+                <button type="button" class="btn-action" style="padding: 8px 16px; font-size: 13px;" onclick="navigate('grn', 'edit', '${d.id}')">${Icons.edit} Sửa</button>
+                <button type="button" class="btn-action btn-action-del" style="padding: 8px 16px; font-size: 13px;" onclick="deleteItem('grn', '${d.id}')">${Icons.trash} Xóa</button>
+              ` : ''}
+              <!-- NÚT IN TEM SẢN PHẨM HIỂN THỊ Ở TRẠNG THÁI VIEW -->
+              <button type="button" class="btn-primary" onclick="printGRNProductLabels()" style="background: #f0a030; color: #000000; padding: 8px 16px; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                In Tem Sản Phẩm
+              </button>
             ` : ''}
             ${!isView ? `<button type="submit" class="btn-submit" style="padding: 8px 16px; font-size: 13px;" ${isDetailsDisabled ? 'disabled style="opacity: 0.5; cursor: not-allowed; pointer-events: none;"' : ''}>${state.mode === 'add' ? 'Tạo phiếu nhập' : 'Cập nhật'}</button>` : ''}
           </div>
         </div>
       </form>
     </div>
-    `;
+  `;
 }
 
 function renderReportInventory(c) {
@@ -3152,7 +3189,7 @@ function renderReportSales(c) {
         let dayRows = [];
 
         dayRows.push(`
-          <tr style="background: var(--secondary); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); cursor: pointer;" class="hover-row" onclick="navigate('sales-orders', 'list', null, { search: '${dateStr}', page: 1 });" title="Click để xem các Đơn hàng bán ngày ${formattedDate}">
+          <tr style="background: var(--secondary); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); cursor: pointer;" class="hover-row" onclick="navigate('sales-orders', 'list', null, { search: '${selectedCustomer.replace(/'/g, "\\'")}', ordersFromDate: '${dateStr}', ordersToDate: '${dateStr}', page: 1 });" title="Click để xem danh sách Đơn hàng bán ngày ${formattedDate}">
             <td style="padding: 8px 16px;"></td>
             <td style="padding: 8px 16px;"></td>
             <td style="padding: 8px 16px; font-size: 13px; font-weight: 700; color: #f0a030; font-family: var(--font-dm-mono); text-align: center;">${formattedDate}</td>
@@ -3189,7 +3226,7 @@ function renderReportSales(c) {
             renderedItemCount++;
 
             dayRows.push(`
-              <tr style="border-bottom: 1px solid var(--border); cursor: pointer;" class="hover-row" onclick="navigate('sales-orders', 'view', '${o.id}')" ondblclick="navigate('sales-orders', 'edit', '${o.id}')">
+              <tr style="border-bottom: 1px solid var(--border); cursor: pointer;" class="hover-row" onclick="navigate('sales-orders', 'view', '${o.id}')">
                 <td data-label="Đơn Hàng Bán" style="padding: 9px 16px;"></td>
                 <td data-label="Tên Hàng" style="padding: 9px 16px; font-size: 13px;">${name}</td>
                 <td data-label="Đơn Vị" style="padding: 9px 16px; font-family: var(--font-dm-mono); font-size: 12px; text-align: center; color: var(--muted-foreground);">${unit}</td>
@@ -3201,7 +3238,7 @@ function renderReportSales(c) {
           });
 
           dayRows[orderHeaderIndex] = `
-            <tr style="border-bottom: 1px solid var(--border); background: var(--secondary); font-weight: 600;" class="hover-row" onclick="navigate('sales-orders', 'view', '${o.id}')" ondblclick="navigate('sales-orders', 'edit', '${o.id}')">
+            <tr style="border-bottom: 1px solid var(--border); background: var(--secondary); font-weight: 600; cursor: pointer;" class="hover-row" onclick="navigate('sales-orders', 'view', '${o.id}')">
               <td data-label="Đơn Hàng Bán" style="padding: 9px 16px; font-family: var(--font-dm-mono); font-size: 12px; color: var(--primary); font-weight: 600;">${o.id || '—'}</td>
               <td data-label="Ghi Chú" style="padding: 9px 16px; font-size: 12px; color: var(--muted-foreground); font-weight: 600;">${o.notes || '—'}</td>
               <td style="padding: 9px 16px; font-size: 12px; color: var(--muted-foreground); font-weight: 600; text-align: center;">—</td>
@@ -3244,11 +3281,13 @@ function renderReportSales(c) {
   }
 
   const customersHtml = topCustomersReal.slice(0, 5).map((cus, i) => `
-    <tr style="border-bottom: 1px solid var(--border); cursor: pointer;" class="hover-row" onclick="navigate('sales-orders', 'list', null, { search: '${cus.name.replace(/'/g, "\\'")}', page: 1 });" title="Click để xem danh sách đơn hàng của ${cus.name}">
-      <td data-label="" style="padding: 9px 14px; font-family: var(--font-dm-mono); font-size: 11px; color: var(--muted-foreground); width: 28px;">${String(i + 1)}.</td>
-      <td data-label="" style="padding: 9px 14px; font-size: 13px; font-weight: 500; color: var(--foreground);">${cus.name}</td>
-      <td data-label="" style="padding: 9px 14px; font-family: var(--font-dm-mono); font-size: 12px; text-align: right; color: var(--primary);">${fmtUSD(cus.revenue)}</td>
-      <td data-label="" style="padding: 9px 14px; font-family: var(--font-dm-mono); font-size: 11px; text-align: right; color: var(--muted-foreground);">${cus.orders} đơn</td>
+    <tr style="border-bottom: 1px solid var(--border); cursor: pointer;" class="hover-row" 
+        onclick="navigate('sales-orders', 'list', null, { search: '${cus.name.replace(/'/g, "\\'")}', ordersFromDate: '${selectedFromDate}', ordersToDate: '${selectedToDate}', page: 1 });" 
+        title="Click để xem danh sách đơn hàng của ${cus.name}">
+      <td style="padding: 9px 14px; font-family: var(--font-dm-mono); font-size: 11px; color: var(--muted-foreground); width: 28px;">${String(i + 1)}.</td>
+      <td style="padding: 9px 14px; font-size: 13px; font-weight: 500; color: var(--foreground);">${cus.name}</td>
+      <td style="padding: 9px 14px; font-family: var(--font-dm-mono); font-size: 12px; text-align: right; color: var(--primary);">${fmtUSD(cus.revenue)}</td>
+      <td style="padding: 9px 14px; font-family: var(--font-dm-mono); font-size: 11px; text-align: right; color: var(--muted-foreground);">${cus.orders} đơn</td>
     </tr>
   `).join('');
 
@@ -3263,7 +3302,7 @@ function renderReportSales(c) {
       <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background-color: var(--border);" class="kpi-grid">
         <div class="kpi-card"><span class="kpi-label">Doanh Thu Lũy Kế Năm</span><div class="kpi-value-row"><span class="kpi-value">${fmtUSD(ytdRevenue)}</span></div><span class="kpi-sub">Năm ${currentYear}</span></div>
         <div class="kpi-card"><span class="kpi-label">Tổng Đơn Bán</span><div class="kpi-value-row"><span class="kpi-value">${fmt(ytdOrders)}</span></div><span class="kpi-sub">Năm ${currentYear}</span></div>
-        <div class="kpi-card"><span class="kpi-label">Tỷ Lệ Trả Hàng</span><div class="kpi-value-row"><span class="kpi-value">${returnRatePercent}%</span></div><span class="kpi-sub">theo số lượt nhận trả</span></div>
+        <div class="kpi-card"><span class="kpi-label">Tỷ Lệ Trả Hàng</span><div class="kpi-value-row"><span class="kpi-value">${returnRatePercent}%</span></div><span class="kpi-sub">theo số lượt đổi trả</span></div>
         <div class="kpi-card"><span class="kpi-label">Giá Trị Đơn Trung Bình</span><div class="kpi-value-row"><span class="kpi-value">${fmtUSD(avgOrderValue)}</span></div><span class="kpi-sub">AOV năm ${currentYear}</span></div>
       </div>
 
@@ -3304,12 +3343,18 @@ function renderReportSales(c) {
             <div class="report-filter-row">
               <div class="report-filter-item" style="display: flex; align-items: center; gap: 6px;">
                 <label style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--muted-foreground); text-transform: uppercase; white-space: nowrap;">TỪ NGÀY:</label>
-                <input type="date" class="form-input" style="width: 125px; padding: 4px 6px; font-size: 12px; height: 38px; box-sizing: border-box;" value="${selectedFromDate}" onchange="state.reportSalesFromDate=this.value; state.reportSalesLimit=40; state.page=1; render();">
+                <input type="date" class="form-input" style="width: 125px; padding: 4px 6px; font-size: 12px; height: 38px; box-sizing: border-box;" 
+                  value="${selectedFromDate}" 
+                  onkeydown="if(event.key === 'Enter') { state.reportSalesFromDate=this.value; state.reportSalesLimit=40; state.page=1; render(); this.blur(); }"
+                  onblur="if(state.reportSalesFromDate !== this.value) { state.reportSalesFromDate=this.value; state.reportSalesLimit=40; state.page=1; render(); }">
               </div>
 
               <div class="report-filter-item" style="display: flex; align-items: center; gap: 6px;">
                 <label style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--muted-foreground); text-transform: uppercase; white-space: nowrap;">ĐẾN NGÀY:</label>
-                <input type="date" class="form-input" style="width: 125px; padding: 4px 6px; font-size: 12px; height: 38px; box-sizing: border-box;" value="${selectedToDate}" onchange="state.reportSalesToDate=this.value; state.reportSalesLimit=40; state.page=1; render();">
+                <input type="date" class="form-input" style="width: 125px; padding: 4px 6px; font-size: 12px; height: 38px; box-sizing: border-box;" 
+                  value="${selectedToDate}" 
+                  onkeydown="if(event.key === 'Enter') { state.reportSalesToDate=this.value; state.reportSalesLimit=40; state.page=1; render(); this.blur(); }"
+                  onblur="if(state.reportSalesToDate !== this.value) { state.reportSalesToDate=this.value; state.reportSalesLimit=40; state.page=1; render(); }">
               </div>
             </div>
 

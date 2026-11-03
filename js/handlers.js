@@ -72,6 +72,8 @@ async function navigate(view, mode = 'list', itemId = null, extraState = null) {
     if (extraState.search !== undefined) state.search = extraState.search;
     if (extraState.filter !== undefined) state.filter = extraState.filter;
     if (extraState.page !== undefined) state.page = extraState.page;
+    if (extraState.ordersFromDate !== undefined) state.ordersFromDate = extraState.ordersFromDate;
+    if (extraState.ordersToDate !== undefined) state.ordersToDate = extraState.ordersToDate;
   }
 
   state.view = view;
@@ -853,6 +855,86 @@ async function saveForm(module) {
     const totalValue = rawData.totalValue ?? rawData.totalvalue ?? 0;
 
     if (!Array.isArray(db.grns)) db.grns = [];
+
+    // =========================================================================
+    // LOGIC TỰ ĐỘNG THÊM TẤT CẢ SẢN PHẨM Ở MỤC 02 VÀO DANH MỤC HÀNG HÓA (MATERIALS)
+    // =========================================================================
+    if (lineItems.length > 0) {
+      if (!Array.isArray(db.materials)) db.materials = [];
+
+      // 1. Tìm Mã SKU số lớn nhất hiện có trong danh mục để cộng dồn (+1)
+      let maxSkuNum = 0;
+      db.materials.forEach(m => {
+        const num = parseInt(String(m.id || '').replace(/\D/g, ''), 10);
+        if (!isNaN(num) && num > maxSkuNum) maxSkuNum = num;
+      });
+
+      const newMaterialsToInsert = [];
+
+      lineItems.forEach((l) => {
+        maxSkuNum++;
+        // Định dạng mã hàng tự động (ví dụ: HH0001, HH0002... hoặc 1001, 1002...)
+        const newSku = `HH${String(maxSkuNum).padStart(4, '0')}`;
+        l.sku = newSku; // Gán mã SKU vừa sinh cho dòng chi tiết phiếu nhập
+
+        const qtyImport = Number(l.receivedQty ?? l.qtyImport ?? 0);
+        const costPrice = Number(l.unitCost ?? 0);
+
+        const newMatObj = {
+          id: newSku,
+          name: l.name ? l.name.trim() : '',
+          unit: l.unit ? l.unit.trim().toUpperCase() : '',
+          category: '', // Danh mục để trống
+          location: warehouseCode, // Mã kho đẩy vào Vị trí lưu kho
+          stock: qtyImport, // SL nhập đẩy vào Tồn kho ban đầu
+          reorder: 0,
+          cost: costPrice, // Giá nhập đẩy vào Đơn giá
+          status: 'ok', // Mặc định Đủ Hàng
+          reserved: 0,
+          user_id0: currentUserId,
+          date0: currentDate,
+          time0: currentTime,
+          user_id2: currentUserId,
+          date2: currentDate,
+          time2: currentTime
+        };
+
+        // Đưa vào bộ nhớ tạm Local
+        db.materials.unshift(newMatObj);
+
+        // Đưa vào mảng insert đẩy lên CSDL Supabase
+        newMaterialsToInsert.push({
+          id: newMatObj.id,
+          name: newMatObj.name,
+          unit: newMatObj.unit,
+          category: newMatObj.category,
+          location: newMatObj.location,
+          stock: newMatObj.stock,
+          reorder: newMatObj.reorder,
+          cost: newMatObj.cost,
+          status: newMatObj.status,
+          reserved: 0,
+          user_id0: newMatObj.user_id0,
+          date0: newMatObj.date0,
+          time0: newMatObj.time0,
+          user_id2: newMatObj.user_id2,
+          date2: newMatObj.date2,
+          time2: newMatObj.time2
+        });
+      });
+
+      // Đưa query tự động thêm N mặt hàng vào bảng materials chạy nền Supabase
+      asyncBackgroundTasks.push(
+        (async () => {
+          try {
+            const { error: matErr } = await supabaseClient.from('materials').insert(newMaterialsToInsert);
+            if (matErr) console.error('Lỗi khi tự động thêm sản phẩm vào bảng materials:', matErr);
+          } catch (err) {
+            console.error('Lỗi insert materials:', err);
+          }
+        })()
+      );
+    }
 
     dbPayload.warehouseCode = warehouseCode;
     dbPayload.warehousecode = warehouseCode;
@@ -3131,6 +3213,189 @@ async function executePrintLabels() {
     });
 
     // Mở giao diện in
+    setTimeout(() => {
+      printFrame.contentWindow.focus();
+      printFrame.contentWindow.print();
+    }, 400);
+  }, 300);
+}
+
+// ==========================================
+// CHỨC NĂNG IN TEM TẤT CẢ SẢN PHẨM TRONG PHIẾU NHẬP KHO
+// ==========================================
+async function printGRNProductLabels() {
+  const d = state.formData;
+  if (!d || !Array.isArray(d.lineItems) || d.lineItems.length === 0) {
+    showAlert('Phiếu nhập kho này chưa có danh sách sản phẩm để in tem!', 'Thông báo');
+    return;
+  }
+
+  const lineItems = d.lineItems;
+
+  // Lấy dữ liệu sản phẩm tương ứng trong db.materials hoặc dùng thông tin dòng chi tiết
+  const productsToPrint = lineItems.map(l => {
+    const mat = (db.materials || []).find(m => (l.sku && m.id === l.sku) || (l.name && m.name === l.name));
+    return {
+      id: l.sku || (mat ? mat.id : ''),
+      name: l.name || (mat ? mat.name : ''),
+      cost: l.unitCost || (mat ? mat.cost : 0)
+    };
+  });
+
+  // Chia danh sách thành từng trang 20 tem (lưới 4x5 trên A4)
+  const pageSize = 20;
+  const pages = [];
+  for (let i = 0; i < productsToPrint.length; i += pageSize) {
+    pages.push(productsToPrint.slice(i, i + pageSize));
+  }
+
+  let printFrame = document.getElementById('print-label-frame');
+  if (printFrame) printFrame.remove();
+
+  printFrame = document.createElement('iframe');
+  printFrame.id = 'print-label-frame';
+  printFrame.style.position = 'fixed';
+  printFrame.style.right = '0';
+  printFrame.style.bottom = '0';
+  printFrame.style.width = '0';
+  printFrame.style.height = '0';
+  printFrame.style.border = 'none';
+  document.body.appendChild(printFrame);
+
+  const frameDoc = printFrame.contentWindow.document;
+
+  const pagesHtml = pages.map((pageItems, pageIdx) => {
+    const itemsHtml = pageItems.map((m, itemIdx) => `
+      <div class="label-item">
+        <div class="qr-container" id="qr-${pageIdx}-${itemIdx}"></div>
+        <div class="label-info">
+          <div class="sku-code">${m.id || ''}</div>
+          <div class="product-name" title="${m.name || ''}">${m.name || ''}</div>
+        </div>
+      </div>
+    `).join('');
+
+    return `<div class="page-a4">${itemsHtml}</div>`;
+  }).join('');
+
+  frameDoc.open();
+  frameDoc.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>In Tem Sản Phẩm Phiếu Nhập ${d.id || ''}</title>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+      <style>
+        @page {
+          size: A4 portrait;
+          margin: 0;
+        }
+        * {
+          box-sizing: border-box;
+        }
+        body {
+          margin: 0;
+          padding: 0;
+          background: #ffffff;
+          font-family: Arial, sans-serif;
+          -webkit-print-color-adjust: exact;
+        }
+        .page-a4 {
+          width: 210mm;
+          height: 297mm;
+          padding: 8mm 6mm;
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          grid-template-rows: repeat(5, 54mm);
+          gap: 2mm 3mm;
+          page-break-after: always;
+          page-break-inside: avoid;
+          overflow: hidden;
+        }
+        .page-a4:last-child {
+          page-break-after: auto;
+        }
+        .label-item {
+          border: 1px dashed #cccccc;
+          border-radius: 4px;
+          padding: 3mm 2mm;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          background: #ffffff;
+          overflow: hidden;
+        }
+        .qr-container {
+          width: 28mm;
+          height: 28mm;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #ffffff;
+          padding: 1mm;
+        }
+        .qr-container img, .qr-container canvas {
+          width: 26mm !important;
+          height: 26mm !important;
+          object-fit: contain;
+          display: block;
+        }
+        .label-info {
+          width: 100%;
+          margin-top: 1mm;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        }
+        .sku-code {
+          font-family: monospace;
+          font-size: 10pt;
+          font-weight: bold;
+          color: #000000;
+          line-height: 1.2;
+        }
+        .product-name {
+          font-size: 8.5pt;
+          color: #222222;
+          line-height: 1.15;
+          margin-top: 0.5mm;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          word-break: break-word;
+          max-height: 20pt;
+        }
+      </style>
+    </head>
+    <body>
+      ${pagesHtml}
+    </body>
+    </html>
+  `);
+  frameDoc.close();
+
+  // Khởi tạo mã QR Code cho từng thẻ tem
+  setTimeout(() => {
+    pages.forEach((pageItems, pageIdx) => {
+      pageItems.forEach((m, itemIdx) => {
+        const qrBox = frameDoc.getElementById(`qr-${pageIdx}-${itemIdx}`);
+        if (qrBox) {
+          new printFrame.contentWindow.QRCode(qrBox, {
+            text: String(m.id || m.name || ''),
+            width: 128,
+            height: 128,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: printFrame.contentWindow.QRCode.CorrectLevel.M
+          });
+        }
+      });
+    });
+
     setTimeout(() => {
       printFrame.contentWindow.focus();
       printFrame.contentWindow.print();
