@@ -356,109 +356,140 @@ function renderDashboard(c) {
 }
 
 function renderMaterialsList(c) {
-  const searchKey = normalizeSearchText(state.search || '');
-  const filterCat = state.filter || 'all';
-
-  let list = (db.materials || []).filter(m => {
-    const matchSearch = !searchKey || normalizeSearchText(m.id).includes(searchKey) || normalizeSearchText(m.name).includes(searchKey);
-    const matchCat = filterCat === 'all' || m.category === filterCat;
-    return matchSearch && matchCat;
-  });
-
-  list.sort((a, b) => String(b.id || '').localeCompare(String(a.id || ''), undefined, { numeric: true, sensitivity: 'base' }));
-
-  const totalPages = Math.ceil(list.length / ITEMS_PER_PAGE) || 1;
-  state.page = Math.min(state.page, totalPages);
-  const pagedList = list.slice((state.page - 1) * ITEMS_PER_PAGE, state.page * ITEMS_PER_PAGE);
-
   const hasPermission = checkModulePermission('materials');
 
-  const rows = pagedList.map(m => {
-    // XỬ LÝ TRẠNG THÁI HÀNG HÓA VỚI MÀU SẮC
-    let statusBadge = '<span class="status-tag status-ok">Còn Hàng</span>';
-    const st = (m.status || '').toLowerCase();
-    
-    if (st === 'rent' || st === 'cho thuê') {
-      statusBadge = '<span class="status-tag" style="background: rgba(240, 160, 48, 0.15); color: #f0a030; border: 1px solid rgba(240, 160, 48, 0.3);">Cho Thuê</span>';
-    } else if (st === 'out' || st === 'hết hàng' || Number(m.stock || 0) <= 0) {
-      statusBadge = '<span class="status-tag" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);">Hết Hàng</span>';
-    }
+  const filtered = db.materials.filter(m => {
+    if (state.filter !== 'all' && m.status !== state.filter) return false;
+    const searchKey = normalizeSearchText(state.search);
+    if (searchKey && !normalizeSearchText(m.name).includes(searchKey) && !normalizeSearchText(m.id).includes(searchKey)) return false;
+    return true;
+  });
 
-    return `
-      <tr style="border-bottom: 1px solid var(--border); cursor: pointer;" class="hover-row" onclick="navigate('materials', 'view', '${m.id}')">
-        <td data-label="Mã SKU" style="padding: 10px 14px; font-family: var(--font-dm-mono); font-size: 12px; color: var(--primary); font-weight: 500;">${m.id}</td>
-        <td data-label="Tên Sản Phẩm" style="padding: 10px 14px; font-size: 13px; font-weight: 500;">${m.name}</td>
-        <td data-label="Danh Mục" style="padding: 10px 14px; font-size: 12px; color: var(--muted-foreground);">${m.category || '—'}</td>
-        <td data-label="ĐVT" style="padding: 10px 14px; font-size: 12px; text-align: center; font-family: var(--font-dm-mono); color: var(--muted-foreground);">${m.unit || '—'}</td>
-        <td data-label="Đơn Giá" style="padding: 10px 14px; font-family: var(--font-dm-mono); font-size: 12px; text-align: right;">${fmtUSD(m.cost || 0)}</td>
-        
-        <!-- CỘT GHI CHÚ THAY THẾ CỘT TỒN KHO BAN ĐẦU -->
-        <td data-label="Ghi Chú" style="padding: 10px 14px; font-size: 12px; color: var(--muted-foreground); max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${m.notes || ''}">${m.notes || '—'}</td>
-        
-        <td data-label="Trạng Thái" style="padding: 10px 14px; text-align: center;">${statusBadge}</td>
-        <td style="padding: 10px 14px; text-align: right;" onclick="event.stopPropagation();">
-          <div style="display: flex; gap: 4px; justify-content: flex-end;">
-            <button class="btn-table-action" onclick="navigate('materials', 'view', '${m.id}')" title="Xem chi tiết">${Icons.view}</button>
-            ${hasPermission ? `
-              <button class="btn-table-action" onclick="navigate('materials', 'edit', '${m.id}')" title="Sửa">${Icons.edit}</button>
-              <button class="btn-table-action btn-del" onclick="deleteItem('materials', '${m.id}')" title="Xóa">${Icons.trash}</button>
-            ` : ''}
-          </div>
-        </td>
-      </tr>
-    `;
-  }).join('');
+  // TÍNH TOÁN PHÂN TRANG
+  const totalItems = filtered.length;
+  const totalPages = Math.ceil(totalItems / state.pageSize) || 1;
+  if (state.page > totalPages) state.page = totalPages;
+  if (state.page < 1) state.page = 1;
+
+  const startIndex = (state.page - 1) * state.pageSize;
+  const paginatedItems = filtered.slice(startIndex, startIndex + state.pageSize);
+
+  const totalSku = db.materials.length;
+  const totalStock = db.materials.reduce((a, i) => a + (Number(i.stock) || 0), 0);
+  const lowCount = db.materials.filter(i => (i.status || '').toLowerCase() === 'low').length;
+  const outCount = db.materials.filter(i => (i.status || '').toLowerCase() === 'out').length;
+
+  const kpiHtml = [
+    { label: 'TỔNG SỐ SKU', value: fmt(totalSku), color: 'var(--foreground)' },
+    { label: 'TỔNG TỒN KHO', value: fmt(totalStock), color: '#34d399' },
+    { label: 'SẮP HẾT', value: fmt(lowCount), color: '#fbbf24' },   // Thống kê Sắp hết (Màu vàng/cam)
+    { label: 'HẾT HÀNG', value: fmt(outCount), color: '#f87171' }    // Thống kê Hết hàng (Màu đỏ)
+  ].map(s => `
+    <div style="background-color: var(--card); padding: 16px 20px;">
+      <div style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">${s.label}</div>
+      <div style="font-family: var(--font-dm-mono); font-size: 24px; font-weight: 300; color: ${s.color};">${s.value}</div>
+    </div>
+  `).join('');
+
+  const columnConfig = [
+    { title: 'Mã Hàng (SKU)', width: '30px', align: 'center' },
+    { title: 'Tên Hàng', width: '100px', align: 'center' },
+    { title: 'Đơn Vị', width: '20px', align: 'center' },
+    { title: 'Danh Mục', width: '40px', align: 'center' },
+    { title: 'Vị Trí Lưu Kho', width: '40px', align: 'center' },
+    { title: 'Tồn Kho Ban Đầu', width: '30px', align: 'center' },
+    { title: 'Đơn Giá', width: '30px', align: 'center' },
+    { title: 'Trạng Thái', width: '50px', align: 'center' },
+    { title: 'Người Tạo', width: '50px', align: 'center' },
+    { title: 'Ngày Tạo', width: '30px', align: 'center' },
+    { title: 'Giờ Tạo', width: '20px', align: 'center' },
+    { title: 'Người Sửa', width: '50px', align: 'center' },
+    { title: 'Ngày Sửa', width: '30px', align: 'center' },
+    { title: 'Giờ Sửa', width: '20px', align: 'center' },
+    { title: 'Hành Động', width: '80px', align: 'center' }
+  ];
+
+  const headersHtml = columnConfig.map(col => `
+  <th style="width: ${col.width}; min-width: ${col.width}; padding: 9px 16px; text-align: ${col.align}; font-family: var(--font-dm-mono); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted-foreground); font-weight: 400; white-space: nowrap;">
+    ${col.title}
+  </th>
+`).join('');
+
+  const rowsHtml = paginatedItems.map(m => `
+    <tr style="border-bottom: 1px solid var(--border);" class="hover-row" ondblclick="navigate('materials', '${hasPermission ? 'edit' : 'view'}', '${m.id}')" onclick="navigate('materials', 'view', '${m.id}')">
+      <td data-label="Mã Hàng" style="padding: 11px 16px; font-family: var(--font-dm-mono); font-size: 12px; text-align: left; color: var(--primary);">${m.id}</td>
+      <td data-label="Tên Hàng" style="padding: 11px 16px; font-size: 13px;">${m.name}</td>
+      <td data-label="Đơn Vị" style="padding: 11px 16px; font-family: var(--font-dm-mono); font-size: 12px; text-align: center; color: var(--foreground);">${m.unit || '—'}</td>
+      <td data-label="Danh Mục" style="padding: 11px 16px; font-family: var(--font-dm-mono); font-size: 11px; text-align: center; color: var(--muted-foreground);">${m.category || '—'}</td>
+      <td data-label="Vị Trí Lưu Kho" style="padding: 11px 16px; font-family: var(--font-dm-mono); font-size: 12px; text-align: center;">${m.location || '—'}</td>
+      <td data-label="Tồn Kho Ban Đầu" style="padding: 11px 16px; font-family: var(--font-dm-mono); font-size: 12px; text-align: right;">${m.stock ?? 0}</td>
+      <td data-label="Đơn Giá" style="padding: 11px 16px; font-family: var(--font-dm-mono); font-size: 12px; text-align: right;">${fmtUSD(m.cost || 0)}</td>
+      <td data-label="Trạng Thái" style="padding: 11px 16px; text-align: center;">
+        <span class="badge ${getBadgeClass(m.status)}">${getStatusLabel(m.status)}</span>
+      </td>
+      
+      <td data-label="Người Tạo" style="padding: 11px 16px; font-size: 12px;">${getUserFullName(m.user_id0)}</td>
+      <td data-label="Ngày Tạo" style="padding: 11px 16px; font-family: var(--font-dm-mono); font-size: 11px; text-align: center; color: var(--muted-foreground);">${fmtDateStr(m.date0)}</td>
+      <td data-label="Giờ Táo" style="padding: 11px 16px; font-family: var(--font-dm-mono); font-size: 11px; text-align: center; color: var(--muted-foreground);">${fmtTimeStr(m.time0)}</td>
+      <td data-label="Người Sửa" style="padding: 11px 16px; font-size: 12px;">${getUserFullName(m.user_id2)}</td>
+      <td data-label="Ngày Sửa" style="padding: 11px 16px; font-family: var(--font-dm-mono); font-size: 11px; text-align: center; color: var(--muted-foreground);">${fmtDateStr(m.date2)}</td>
+      <td data-label="Giờ Sửa" style="padding: 11px 16px; font-family: var(--font-dm-mono); font-size: 11px; text-align: center; color: var(--muted-foreground);">${fmtTimeStr(m.time2)}</td>
+
+      <td data-label="Hành Động" style="padding: 8px 16px; text-align: center; white-space: nowrap;">
+        <div style="display: flex; gap: 6px; justify-content: flex-end; align-items: center;">
+          <button class="btn-action" onclick="event.stopPropagation(); navigate('materials', 'view', '${m.id}')">${Icons.view} Xem</button>
+          ${hasPermission ? `<button class="btn-action" onclick="event.stopPropagation(); navigate('materials', 'edit', '${m.id}')">${Icons.edit} Sửa</button>` : ''}
+          ${hasPermission ? `<button class="btn-action btn-action-del" onclick="event.stopPropagation(); deleteItem('materials', '${m.id}')">${Icons.trash} Xóa</button>` : ''}
+        </div>
+      </td>
+    </tr>
+  `).join('');
 
   c.innerHTML = `
-    <div>
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
-        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; flex: 1;">
-          <div class="search-box" style="width: 260px;">
-            ${Icons.search}
-            <input type="text" placeholder="Tìm tên, mã SKU..." value="${state.search || ''}" oninput="state.search = this.value; state.page = 1; render();">
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background-color: var(--border);" class="kpi-grid">
+        ${kpiHtml}
+      </div>
+      <div class="filter-search-container" style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
+        ${getFilterBar([['all', 'TẤT CẢ'], ['ok', 'ĐỦ HÀNG'], ['low', 'SẮP HẾT'], ['out', 'HẾT HÀNG']])}
+        <div class="mobile-search-action-group" style="display: flex; gap: 8px; flex-wrap: wrap; width: 100%; max-width: 550px;">
+          <div style="display: flex; align-items: center; gap: 8px; border: 1px solid var(--border); background: var(--card); padding: 0 12px; flex: 1; min-width: 200px; height: 38px; box-sizing: border-box;">
+            <span style="color: var(--muted-foreground); display: flex; align-items: center;">${Icons.search}</span>
+            <input type="text" id="global-search" placeholder="Tìm kiếm..." value="${state.search || ''}" oninput="state.search=this.value; state.page=1; render();" style="background: transparent; border: none; outline: none; color: var(--foreground); font-family: var(--font-jost); font-size: 13px; width: 100%; height: 100%; padding: 0;">
           </div>
-          <select class="form-select" style="width: 140px; height: 38px;" onchange="state.filter = this.value; state.page = 1; render();">
-            <option value="all" ${filterCat === 'all' ? 'selected' : ''}>Tất cả danh mục</option>
-            <option value="Áo" ${filterCat === 'Áo' ? 'selected' : ''}>Áo</option>
-            <option value="Quần" ${filterCat === 'Quần' ? 'selected' : ''}>Quần</option>
-            <option value="Váy" ${filterCat === 'Váy' ? 'selected' : ''}>Váy</option>
-            <option value="Phụ Kiện" ${filterCat === 'Phụ Kiện' ? 'selected' : ''}>Phụ Kiện</option>
-            <option value="Khác" ${filterCat === 'Khác' ? 'selected' : ''}>Khác</option>
-          </select>
-        </div>
-        <div style="display: flex; gap: 8px;">
-          <button class="btn-primary" onclick="openPrintLabelDrawer()" style="background: var(--secondary); color: var(--foreground); border: 1px solid var(--border);">
-            ${Icons.print || ''} In Tem Sản Phẩm
+          ${hasPermission ? `<button class="btn-primary" onclick="navigate('materials', 'add')">${Icons.plus} Thêm Mới</button>` : ''}
+          <button class="btn-action pc-only-print-btn" onclick="openPrintLabelDrawer()" style="height: 38px; padding: 0 14px; background: var(--card); border: 1px solid var(--border); color: var(--foreground); font-family: var(--font-jost); font-size: 13px; font-weight: 500; cursor: pointer; align-items: center; gap: 6px; white-space: nowrap;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+            In Tem Sản Phẩm
           </button>
-          ${hasPermission ? `
-            <button class="btn-primary" onclick="navigate('materials', 'add')">
-              ${Icons.plus} Thêm Hàng Hóa
-            </button>
-          ` : ''}
         </div>
       </div>
 
-      <div class="table-container">
-        <table class="data-table">
+      <div style="border: 1px solid var(--border); background: var(--card); overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse;">
           <thead>
-            <tr>
-              <th style="width: 120px;">MÃ SKU</th>
-              <th>TÊN SẢN PHẨM</th>
-              <th style="width: 110px;">DANH MỤC</th>
-              <th style="width: 70px; text-align: center;">ĐVT</th>
-              <th style="width: 110px; text-align: right;">ĐƠN GIÁ</th>
-              <th style="width: 180px;">GHI CHÚ</th>
-              <th style="width: 110px; text-align: center;">TRẠNG THÁI</th>
-              <th style="width: 100px; text-align: right;">THAO TÁC</th>
+            <tr style="border-bottom: 1px solid var(--border); background: var(--secondary);">
+              ${headersHtml}
             </tr>
           </thead>
           <tbody>
-            ${list.length > 0 ? rows : `<tr><td colspan="8" style="text-align: center; padding: 40px; color: var(--muted-foreground);">Không tìm thấy dữ liệu hàng hóa nào.</td></tr>`}
+            ${rowsHtml}
           </tbody>
         </table>
+        ${filtered.length === 0 ? `<div style="padding: 40px; text-align: center; color: var(--muted-foreground); font-family: var(--font-dm-mono); font-size: 12px;">Không tìm thấy dữ liệu</div>` : ''}
       </div>
 
-      ${renderPagination(totalPages)}
+      <!-- THANH ĐIỀU HƯỚNG PHÂN TRANG -->
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: var(--card); border: 1px solid var(--border); flex-wrap: wrap; gap: 10px;">
+        <span style="font-family: var(--font-dm-mono); font-size: 11px; color: var(--muted-foreground);">
+          Hiển thị ${totalItems === 0 ? 0 : startIndex + 1} - ${Math.min(startIndex + state.pageSize, totalItems)} / Tổng ${totalItems} mục
+        </span>
+        <div style="display: flex; gap: 6px; align-items: center;">
+          <button ${state.page <= 1 ? 'disabled style="opacity:0.4; cursor:not-allowed;"' : ''} class="btn-action" onclick="state.page--; render();">❮ Trước</button>
+          <span style="font-family: var(--font-dm-mono); font-size: 11px; padding: 0 8px; color: var(--foreground);">Trang ${state.page} / ${totalPages}</span>
+          <button ${state.page >= totalPages ? 'disabled style="opacity:0.4; cursor:not-allowed;"' : ''} class="btn-action" onclick="state.page++; render();">Sau ❯</button>
+        </div>
+      </div>
     </div>
   `;
 }
@@ -1337,96 +1368,98 @@ function renderGRNList(c) {
 function renderMaterialForm(c) {
   const d = state.formData || {};
   const isView = state.mode === 'view';
-  const isEdit = state.mode === 'edit';
-  const isAdd = state.mode === 'add';
   const hasPermission = checkModulePermission('materials');
-
-  if (isAdd && !d.id) {
-    d.id = generateAutoSku();
-    d.stock = d.stock ?? 1; // Mặc định tồn kho ban đầu là 1
-  }
 
   c.innerHTML = `
     <div style="max-width: 900px;">
-      ${getBreadcrumb('Danh mục hàng hóa', isView ? `Xem ${d.name || d.id}` : (isEdit ? `Chỉnh sửa ${d.id}` : 'Thêm hàng hóa mới'), 'materials')}
-      
+      ${getBreadcrumb('Sản Phẩm & Vật Tư', isView ? `Xem ${d.id}` : (state.mode === 'edit' ? `Sửa ${d.id}` : 'Thêm Sản Phẩm Mới'), 'materials')}
       <form onsubmit="event.preventDefault(); saveForm('materials');">
+        <input type="hidden" value="${d.id || ''}">
+
         <div class="section-panel">
           <div class="section-header">
             <span class="section-num">01</span>
             <span class="section-title">Thông tin cơ bản</span>
           </div>
-          <div class="section-body grid-2">
-            <div class="form-group">
-              <label class="form-label">Mã SKU / Mã hàng *</label>
-              <input type="text" class="form-input" value="${d.id || ''}" readonly style="background: var(--muted); cursor: not-allowed; font-family: var(--font-dm-mono);" required>
-            </div>
-            
-            <div class="form-group">
+          <div class="section-body grid-3">
+            <div class="form-group" style="grid-column: span 2;">
               <label class="form-label">Tên sản phẩm *</label>
-              <input type="text" class="form-input" value="${d.name || ''}" ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : `oninput="this.value = toTitleCase(this.value); updateField('name', this.value.trim());"`} placeholder="Nhập tên sản phẩm..." required>
+              <input 
+                  type="text" 
+                  class="form-input" 
+                  value="${d.name || ''}" 
+                  ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : `
+                    oninput="this.value = toTitleCase(this.value); updateField('name', this.value.trim());"
+                    onchange="this.value = toTitleCase(this.value.trim()); updateField('name', this.value.trim());"
+                  `} 
+                  placeholder="Nhập tên sản phẩm..." 
+                  required
+                >
             </div>
-
             <div class="form-group">
-              <label class="form-label">Danh mục sản phẩm</label>
+              <label class="form-label">Đơn vị tính *</label>
+              <input 
+                type="text" 
+                class="form-input" 
+                value="${d.unit || ''}" 
+                ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : `
+                  oninput="this.value = toUpperCaseStr(this.value); updateField('unit', this.value.trim());"
+                  onchange="this.value = toUpperCaseStr(this.value.trim()); updateField('unit', this.value.trim());"
+                `} 
+                placeholder="CÁI, HỘP, BỘ, KG..." 
+                required
+              >
+            </div>
+            <div class="form-group">
+              <label class="form-label">Danh mục</label>
               <select class="form-select" ${isView ? 'disabled style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'category\', this.value)"'}>
-                <option value="Áo" ${d.category === 'Áo' ? 'selected' : ''}>Áo</option>
-                <option value="Quần" ${d.category === 'Quần' ? 'selected' : ''}>Quần</option>
-                <option value="Váy" ${d.category === 'Váy' ? 'selected' : ''}>Váy</option>
-                <option value="Phụ Kiện" ${d.category === 'Phụ Kiện' ? 'selected' : ''}>Phụ Kiện</option>
-                <option value="Khác" ${d.category === 'Khác' ? 'selected' : ''}>Khác</option>
+                ${['Hoa quả', 'Rau củ', 'Khác'].map(cat => `<option value="${cat}" ${d.category === cat ? 'selected' : ''}>${cat}</option>`).join('')}
               </select>
             </div>
+          </div>
+        </div>
 
-            <div class="form-group">
-              <label class="form-label">Đơn vị tính (ĐVT)</label>
-              <input type="text" class="form-input" maxlength="10" value="${d.unit || ''}" ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : `oninput="this.value = toUpperCaseStr(this.value); updateField('unit', this.value.trim());"`} placeholder="CÁI, BỘ, CHIẾC...">
-            </div>
-
+        <div class="section-panel">
+          <div class="section-header">
+            <span class="section-num">02</span>
+            <span class="section-title">Kho hàng & Chi phí (Tùy chọn)</span>
+          </div>
+          <div class="section-body grid-4">
             <div class="form-group">
               <label class="form-label">Vị trí lưu kho</label>
-              <input type="text" class="form-input" value="${d.location || ''}" ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'location\', this.value)"'} placeholder="Kệ A1, Kho chính...">
+              <input type="text" class="form-input" value="${d.location || ''}" ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'location\', this.value.trim())"'} placeholder="Ví dụ: A-12-03">
             </div>
-
-            <div class="form-group">
-              <label class="form-label">Đơn giá niêm yết / Giá vốn</label>
-              <input type="text" inputmode="numeric" class="form-input" style="font-family: var(--font-dm-mono);" value="${(d.cost ?? 0).toLocaleString('vi-VN')}" ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : `onfocus="this.value = parseNumberInput(this.value) || ''" onblur="this.value = formatVNDInput(this.value)" onchange="updateField('cost', parseNumberInput(this.value), 'number')"`}>
-            </div>
-
             <div class="form-group">
               <label class="form-label">Tồn kho ban đầu</label>
-              <input type="number" class="form-input" style="font-family: var(--font-dm-mono);" value="${d.stock ?? 1}" ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'stock\', this.value, \'number\')"'} required>
+              <input 
+                type="number" 
+                step="any" 
+                inputmode="decimal" 
+                class="form-input" 
+                value="${d.stock ?? 0}" 
+                ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'stock\', this.value, \'number\')"'}>
             </div>
-
             <div class="form-group">
-              <label class="form-label">Trạng thái hàng hóa</label>
-              <select class="form-select" ${isView ? 'disabled style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'status\', this.value)"'}>
-                <option value="ok" ${(d.status === 'ok' || d.status === 'Còn Hàng') ? 'selected' : ''}>Còn Hàng</option>
-                <option value="rent" ${(d.status === 'rent' || d.status === 'Cho Thuê') ? 'selected' : ''}>Cho Thuê</option>
-                <option value="out" ${(d.status === 'out' || d.status === 'Hết Hàng') ? 'selected' : ''}>Hết Hàng</option>
-              </select>
+              <label class="form-label">Mức định mức</label>
+              <input type="number" step="any" inputmode="decimal" class="form-input" value="${d.reorder ?? 0}" ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'reorder\', this.value, \'number\')"'} >
             </div>
-
-            <!-- Ô THÔNG TIN GHI CHÚ Ở MỤC 01 -->
-            <div class="form-group" style="grid-column: span 2;">
-              <label class="form-label">Ghi chú</label>
-              <textarea class="form-textarea" rows="2" style="resize: vertical; ${isView ? 'background: var(--muted); cursor: not-allowed;' : ''}" ${isView ? 'readonly' : 'onchange="updateField(\'notes\', this.value)"'} placeholder="Nhập chi tiết ghi chú sản phẩm...">${d.notes || ''}</textarea>
+            <div class="form-group">
+              <label class="form-label">Đơn giá (VNĐ)</label>
+              <input type="number" step="any" inputmode="numeric" class="form-input" value="${d.cost ?? 0}" ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'cost\', this.value, \'number\')"'} >
             </div>
           </div>
         </div>
 
         <div class="action-bar" style="display: flex; justify-content: space-between; align-items: center;">
-          <button type="button" class="btn-cancel" onclick="isEdit ? navigate('materials', 'view', '${d.id}') : navigate('materials')">
+          <button type="button" class="btn-cancel" style="padding: 8px 16px; font-size: 13px;" onclick="state.mode === 'edit' ? navigate('materials', 'view', '${d.id}') : navigate('materials')">
             ${isView ? 'Quay Lại' : 'Hủy'}
           </button>
           <div style="display: flex; gap: 8px;">
-            ${isView ? `
-              ${hasPermission ? `
-                <button type="button" class="btn-action" onclick="navigate('materials', 'edit', '${d.id}')">${Icons.edit} Sửa</button>
-                <button type="button" class="btn-action btn-action-del" onclick="deleteItem('materials', '${d.id}')">${Icons.trash} Xóa</button>
-              ` : ''}
+            ${isView && hasPermission ? `
+              <button type="button" class="btn-action" style="padding: 8px 16px; font-size: 13px;" onclick="navigate('materials', 'edit', '${d.id}')">${Icons.edit} Sửa</button>
+              <button type="button" class="btn-action btn-action-del" style="padding: 8px 16px; font-size: 13px;" onclick="deleteItem('materials', '${d.id}')">${Icons.trash} Xóa</button>
             ` : ''}
-            ${!isView ? `<button type="submit" class="btn-submit">${isAdd ? 'Thêm mới' : 'Cập nhật'}</button>` : ''}
+            ${!isView ? `<button type="submit" class="btn-submit" style="padding: 8px 16px; font-size: 13px;">${state.mode === 'add' ? 'Lưu sản phẩm' : 'Cập nhật'}</button>` : ''}
           </div>
         </div>
       </form>
