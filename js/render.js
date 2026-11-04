@@ -1732,7 +1732,6 @@ function renderQuotationForm(c) {
             onchange="updateLine('${l.lineId}', 'hirePrice', parseNumberInput(this.value), 'number')"
           `}
         >
-
         <!-- CỘT GIÁ BÁN (ĐỔI TÊN TỪ ĐƠN GIÁ) -->
         <input 
           type="text" 
@@ -1821,9 +1820,7 @@ function renderQuotationForm(c) {
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Tên Hàng</span>
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">ĐVT</span>
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Số Lượng</span>
-              <!-- CỘT MỚI: GIÁ THUÊ -->
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Giá Thuê</span>
-              <!-- ĐỔI TÊN: GIÁ BÁN -->
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Giá Bán</span>
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">CK%</span>
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Thuế%</span>
@@ -1873,6 +1870,65 @@ function renderQuotationForm(c) {
   `;
 }
 
+// HELPER CẬP NHẬT ĐƠN GIÁ KHI TÍCH / BỎ TÍCH CHECKBOX HÀNG BÁN (sale_yn)
+window.handleSaleYnChangeInLine = function (lineId, isSaleChecked) {
+  const line = (state.formData.lineItems || []).find(l => l.lineId === lineId);
+  if (!line) return;
+
+  line.sale_yn = isSaleChecked;
+
+  const currentCustomer = (state.formData.customer || '').trim();
+  const orderDate = state.formData.date || getTodayDateStr();
+
+  // Tìm báo giá khả dụng
+  let activeQuotation = null;
+  if (currentCustomer) {
+    activeQuotation = (db.quotations || [])
+      .filter(q => {
+        if (!q || !q.customer) return false;
+        if (q.customer.trim().toLowerCase() !== currentCustomer.toLowerCase()) return false;
+        const status = (q.status || '').toLowerCase();
+        if (!['accepted', 'approved', 'duyệt', 'đã duyệt'].includes(status)) return false;
+        const vBegin = q.validbegin || q.validBegin || q.date || '';
+        const vUntil = q.validUntil || q.validuntil || '';
+        if (vBegin && vUntil) return orderDate >= vBegin && orderDate <= vUntil;
+        return true;
+      })
+      .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))[0];
+  }
+
+  const mat = (db.materials || []).find(m => (line.sku && m.id === line.sku) || (line.name && m.name === line.name));
+  
+  let qItem = null;
+  if (activeQuotation && Array.isArray(activeQuotation.lineItems)) {
+    qItem = activeQuotation.lineItems.find(q => {
+      const qSku = (q.sku || q.id || '').trim().toLowerCase();
+      const qName = (q.name || '').trim().toLowerCase();
+      const lSku = (line.sku || '').trim().toLowerCase();
+      const lName = (line.name || '').trim().toLowerCase();
+      return (lSku && qSku === lSku) || (lName && qName === lName);
+    });
+  }
+
+  if (isSaleChecked) {
+    // KHI TÍCH CHỌN HÀNG BÁN (sale_yn = true)
+    // Lấy Giá Bán từ Báo Giá, nếu không có/không khả dụng thì mặc định = 0
+    line.unitPrice = qItem ? (qItem.unitPrice ?? qItem.price ?? 0) : 0;
+  } else {
+    // KHI KHÔNG TÍCH HÀNG BÁN (sale_yn = false - Cho Thuê)
+    // Lấy Giá Thuê từ Báo Giá, không có thì lấy Đơn Giá từ Danh Mục Hàng Hóa
+    if (qItem && (qItem.hirePrice !== undefined && qItem.hirePrice !== null)) {
+      line.unitPrice = qItem.hirePrice;
+    } else if (mat) {
+      line.unitPrice = mat.unitPrice ?? mat.price ?? mat.cost ?? 0;
+    } else {
+      line.unitPrice = 0;
+    }
+  }
+
+  render();
+};
+
 function renderSalesOrderForm(c) {
   const d = state.formData || {};
   const isView = state.mode === 'view';
@@ -1886,9 +1942,12 @@ function renderSalesOrderForm(c) {
     d.warehouseCode = db.warehouses[0].code || db.warehouses[0].id;
   }
 
+  // MẶC ĐỊNH SALE_YN = FALSE KHI THÊM MỚI ĐƠN HÀNG
   d.lineItems.forEach(l => {
     l.warehouseCode = d.warehouseCode;
-    if (l.sale_yn === undefined) l.sale_yn = true; // Mặc định là hàng bán
+    if (l.sale_yn === undefined || l.sale_yn === null) {
+      l.sale_yn = false;
+    }
   });
 
   d.subtotal = d.lineItems.reduce((s, l) => s + ((l.qty || 0) * (l.unitPrice || 0)), 0);
@@ -1947,10 +2006,11 @@ function renderSalesOrderForm(c) {
         const matKey = (mat.id || mat.name || '').toLowerCase();
         if (!matchedSkusAndNames.has(matKey)) {
           matchedSkusAndNames.add(matKey);
-          const quotedPrice = qItem.unitPrice ?? qItem.price ?? mat.unitPrice ?? mat.price ?? mat.cost ?? 0;
+          // Mặc định chọn sản phẩm hiển thị Giá Thuê từ Báo giá
+          const displayPrice = (qItem.hirePrice !== undefined && qItem.hirePrice !== null) ? qItem.hirePrice : (mat.unitPrice ?? mat.price ?? mat.cost ?? 0);
           inQuotationList.push({
             ...mat,
-            quotedPrice: quotedPrice
+            quotedPrice: displayPrice
           });
         }
       }
@@ -2005,7 +2065,6 @@ function renderSalesOrderForm(c) {
     return `<option value="${wCode}" ${d.warehouseCode === wCode ? 'selected' : ''}>${wCode} - ${w.name}</option>`;
   }).join('');
 
-  // Layout Grid điều chỉnh kích thước cột Hàng bán (dạng Checkbox)
   const gridLayout = isView
     ? "10px 100px minmax(170px, 1.5fr) 60px 70px 65px 65px 65px 90px 70px 60px 120px"
     : "10px 100px minmax(170px, 1.5fr) 60px 70px 65px 65px 65px 90px 70px 60px 120px 32px";
@@ -2034,14 +2093,14 @@ function renderSalesOrderForm(c) {
         
         <input type="text" id="line-item-${l.lineId}-warehouseCode" class="form-input" style="padding: 6px 8px; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; text-align: center;" value="${d.warehouseCode || '—'}" readonly title="Mã kho từ mục 01">
 
-        <!-- CỘT HÀNG BÁN: DẠNG NÚT TÍCH CHỌN (CHECKBOX sale_yn) -->
+        <!-- CỘT HÀNG BÁN: CHECKBOX sale_yn (GỌI HANDLE RIÊNG ĐỂ TỰ ĐỘNG CẬP NHẬT ĐƠN GIÁ) -->
         <div style="display: flex; justify-content: center; align-items: center;">
           <input 
             type="checkbox" 
             id="line-item-${l.lineId}-sale_yn" 
             style="width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary);" 
-            ${l.sale_yn !== false ? 'checked' : ''} 
-            ${(isView || isDetailsDisabled) ? 'disabled' : `onchange="updateLine('${l.lineId}', 'sale_yn', this.checked, 'boolean')"`}
+            ${l.sale_yn === true ? 'checked' : ''} 
+            ${(isView || isDetailsDisabled) ? 'disabled' : `onchange="handleSaleYnChangeInLine('${l.lineId}', this.checked)"`}
           >
         </div>
         
@@ -2223,9 +2282,7 @@ function renderSalesOrderForm(c) {
 
     if (!nameVal || !phoneVal) return;
 
-    // Sinh mã khách hàng tự động dạng CUS-26110001
-    const newId = generateAutoCode('CUS', db.customers || []);
-
+    const newId = generateAutoId('customers');
     const newCust = {
       id: newId,
       name: nameVal,
@@ -2244,7 +2301,6 @@ function renderSalesOrderForm(c) {
     if (!db.customers) db.customers = [];
     db.customers.push(newCust);
 
-    // LƯU VĨNH VIỄN VÀO CSDL (Tùy thuộc tên hàm save DB trong dự án của bạn)
     if (typeof saveToDatabase === 'function') {
       await saveToDatabase('customers', newCust);
     } else if (typeof saveItem === 'function') {
@@ -2253,7 +2309,6 @@ function renderSalesOrderForm(c) {
 
     closeQuickCustomerDrawer();
 
-    // Cập nhật lại form đơn bán hàng
     d.customer = nameVal;
     d.phone = phoneVal;
     render();
