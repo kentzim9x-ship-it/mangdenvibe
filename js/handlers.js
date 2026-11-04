@@ -1646,8 +1646,12 @@ function handleOrderPhoneInput(phoneVal) {
   const noticeEl = document.getElementById('phoneNotice');
 
   if (noticeEl) noticeEl.style.display = 'none';
-
   if (!checkBtn) return;
+
+  // Nếu nút đang là "Thêm mới", giữ nguyên trạng thái để người dùng click
+  if (checkBtn.innerText.trim() === 'Thêm mới') {
+    return;
+  }
 
   if (!selectCust && cleanPhone.trim().length > 0) {
     checkBtn.disabled = false;
@@ -1663,7 +1667,9 @@ function handleOrderPhoneInput(phoneVal) {
   }
 }
 
-function handleCheckOrAddCustomerPhone() {
+function handleCheckOrAddCustomerPhone(e) {
+  if (e) e.preventDefault(); // Ngăn ngừa reload/submit form
+
   const phoneInput = document.getElementById('so-phone-input');
   const phone = phoneInput ? phoneInput.value.trim() : '';
   const btnCheck = document.getElementById('so-check-phone-btn');
@@ -1676,37 +1682,35 @@ function handleCheckOrAddCustomerPhone() {
 
   // 1. Nếu nút ĐÃ LÀ "Thêm mới" -> Mở Drawer ngay lập tức
   if (btnCheck && btnCheck.innerText.trim() === 'Thêm mới') {
-    if (typeof openQuickCustomerDrawer === 'function') {
-      openQuickCustomerDrawer(phone);
-    } else if (window.openQuickCustomerDrawer) {
-      window.openQuickCustomerDrawer(phone);
-    }
+    openQuickCustomerDrawer(phone);
     return;
   }
 
-  // 2. Nếu nút đang là "Kiểm tra" -> Thực hiện kiểm tra SĐT trong hệ thống
+  // 2. Nếu nút đang là "Kiểm tra" -> Thực hiện kiểm tra SĐT trong CSDL
   const foundCustomer = (db.customers || []).find(c => (c.phone || '').trim() === phone);
 
   if (!foundCustomer) {
-    // Không có trong CSDL -> Đổi chữ nút thành "Thêm mới" và hiện thông báo đỏ
+    // Không có trong CSDL -> Chuyển nút sang trạng thái "Thêm mới"
     if (noticeEl) {
       noticeEl.innerText = "* Khách hàng chưa có trong hệ thống";
       noticeEl.style.display = "block";
     }
 
     if (btnCheck) {
+      btnCheck.disabled = false; // Đảm bảo nút không bị disabled
       btnCheck.innerText = "Thêm mới";
       btnCheck.classList.add('btn-add-new');
       btnCheck.style.opacity = '1';
       btnCheck.style.cursor = 'pointer';
-      // Gán trực tiếp lệnh mở Drawer khi bấm click tiếp theo
-      btnCheck.onclick = function (e) {
-        if (e) e.preventDefault();
+
+      // Gán sự kiện click trực tiếp để mở Drawer
+      btnCheck.onclick = function (event) {
+        if (event) event.preventDefault();
         openQuickCustomerDrawer(phone);
       };
     }
   } else {
-    // Đã có trong CSDL -> Tự động điền thông tin Khách hàng vào Form
+    // Đã có trong CSDL -> Tự động điền thông tin
     if (noticeEl) noticeEl.style.display = "none";
 
     if (state.formData) {
