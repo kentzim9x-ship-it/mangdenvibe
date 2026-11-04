@@ -1773,8 +1773,6 @@ window.closeQuickCustomerDrawer = function () {
   if (drawer) drawer.style.display = 'none';
 };
 
-window.handleCheckOrAddCustomerPhone = handleCheckOrAddCustomerPhone;
-
 async function saveQuickCustomer() {
   const nameVal = (document.getElementById('quick-cust-name')?.value || '').trim();
   const phoneVal = (document.getElementById('quick-cust-phone')?.value || '').trim();
