@@ -1669,11 +1669,26 @@ function handleCheckOrAddCustomerPhone() {
   const btnCheck = document.getElementById('so-check-phone-btn');
   const noticeEl = document.getElementById('phoneNotice');
 
-  if (!phone) return;
+  if (!phone) {
+    if (typeof showAlert === 'function') showAlert('Vui lòng nhập số điện thoại!', 'Thông báo');
+    return;
+  }
 
+  // 1. Nếu nút ĐÃ LÀ "Thêm mới" -> Mở Drawer ngay lập tức
+  if (btnCheck && btnCheck.innerText.trim() === 'Thêm mới') {
+    if (typeof openQuickCustomerDrawer === 'function') {
+      openQuickCustomerDrawer(phone);
+    } else if (window.openQuickCustomerDrawer) {
+      window.openQuickCustomerDrawer(phone);
+    }
+    return;
+  }
+
+  // 2. Nếu nút đang là "Kiểm tra" -> Thực hiện kiểm tra SĐT trong hệ thống
   const foundCustomer = (db.customers || []).find(c => (c.phone || '').trim() === phone);
 
   if (!foundCustomer) {
+    // Không có trong CSDL -> Đổi chữ nút thành "Thêm mới" và hiện thông báo đỏ
     if (noticeEl) {
       noticeEl.innerText = "* Khách hàng chưa có trong hệ thống";
       noticeEl.style.display = "block";
@@ -1682,11 +1697,16 @@ function handleCheckOrAddCustomerPhone() {
     if (btnCheck) {
       btnCheck.innerText = "Thêm mới";
       btnCheck.classList.add('btn-add-new');
-      btnCheck.onclick = function () {
+      btnCheck.style.opacity = '1';
+      btnCheck.style.cursor = 'pointer';
+      // Gán trực tiếp lệnh mở Drawer khi bấm click tiếp theo
+      btnCheck.onclick = function (e) {
+        if (e) e.preventDefault();
         openQuickCustomerDrawer(phone);
       };
     }
   } else {
+    // Đã có trong CSDL -> Tự động điền thông tin Khách hàng vào Form
     if (noticeEl) noticeEl.style.display = "none";
 
     if (state.formData) {
@@ -1696,12 +1716,16 @@ function handleCheckOrAddCustomerPhone() {
 
     if (btnCheck) {
       btnCheck.innerText = "Kiểm Tra";
+      btnCheck.classList.remove('btn-add-new');
       btnCheck.onclick = handleCheckOrAddCustomerPhone;
     }
 
     if (typeof render === 'function') render();
   }
 }
+
+// Gán ra window để HTML gọi trực tiếp từ thuộc tính onclick="..."
+window.handleCheckOrAddCustomerPhone = handleCheckOrAddCustomerPhone;
 
 // Drawer Thêm nhanh khách hàng chuẩn gán vào window
 window.openQuickCustomerDrawer = function (phoneStr) {
