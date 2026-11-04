@@ -493,20 +493,28 @@ function getFilterBar(options) {
 function generateAutoId(module) {
   const collection = db[module === 'sales-orders' ? 'orders' : module] || [];
 
+  // 1. DANH MỤC HÀNG HÓA: SKU-YYMM0001
   if (module === 'materials') {
+    const prefix = `SKU-${yy}${mm}`;
     const maxNum = collection.reduce((m, x) => {
-      const match = (x.id || '').match(/SKU-(\d+)/i);
+      const currentId = String(x.id || x.code || '');
+      const regex = new RegExp(`^${prefix}(\\d+)`, 'i');
+      const match = currentId.match(regex);
       return match ? Math.max(m, parseInt(match[1], 10)) : m;
     }, 0);
-    return `SKU-${String(maxNum + 1).padStart(4, '0')}`;
+    return `${prefix}${String(maxNum + 1).padStart(4, '0')}`;
   }
 
+  // 2. DANH MỤC KHÁCH HÀNG: CUS-YYMM0001
   if (module === 'customers') {
+    const prefix = `CUS-${yy}${mm}`;
     const maxNum = collection.reduce((m, x) => {
-      const match = (x.id || '').match(/CUS-(\d+)/i);
+      const currentId = String(x.id || x.code || '');
+      const regex = new RegExp(`^${prefix}(\\d+)`, 'i');
+      const match = currentId.match(regex);
       return match ? Math.max(m, parseInt(match[1], 10)) : m;
     }, 0);
-    return `CUS-${String(maxNum + 1).padStart(4, '0')}`;
+    return `${prefix}${String(maxNum + 1).padStart(4, '0')}`;
   }
 
   if (module === 'warehouses') {

@@ -1674,68 +1674,74 @@ function renderQuotationForm(c) {
   const hasPermission = checkModulePermission('quotations');
   d.lineItems = Array.isArray(d.lineItems) ? d.lineItems : [];
 
-  const isDetailsDisabled = !isView && state.mode === 'add' && !d.customer;
-
+  // TÍNH TOÁN TỔNG TIỀN (Dựa trên Số lượng * Giá bán)
   d.subtotal = d.lineItems.reduce((s, l) => s + ((l.qty || 0) * (l.unitPrice || 0)), 0);
   d.discountTotal = d.lineItems.reduce((s, l) => s + ((l.qty || 0) * (l.unitPrice || 0) * ((l.discount || 0) / 100)), 0);
-
   d.tax = d.lineItems.reduce((s, l) => {
     const lineSub = (l.qty || 0) * (l.unitPrice || 0) * (1 - (l.discount || 0) / 100);
     return s + (lineSub * ((l.tax || 0) / 100));
   }, 0);
-
   d.total = d.subtotal - d.discountTotal + d.tax;
 
-  let datalistEl = document.getElementById('global-materials-list');
-  if (!datalistEl) {
-    datalistEl = document.createElement('datalist');
-    datalistEl.id = 'global-materials-list';
-    document.body.appendChild(datalistEl);
-  }
-
-  const sortedMaterials = JSON.parse(JSON.stringify(db.materials || [])).sort((a, b) =>
-    (a.id || '').localeCompare(b.id || '', undefined, { numeric: true, sensitivity: 'base' })
-  );
-
-  datalistEl.innerHTML = sortedMaterials.map(m =>
-    `<option value="${m.name}">${m.id} - ${m.name} (${fmtUSD(m.cost || 0)})</option>`
-  ).join('');
-
   const customerOptions = (db.customers || []).map(cust =>
-    `<option value="${cust.name}" ${d.customer === cust.name ? 'selected' : ''}>${cust.name}</option>`
+    `<option value="${cust.name || ''}" ${d.customer === cust.name ? 'selected' : ''}>${cust.name || ''}</option>`
   ).join('');
 
+  // ĐIỀU CHỈNH GRID LAYOUT BỔ SUNG THÊM CỘT GIÁ THUÊ
   const gridLayout = isView
-    ? "10px 100px minmax(180px, 1.5fr) 55px 70px 100px 70px 70px 120px"
-    : "10px 100px minmax(180px, 1.5fr) 55px 70px 100px 70px 70px 120px 32px";
+    ? "10px 100px minmax(170px, 1.5fr) 60px 65px 85px 85px 60px 60px 110px"
+    : "10px 100px minmax(170px, 1.5fr) 60px 65px 85px 85px 60px 60px 110px 32px";
 
   const linesHtml = d.lineItems.map((l, idx) => {
-    const lineSub = (l.qty || 0) * (l.unitPrice || 0) * (1 - (l.discount || 0) / 100);
-    const lineTotal = lineSub * (1 + (l.tax || 0) / 100);
-    const mat = (db.materials || []).find(m => m.id === l.sku || m.name === l.name);
-    const unitName = mat ? (mat.unit || '—') : '—';
+    const mat = (db.materials || []).find(m => (l.sku && m.id === l.sku) || (l.name && m.name === l.name));
+    const unitName = mat ? (mat.unit || '—') : (l.unit || '—');
+
+    const qty = Number(l.qty) || 0;
+    const price = Number(l.unitPrice) || 0; // Giá Bán
+    const hirePrice = Number(l.hirePrice) || 0; // Giá Thuê (mặc định 0)
+    const disc = Number(l.discount) || 0;
+    const tax = Number(l.tax) || 0;
+    const lineSub = qty * price * (1 - disc / 100);
+    const lineTotal = lineSub * (1 + tax / 100);
 
     return `
-      <div style="display: grid; grid-template-columns: ${gridLayout}; gap: 6px; padding: 10px 16px 10px 10px; border-bottom: 1px solid var(--border); align-items: center; ${isDetailsDisabled ? 'opacity: 0.5; pointer-events: none;' : ''}">
-        <span style="font-family: var(--font-dm-mono, monospace); font-size: 10px; font-weight: 400; color: var(--muted-foreground); min-width: 12px; text-align: right; user-select: none;">
+      <div style="display: grid; grid-template-columns: ${gridLayout}; gap: 6px; padding: 10px 16px 10px 10px; border-bottom: 1px solid var(--border); align-items: center;">
+        <span style="font-family: var(--font-dm-mono, monospace); font-size: 10px; font-weight: 400; color: var(--muted-foreground); min-width: 14px; text-align: right; user-select: none;">
           ${idx + 1}.
         </span>
         <input type="text" id="line-item-${l.lineId}-sku" class="form-input" style="padding: 6px 8px; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; color: var(--primary);" value="${l.sku || ''}" readonly title="Mã hàng tự động">
         
-        <input type="text" id="line-item-${l.lineId}-name" autocomplete="off" ${(isView || isDetailsDisabled) ? '' : 'list="global-materials-list"'} class="form-input" style="padding: 6px 8px; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" value="${l.name || ''}" ${(isView || isDetailsDisabled) ? 'readonly' : 'onkeydown="handleLineItemKeyDown(event, \'quotations\', ' + idx + ', \'name\')" onchange="handleMaterialSelectInLine(\'' + l.lineId + '\', this.value)"'} placeholder="${isDetailsDisabled ? 'Vui lòng chọn khách hàng...' : 'Chọn/nhập tên hàng...'}" required>
+        <input type="text" id="line-item-${l.lineId}-name" autocomplete="off" ${isView ? '' : 'list="global-materials-list"'} class="form-input" style="padding: 6px 8px; ${isView ? 'background: var(--muted); cursor: not-allowed;' : ''}" value="${l.name || ''}" ${isView ? 'readonly' : `onkeydown="handleLineItemKeyDown(event, 'quotations', ${idx}, 'name')" onchange="handleMaterialSelectInLine('${l.lineId}', this.value)"`} placeholder="Chọn/nhập tên hàng..." required>
         
-        <input type="text" id="line-item-${l.lineId}-unit" class="form-input" style="padding: 6px 8px; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; text-align: center;" value="${unitName}" readonly title="Đơn vị tính">
+        <input type="text" id="line-item-${l.lineId}-unit" class="form-input" style="padding: 6px 6px; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; text-align: center;" value="${unitName}" readonly title="Đơn vị tính từ danh mục hàng">
         
-        <input type="number" id="line-item-${l.lineId}-qty" step="any" inputmode="decimal" class="form-input" style="padding: 6px 8px; text-align: right; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" value="${l.qty ?? 1}" ${(isView || isDetailsDisabled) ? 'readonly' : `onkeydown="handleLineItemKeyDown(event, 'quotations', ${idx}, 'qty')" onchange="updateLine('${l.lineId}', 'qty', this.value, 'number')"`}>
+        <input type="number" id="line-item-${l.lineId}-qty" step="any" inputmode="decimal" class="form-input" style="padding: 6px 6px; text-align: right; ${isView ? 'background: var(--muted); cursor: not-allowed;' : ''}" value="${l.qty ?? 1}" ${isView ? 'readonly' : `onkeydown="handleLineItemKeyDown(event, 'quotations', ${idx}, 'qty')" onchange="updateLine('${l.lineId}', 'qty', this.value, 'number')"`}>
         
+        <!-- CỘT GIÁ THUÊ (MẶC ĐỊNH BẰNG 0) -->
+        <input 
+          type="text" 
+          id="line-item-${l.lineId}-hirePrice"
+          inputmode="numeric"
+          class="form-input" 
+          style="padding: 6px 6px; text-align: right; ${isView ? 'background: var(--muted); cursor: not-allowed;' : ''}" 
+          value="${(l.hirePrice ?? 0).toLocaleString('vi-VN')}" 
+          ${isView ? 'readonly' : `
+            onkeydown="handleLineItemKeyDown(event, 'quotations', ${idx}, 'hirePrice')"
+            onfocus="this.value = parseNumberInput(this.value) || ''" 
+            onblur="this.value = formatVNDInput(this.value)" 
+            onchange="updateLine('${l.lineId}', 'hirePrice', parseNumberInput(this.value), 'number')"
+          `}
+        >
+
+        <!-- CỘT GIÁ BÁN (ĐỔI TÊN TỪ ĐƠN GIÁ) -->
         <input 
           type="text" 
           id="line-item-${l.lineId}-unitPrice"
           inputmode="numeric"
           class="form-input" 
-          style="padding: 6px 8px; text-align: right; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" 
+          style="padding: 6px 6px; text-align: right; ${isView ? 'background: var(--muted); cursor: not-allowed;' : ''}" 
           value="${(l.unitPrice ?? 0).toLocaleString('vi-VN')}" 
-          ${(isView || isDetailsDisabled) ? 'readonly' : `
+          ${isView ? 'readonly' : `
             onkeydown="handleLineItemKeyDown(event, 'quotations', ${idx}, 'unitPrice')"
             onfocus="this.value = parseNumberInput(this.value) || ''" 
             onblur="this.value = formatVNDInput(this.value)" 
@@ -1743,129 +1749,128 @@ function renderQuotationForm(c) {
           `}
         >
         
-        <input type="number" id="line-item-${l.lineId}-discount" step="any" inputmode="decimal" class="form-input" style="padding: 6px 8px; text-align: right; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" value="${l.discount ?? 0}" ${(isView || isDetailsDisabled) ? 'readonly' : `onkeydown="handleLineItemKeyDown(event, 'quotations', ${idx}, 'discount')" onchange="updateLine('${l.lineId}', 'discount', this.value, 'number')"`}>
+        <input type="number" id="line-item-${l.lineId}-discount" step="any" inputmode="decimal" class="form-input" style="padding: 6px 6px; text-align: right; ${isView ? 'background: var(--muted); cursor: not-allowed;' : ''}" value="${l.discount ?? 0}" ${isView ? 'readonly' : `onkeydown="handleLineItemKeyDown(event, 'quotations', ${idx}, 'discount')" onchange="updateLine('${l.lineId}', 'discount', this.value, 'number')"`}>
         
-        <input type="number" id="line-item-${l.lineId}-tax" step="any" inputmode="decimal" class="form-input" style="padding: 6px 8px; text-align: right; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" value="${l.tax ?? 0}" ${(isView || isDetailsDisabled) ? 'readonly' : `onkeydown="handleLineItemKeyDown(event, 'quotations', ${idx}, 'tax')" onchange="updateLine('${l.lineId}', 'tax', this.value, 'number')"`}>
+        <input type="number" id="line-item-${l.lineId}-tax" step="any" inputmode="decimal" class="form-input" style="padding: 6px 6px; text-align: right; ${isView ? 'background: var(--muted); cursor: not-allowed;' : ''}" value="${l.tax ?? 0}" ${isView ? 'readonly' : `onkeydown="handleLineItemKeyDown(event, 'quotations', ${idx}, 'tax')" onchange="updateLine('${l.lineId}', 'tax', this.value, 'number')"`}>
         
-        <div style="font-family: var(--font-dm-mono); text-align: right; font-weight: 500;">${fmtUSD(lineTotal)}</div>
-        ${(!isView && !isDetailsDisabled) ? `<button type="button" style="background: none; border: none; cursor: pointer; color: var(--muted-foreground); display: flex; align-items: center; justify-content: center;" onclick="removeLineItem('${l.lineId}')">${Icons.trash}</button>` : ''}
+        <div style="font-family: var(--font-dm-mono); text-align: right; font-weight: 500; font-size: 12px;">${fmtUSD(lineTotal)}</div>
+        ${!isView ? `<button type="button" style="background: none; border: none; cursor: pointer; color: var(--muted-foreground); display: flex; align-items: center; justify-content: center;" onclick="removeLineItem('${l.lineId}')">${Icons.trash}</button>` : ''}
       </div>
-`;
+    `;
   }).join('');
 
   c.innerHTML = `
     <div style="max-width: 1050px;">
-      ${getBreadcrumb('Báo giá', isView ? `Xem ${d.id || ''}` : (isEdit ? `Chỉnh sửa ${d.id || ''}` : 'Tạo báo giá mới'), 'quotations')}
+      ${getBreadcrumb('Bảng Báo Giá', isView ? `Xem ${d.id || ''}` : (isEdit ? `Chỉnh sửa ${d.id || ''}` : 'Tạo báo giá mới'), 'quotations')}
       <form onsubmit="event.preventDefault(); saveForm('quotations');">
 
         <input type="hidden" value="${d.id || ''}">
 
-          <div class="section-panel">
-            <div class="section-header">
-              <span class="section-num">01</span>
-              <span class="section-title">Thông tin báo giá</span>
+        <div class="section-panel">
+          <div class="section-header">
+            <span class="section-num">01</span>
+            <span class="section-title">Thông tin báo giá</span>
+          </div>
+          <div class="section-body grid-2">
+            <div class="form-group">
+              <label class="form-label">Khách hàng *</label>
+              <select class="form-select" ${isView ? 'disabled style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'customer\', this.value)"'} required>
+                <option value="">-- Chọn khách hàng --</option>
+                ${customerOptions}
+              </select>
             </div>
-            <div class="section-body grid-3">
-              <div class="form-group" style="grid-column: span 2;">
-                <label class="form-label">Khách hàng *</label>
-                <select class="form-select" ${(isView || isEdit) ? 'disabled style="background: var(--muted); cursor: not-allowed;"' : 'onchange="handleCustomerSelectInQuotation(this.value)"'} required>
-                  <option value="">-- Chọn khách hàng --</option>
-                  ${customerOptions}
-                </select>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Ngày lập phiếu *</label>
-                <input type="date" class="form-input" value="${d.date || getTodayDateStr()}" ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'date\', this.value)"'} required>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Ngày bắt đầu *</label>
-                <input type="date" class="form-input" value="${d.validbegin || d.validBegin || getFirstDayOfMonthStr()}" ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'validbegin\', this.value)"'} required>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Ngày kết thúc *</label>
-                <input type="date" class="form-input" value="${d.validUntil || d.validuntil || ''}" ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'validUntil\', this.value)"'} required>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Trạng thái</label>
-                <select class="form-select" ${isView ? 'disabled style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'status\', this.value)"'}>
-                  <option value="accepted" ${['accepted', 'approved', 'Duyệt'].includes(d.status) ? 'selected' : ''}>Duyệt</option>
-                  <option value="pending" ${['pending', 'draft', 'bản nháp', 'Chờ Duyệt'].includes(d.status) || !d.status ? 'selected' : ''}>Chờ Duyệt</option>
-                  <option value="rejected" ${['rejected', 'Từ Chối'].includes(d.status) ? 'selected' : ''}>Từ Chối</option>
-                  <option value="expired" ${['expired', 'Hết Hạn'].includes(d.status) ? 'selected' : ''}>Hết Hạn</option>
-                </select>
-              </div>
+            <div class="form-group">
+              <label class="form-label">Ngày lập phiếu *</label>
+              <input type="date" class="form-input" value="${d.date || getTodayDateStr()}" ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'date\', this.value)"'} required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Ngày bắt đầu *</label>
+              <input type="date" class="form-input" value="${d.validbegin || getTodayDateStr()}" ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'validbegin\', this.value)"'} required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Ngày kết thúc *</label>
+              <input type="date" class="form-input" value="${d.validUntil || getTodayDateStr()}" ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'validUntil\', this.value)"'} required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Trạng thái</label>
+              <select class="form-select" ${isView ? 'disabled style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'status\', this.value)"'}>
+                <option value="accepted" ${(!d.status || ['accepted', 'approved', 'duyệt', 'đã duyệt'].includes((d.status || '').toLowerCase())) ? 'selected' : ''}>Duyệt</option>
+                <option value="pending" ${d.status && ['pending', 'chờ duyệt'].includes((d.status || '').toLowerCase()) ? 'selected' : ''}>Chờ duyệt</option>
+                <option value="rejected" ${d.status && ['rejected', 'từ chối'].includes((d.status || '').toLowerCase()) ? 'selected' : ''}>Từ chối</option>
+                <option value="expired" ${d.status && ['expired', 'hết hạn'].includes((d.status || '').toLowerCase()) ? 'selected' : ''}>Hết hạn</option>
+              </select>
+            </div>
+            <div class="form-group" style="grid-column: span 2;">
+              <label class="form-label">Ghi chú</label>
+              <textarea class="form-textarea" rows="2" style="resize: vertical; ${isView ? 'background: var(--muted); cursor: not-allowed;' : ''}" ${isView ? 'readonly' : 'onchange="updateField(\'notes\', this.value)"'} placeholder="Nhập thông tin ghi chú (tùy chọn)...">${d.notes || ''}</textarea>
+            </div>
+          </div>
+        </div>
 
-              <div class="form-group" style="grid-column: span 3; margin-top: 6px;">
-                <label class="form-label">Ghi chú</label>
-                <textarea class="form-textarea" rows="2" style="resize: vertical; ${isView ? 'background: var(--muted); cursor: not-allowed;' : ''}" ${isView ? 'readonly' : 'onchange="updateField(\'notes\', this.value)"'} placeholder="Nhập thông tin ghi chú (tùy chọn)...">${d.notes || ''}</textarea>
-              </div>
+        <div class="section-panel">
+          <div class="section-header" style="justify-content: space-between;">
+            <div style="display:flex; gap:10px;"><span class="section-num">02</span><span class="section-title">Danh sách sản phẩm</span></div>
+            ${getAddLineButton('quotations', false, 'header')}
+          </div>
+
+          <div style="overflow-x: auto;">
+            <!-- TIÊU ĐỀ BẢNG CỦA MỤC 02 -->
+            <div style="display: grid; grid-template-columns: ${gridLayout}; gap: 6px; padding: 10px 16px 10px 10px; background: var(--secondary); border-bottom: 1px solid var(--border); align-items: center; min-width: 950px; box-sizing: border-box;">
+              <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;"></span>
+              <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Mã SKU</span>
+              <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Tên Hàng</span>
+              <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">ĐVT</span>
+              <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Số Lượng</span>
+              <!-- CỘT MỚI: GIÁ THUÊ -->
+              <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Giá Thuê</span>
+              <!-- ĐỔI TÊN: GIÁ BÁN -->
+              <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Giá Bán</span>
+              <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">CK%</span>
+              <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Thuế%</span>
+              <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Thành Tiền</span>
+              ${!isView ? `<span></span>` : ''}
+            </div>
+
+            <div style="min-width: 950px;">
+              ${linesHtml}
             </div>
           </div>
 
-          <div class="section-panel">
-            <div class="section-header" style="justify-content: space-between;">
-              <div style="display:flex; gap:10px;"><span class="section-num">02</span><span class="section-title">Danh sách sản phẩm</span></div>
-              <!-- Nút Header: Tự động ẩn trên PC -->
-              ${getAddLineButton('quotations', isDetailsDisabled, 'header')}
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 26px 10px 26px; flex-wrap: wrap; gap: 12px;">
+            <div style="width: 110px; flex-shrink: 0;">
+              ${getAddLineButton('quotations', false, 'footer')}
             </div>
-
-            <div style="overflow-x: auto;">
-              <div style="display: grid; grid-template-columns: ${gridLayout}; gap: 6px; padding: 10px 16px 10px 10px; background: var(--secondary); border-bottom: 1px solid var(--border); align-items: center; min-width: 850px; box-sizing: border-box;">
-                <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;"></span>
-                <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Mã Hàng</span>
-                <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Tên sản phẩm</span>
-                <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Đơn Vị</span>
-                <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Số Lượng</span>
-                <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Đơn Giá</span>
-                <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Chiết Khấu %</span>
-                <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Thuế %</span>
-                <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Thành tiền</span>
-                ${!isView ? `<span></span>` : ''}
-              </div>
-
-              <!-- DANH SÁCH CÁC DÒNG SẢN PHẨM -->
-              <div style="min-width: 850px;">
-                ${linesHtml}
-              </div>
-            </div>
-
-            <!-- CẤU TRÚC PHÍA DƯỚI: NÚT THÊM DÒNG THẲNG HÀNG MÃ HÀNG & CÙNG HÀNG NGANG VỚI TẠM TÍNH -->
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 26px 10px 26px; flex-wrap: wrap; gap: 12px;">
-              <!-- Khung chứa nút Thêm Dòng: Chiều rộng cố định khớp đúng cột Mã hàng -->
-              <div style="width: 110px; flex-shrink: 0;">
-                ${getAddLineButton('quotations', isDetailsDisabled, 'footer')}
-              </div>
-              <div style="display: flex; flex-direction: column; gap: 6px; min-width: 260px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; height: 36px;"><span class="form-label" style="margin:0;">Tạm tính</span><span style="font-family: var(--font-dm-mono);">${fmtUSD(d.subtotal)}</span></div>
-                <div style="display: flex; justify-content: space-between;"><span class="form-label">Chiết khấu</span><span style="font-family: var(--font-dm-mono);">-${fmtUSD(d.discountTotal)}</span></div>
-                <div style="display: flex; justify-content: space-between;"><span class="form-label">Tổng Thuế</span><span style="font-family: var(--font-dm-mono);">${fmtUSD(d.tax)}</span></div>
-                <div style="display: flex; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 8px; margin-top: 2px;"><span class="form-label" style="font-weight: 600;">Tổng cộng</span><span style="font-family: var(--font-dm-mono); font-size: 15px; color: var(--foreground); font-weight: 500;">${fmtUSD(d.total)}</span></div>
-              </div>
+            <div style="display: flex; flex-direction: column; gap: 6px; min-width: 260px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; height: 36px;"><span class="form-label" style="margin:0;">Tạm tính</span><span style="font-family: var(--font-dm-mono);">${fmtUSD(d.subtotal)}</span></div>
+              <div style="display: flex; justify-content: space-between;"><span class="form-label">Chiết khấu</span><span style="font-family: var(--font-dm-mono);">-${fmtUSD(d.discountTotal)}</span></div>
+              <div style="display: flex; justify-content: space-between;"><span class="form-label">Tổng Thuế</span><span style="font-family: var(--font-dm-mono);">${fmtUSD(d.tax)}</span></div>
+              <div style="display: flex; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 8px; margin-top: 2px;"><span class="form-label" style="font-weight: 600;">Tổng cộng</span><span style="font-family: var(--font-dm-mono); font-size: 15px; color: var(--primary); font-weight: 500;">${fmtUSD(d.total)}</span></div>
             </div>
           </div>
+        </div>
 
-          <div class="action-bar" style="display: flex; justify-content: space-between; align-items: center;">
-            <button type="button" class="btn-cancel" style="padding: 8px 16px; font-size: 13px;" event.preventDefault(); onclick="state.mode === 'edit' ? navigate('quotations', 'view', '${d.id}') : navigate('quotations')">
-              ${isView ? 'Quay Lại' : 'Hủy'}
-            </button>
-            <div style="display: flex; gap: 8px;">                          
-              ${isView ? `
-                ${hasPermission ? `
-                  <button type="button" class="btn-action" style="padding: 8px 16px; font-size: 13px;" event.preventDefault(); onclick="navigate('quotations', 'edit', '${d.id}')">${Icons.edit} Sửa</button>
-                  <button type="button" class="btn-action btn-action-del" style="padding: 8px 16px; font-size: 13px;" onclick="deleteItem('quotations', '${d.id}')">${Icons.trash} Xóa</button>
-                ` : ''}
-                <button type="button" class="btn-primary" onclick="exportQuotationToPDF()" style="background: #e11d48; color: #ffffff; padding: 8px 16px; font-size: 13px; cursor: pointer;">Xuất PDF</button>
+        <div class="action-bar" style="display: flex; justify-content: space-between; align-items: center;">
+          <button type="button" class="btn-cancel" style="padding: 8px 16px; font-size: 13px;" onclick="state.mode === 'edit' ? navigate('quotations', 'view', '${d.id}') : navigate('quotations')">
+            ${isView ? 'Quay Lại' : 'Hủy'}
+          </button>
+          <div style="display: flex; gap: 8px;">
+            ${isView ? `
+              ${hasPermission ? `
+                <button type="button" class="btn-action" style="padding: 8px 16px; font-size: 13px;" onclick="navigate('quotations', 'edit', '${d.id}')">${Icons.edit} Sửa</button>
+                <button type="button" class="btn-action btn-action-del" style="padding: 8px 16px; font-size: 13px;" onclick="deleteItem('quotations', '${d.id}')">${Icons.trash} Xóa</button>
               ` : ''}
-              ${!isView ? `
-                <button type="submit" class="btn-submit" style="padding: 8px 16px; font-size: 13px;" ${isDetailsDisabled ? 'disabled style="opacity: 0.5; cursor: not-allowed; pointer-events: none;"' : ''}>
-                  ${state.mode === 'add' ? 'Tạo báo giá' : 'Cập nhật'}
-                </button>
-              ` : ''}
-            </div>
+              <button type="button" class="btn-primary" onclick="exportQuotationToPDF()" style="background: #e11d48; color: #ffffff; padding: 8px 16px; font-size: 13px; cursor: pointer;">Xuất PDF</button>
+            ` : ''}
+            ${!isView ? `
+              <button type="submit" class="btn-submit" style="padding: 8px 16px; font-size: 13px;">
+                ${state.mode === 'add' ? 'Tạo báo giá' : 'Cập nhật'}
+              </button>
+            ` : ''}
           </div>
+        </div>
       </form>
     </div>
-    `;
+  `;
 }
 
 function renderSalesOrderForm(c) {
@@ -1883,6 +1888,7 @@ function renderSalesOrderForm(c) {
 
   d.lineItems.forEach(l => {
     l.warehouseCode = d.warehouseCode;
+    if (l.sale_yn === undefined) l.sale_yn = true; // Mặc định là hàng bán
   });
 
   d.subtotal = d.lineItems.reduce((s, l) => s + ((l.qty || 0) * (l.unitPrice || 0)), 0);
@@ -1893,7 +1899,6 @@ function renderSalesOrderForm(c) {
   }, 0);
   d.total = d.subtotal - d.discountTotal + d.tax;
 
-  // XỬ LÝ LẤY SẢN PHẨM: GIỮ NGUYÊN THỨ TỰ BÁO GIÁ + ĐƯỜNG KẺ PHÂN CÁCH TRÊN SAFARI/PC
   const currentCustomer = (d.customer || '').trim();
   const orderDate = d.date || getTodayDateStr();
 
@@ -1928,7 +1933,6 @@ function renderSalesOrderForm(c) {
   if (activeQuotation && Array.isArray(activeQuotation.lineItems) && activeQuotation.lineItems.length > 0) {
     const matchedSkusAndNames = new Set();
 
-    // 1. Lấy đúng thứ tự và GIÁ trong Báo Giá
     activeQuotation.lineItems.forEach(qItem => {
       const qSku = (qItem.sku || qItem.id || '').trim().toLowerCase();
       const qName = (qItem.name || '').trim().toLowerCase();
@@ -1943,7 +1947,6 @@ function renderSalesOrderForm(c) {
         const matKey = (mat.id || mat.name || '').toLowerCase();
         if (!matchedSkusAndNames.has(matKey)) {
           matchedSkusAndNames.add(matKey);
-          // Gán giá báo giá ưu tiên vào object sản phẩm
           const quotedPrice = qItem.unitPrice ?? qItem.price ?? mat.unitPrice ?? mat.price ?? mat.cost ?? 0;
           inQuotationList.push({
             ...mat,
@@ -1953,7 +1956,6 @@ function renderSalesOrderForm(c) {
       }
     });
 
-    // 2. Lấy các sản phẩm còn lại và sắp xếp theo SKU tăng dần
     outQuotationList = allMaterials.filter(m => {
       const matKey = (m.id || m.name || '').toLowerCase();
       return !matchedSkusAndNames.has(matKey);
@@ -1963,7 +1965,6 @@ function renderSalesOrderForm(c) {
     outQuotationList = allMaterials.sort(sortBySkuAsc);
   }
 
-  // CẬP NHẬT HOẶC TẠO LẠI DATALIST RIÊNG DÀNH CHO FORM ĐƠN BÁN HÀNG
   let datalistEl = document.getElementById('global-materials-list');
   if (!datalistEl) {
     datalistEl = document.createElement('datalist');
@@ -1971,7 +1972,6 @@ function renderSalesOrderForm(c) {
     document.body.appendChild(datalistEl);
   }
 
-  // TẠO OPTION HIỂN THỊ ĐÚNG GIÁ BÁO GIÁ
   if (inQuotationList.length > 0 && outQuotationList.length > 0) {
     const quotedHtml = inQuotationList.map(m => {
       const priceToDisplay = m.quotedPrice ?? m.unitPrice ?? m.price ?? m.cost ?? 0;
@@ -2005,14 +2005,14 @@ function renderSalesOrderForm(c) {
     return `<option value="${wCode}" ${d.warehouseCode === wCode ? 'selected' : ''}>${wCode} - ${w.name}</option>`;
   }).join('');
 
+  // Layout Grid điều chỉnh kích thước cột Hàng bán (dạng Checkbox)
   const gridLayout = isView
-    ? "10px 100px minmax(170px, 1.5fr) 60px 70px 80px 65px 65px 90px 70px 60px 120px"
-    : "10px 100px minmax(170px, 1.5fr) 60px 70px 80px 65px 65px 90px 70px 60px 120px 32px";
+    ? "10px 100px minmax(170px, 1.5fr) 60px 70px 65px 65px 65px 90px 70px 60px 120px"
+    : "10px 100px minmax(170px, 1.5fr) 60px 70px 65px 65px 65px 90px 70px 60px 120px 32px";
 
   const linesHtml = d.lineItems.map((l, idx) => {
     const mat = (db.materials || []).find(m => (l.sku && m.id === l.sku) || (l.name && m.name === l.name));
     const unitName = mat ? (mat.unit || '—') : (l.unit || '—');
-    const isSale = Boolean(l.sale_yn);
 
     const qty = Number(l.qty) || 0;
     const price = Number(l.unitPrice) || 0;
@@ -2034,7 +2034,16 @@ function renderSalesOrderForm(c) {
         
         <input type="text" id="line-item-${l.lineId}-warehouseCode" class="form-input" style="padding: 6px 8px; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; text-align: center;" value="${d.warehouseCode || '—'}" readonly title="Mã kho từ mục 01">
 
-        <input type="text" id="line-item-${l.lineId}-type" class="form-input" style="padding: 6px 8px; text-align: center; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" value="${l.type || 'Hàng Bán'}" ${(isView || isDetailsDisabled) ? 'readonly' : `onchange="updateLine('${l.lineId}', 'type', this.value)"`}>
+        <!-- CỘT HÀNG BÁN: DẠNG NÚT TÍCH CHỌN (CHECKBOX sale_yn) -->
+        <div style="display: flex; justify-content: center; align-items: center;">
+          <input 
+            type="checkbox" 
+            id="line-item-${l.lineId}-sale_yn" 
+            style="width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary);" 
+            ${l.sale_yn !== false ? 'checked' : ''} 
+            ${(isView || isDetailsDisabled) ? 'disabled' : `onchange="updateLine('${l.lineId}', 'sale_yn', this.checked, 'boolean')"`}
+          >
+        </div>
         
         <input type="number" id="line-item-${l.lineId}-qty" step="any" inputmode="decimal" class="form-input" style="padding: 6px 6px; text-align: right; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" value="${l.qty ?? 1}" ${(isView || isDetailsDisabled) ? 'readonly' : `onkeydown="handleLineItemKeyDown(event, 'sales-orders', ${idx}, 'qty')" onchange="updateLine('${l.lineId}', 'qty', this.value, 'number')"`}>
         
@@ -2063,11 +2072,9 @@ function renderSalesOrderForm(c) {
     `;
   }).join('');
 
-  // TÍNH TOÁN LẤY SỐ ĐIỆN THOẠI CỦA KHÁCH HÀNG HIỆN TẠI NẾU ĐÃ CHỌN KHÁCH HÀNG
   const currentCustObj = (db.customers || []).find(c => c.name === d.customer);
   const initialPhone = currentCustObj ? (currentCustObj.phone || '') : (d.phone || '');
 
-  // HELPER FUNCTIONS XỬ LÝ TRỰC TIẾP TRÊN INTERFACE
   window.handleOrderCustomerSelect = function (val) {
     const cust = (db.customers || []).find(c => c.name === val);
     const phoneInput = document.getElementById('so-phone-input');
@@ -2099,7 +2106,6 @@ function renderSalesOrderForm(c) {
   };
 
   window.handleOrderPhoneInput = function (phoneVal) {
-    // Chỉ cho phép nhập ký tự số
     const cleanPhone = phoneVal.replace(/[^0-9]/g, '');
     const phoneInput = document.getElementById('so-phone-input');
     if (phoneInput && phoneInput.value !== cleanPhone) {
@@ -2140,7 +2146,6 @@ function renderSalesOrderForm(c) {
     const foundCustomer = (db.customers || []).find(c => (c.phone || '').trim() === phone);
 
     if (!foundCustomer) {
-      // Nếu KHÔNG tìm thấy trong hệ thống -> Hiện thông báo màu cam giống hệt thông báo Báo giá
       if (noticeEl) {
         noticeEl.innerText = "⚠ Khách hàng chưa có trong hệ thống";
         noticeEl.style.display = "block";
@@ -2153,7 +2158,6 @@ function renderSalesOrderForm(c) {
         };
       }
     } else {
-      // Nếu tìm thấy khách hàng
       if (noticeEl) noticeEl.style.display = "none";
       d.customer = foundCustomer.name;
       d.phone = foundCustomer.phone;
@@ -2162,7 +2166,6 @@ function renderSalesOrderForm(c) {
   };
 
   window.openQuickCustomerDrawer = function (phoneStr) {
-    // Sửa lỗi [object PointerEvent] bằng cách ép kiểu chuỗi
     const validPhone = (typeof phoneStr === 'string' || typeof phoneStr === 'number') ? phoneStr : (d.phone || '');
 
     let drawer = document.getElementById('quick-customer-drawer');
@@ -2213,14 +2216,16 @@ function renderSalesOrderForm(c) {
     }
   };
 
-  window.saveQuickCustomer = function () {
+  window.saveQuickCustomer = async function () {
     const nameVal = (document.getElementById('quick-cust-name')?.value || '').trim();
     const phoneVal = (document.getElementById('quick-cust-phone')?.value || '').trim();
     const addressVal = (document.getElementById('quick-cust-address')?.value || '').trim();
 
     if (!nameVal || !phoneVal) return;
 
-    const newId = 'KH' + String((db.customers || []).length + 1).padStart(4, '0');
+    // Sinh mã khách hàng tự động dạng CUS-26110001
+    const newId = generateAutoCode('CUS', db.customers || []);
+
     const newCust = {
       id: newId,
       name: nameVal,
@@ -2239,8 +2244,16 @@ function renderSalesOrderForm(c) {
     if (!db.customers) db.customers = [];
     db.customers.push(newCust);
 
+    // LƯU VĨNH VIỄN VÀO CSDL (Tùy thuộc tên hàm save DB trong dự án của bạn)
+    if (typeof saveToDatabase === 'function') {
+      await saveToDatabase('customers', newCust);
+    } else if (typeof saveItem === 'function') {
+      await saveItem('customers', newCust);
+    }
+
     closeQuickCustomerDrawer();
 
+    // Cập nhật lại form đơn bán hàng
     d.customer = nameVal;
     d.phone = phoneVal;
     render();
@@ -2268,7 +2281,6 @@ function renderSalesOrderForm(c) {
                 ${d.quotationId ? `<div style="font-size: 11px; color: var(--primary); font-family: var(--font-dm-mono); margin-top: 4px;">✔ Đã tự động áp dụng Báo giá: ${d.quotationId}</div>` : ''}
               </div>
 
-              <!-- THÊM TRƯỜNG SỐ ĐIỆN THOẠI VÀ NÚT KIỂM TRA -->
               <div class="form-group">
                 <label class="form-label">Số điện thoại</label>
                 <div style="display: flex; gap: 6px;">
@@ -2294,7 +2306,6 @@ function renderSalesOrderForm(c) {
                     </button>
                   ` : ''}
                 </div>
-                <!-- THÔNG BÁO TƯƠNG TỰ BÁO GIÁ: MÀU CAM, CHỮ NHỎ DM-MONO -->
                 <div id="phoneNotice" style="font-size: 11px; color: var(--primary); font-family: var(--font-dm-mono); margin-top: 4px; display: none;"></div>
               </div>
 
@@ -2327,7 +2338,6 @@ function renderSalesOrderForm(c) {
           <div class="section-panel">
             <div class="section-header" style="justify-content: space-between;">
               <div style="display:flex; gap:10px;"><span class="section-num">02</span><span class="section-title">Danh sách sản phẩm</span></div>
-              <!-- Nút Header: Tự động ẩn trên PC -->
               ${getAddLineButton('sales-orders', isDetailsDisabled, 'header')}
             </div>
 
@@ -2352,9 +2362,7 @@ function renderSalesOrderForm(c) {
             </div>
           </div>
 
-            <!-- CẤU TRÚC PHÍA DƯỚI: NÚT THÊM DÒNG THẲNG HÀNG MÃ HÀNG & CÙNG HÀNG NGANG VỚI TẠM TÍNH -->
             <div style="display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 26px 10px 26px; flex-wrap: wrap; gap: 12px;">
-              <!-- Khung chứa nút Thêm Dòng: Chiều rộng cố định khớp đúng cột Mã hàng -->
               <div style="width: 110px; flex-shrink: 0;">
                 ${getAddLineButton('sales-orders', isDetailsDisabled, 'footer')}
               </div>
