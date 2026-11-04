@@ -78,9 +78,6 @@ async function navigate(view, mode = 'list', itemId = null, extraState = null) {
 
   state.view = view;
   state.mode = mode;
-  // state.filter = 'all';
-  // state.search = '';
-  // state.page = 1;
 
   const meta = viewMeta[view] || { tag: 'HỆ THỐNG', title: 'NEXSTOCK' };
   const tagEl = document.getElementById('view-tag');
@@ -239,22 +236,18 @@ function restoreScrollPosition(view) {
     window.scrollTo({ top: targetY, behavior: 'instant' });
   };
 
-  // Thử cuộn qua nhiều chu kỳ render
   requestAnimationFrame(() => {
     doScroll();
 
-    // Dùng MutationObserver để đảm bảo khi bảng vẽ xong toàn bộ các dòng (HTML chèn xong) thì cuộn lại chuẩn xác
     const targetNode = contentBox || document.body;
     const observer = new MutationObserver((mutations, obs) => {
       doScroll();
-      // Sau khi cuộn xong thì dọn dẹp observer và xóa lưu trữ
       obs.disconnect();
       sessionStorage.removeItem(`scroll_pos_${view}`);
     });
 
     observer.observe(targetNode, { childList: true, subtree: true });
 
-    // Fallback: Tự động ngắt observer sau 500ms nếu không có thay đổi DOM thêm
     setTimeout(() => {
       doScroll();
       observer.disconnect();
@@ -279,7 +272,6 @@ function updateField(field, value, type = 'string') {
 
   state.formData[field] = parsedValue;
 
-  // Tự động tính toán lại trạng thái hàng hóa khi thay đổi tồn kho hoặc định mức
   if (state.view === 'materials' && (field === 'stock' || field === 'reorder')) {
     const stock = Number(state.formData.stock || 0);
     const reorder = Number(state.formData.reorder || 0);
@@ -329,7 +321,6 @@ function updateLine(lineId, field, value, type = 'text') {
       total += lineTotal;
     }
 
-    // Cập nhật text "Thành Tiền" ở từng dòng đang nhập
     const skuInput = document.getElementById(`line-item-${l.lineId}-sku`);
     if (skuInput && skuInput.parentElement) {
       const divs = skuInput.parentElement.querySelectorAll('div');
@@ -346,13 +337,12 @@ function updateLine(lineId, field, value, type = 'text') {
     state.formData.totalValue = total;
   }
 
-  // CẬP NHẬT KHUNG TỔNG TIỀN (BẮT CHUẨN 100%)
   const summaryDivs = document.querySelectorAll('div[style*="justify-content: space-between"]');
   summaryDivs.forEach(div => {
     const spans = div.querySelectorAll('span');
     if (spans.length >= 2) {
-      const lbl = spans[0].innerText.trim().toLowerCase(); // Đưa về chữ thường để so sánh
-      const valSpan = spans[spans.length - 1]; // Lấy giá trị ở cuối
+      const lbl = spans[0].innerText.trim().toLowerCase();
+      const valSpan = spans[spans.length - 1];
 
       if (lbl === 'tạm tính') valSpan.innerText = fmtUSD(subtotal);
       else if (lbl === 'chiết khấu') valSpan.innerText = '-' + fmtUSD(discountTotal);
@@ -386,7 +376,6 @@ function handleLineItemKeyDown(e, module, lineIndex, fieldName) {
     const lineItems = state.formData?.lineItems || [];
     const isLastRow = lineIndex === lineItems.length - 1;
 
-    // Ánh xạ tên trường Số lượng & Đơn giá cho từng module
     const fieldMapping = {
       'quotations': { name: 'name', qty: 'qty', price: 'unitPrice' },
       'sales-orders': { name: 'name', qty: 'qty', price: 'unitPrice' },
@@ -398,11 +387,6 @@ function handleLineItemKeyDown(e, module, lineIndex, fieldName) {
     const firstLineId = lineItems[0]?.lineId;
 
     if (isLastRow) {
-      // ==========================================
-      // XỬ LÝ KHI ĐANG Ở DÒNG CUỐI CÙNG
-      // ==========================================
-
-      // 1. Nếu đang ở cột Tên sản phẩm -> Nhảy lên cột Số lượng của HÀNG ĐẦU TIÊN
       if (fieldName === currentMap.name) {
         setTimeout(() => {
           const firstQtyInput = document.getElementById(`line-item-${firstLineId}-${currentMap.qty}`);
@@ -411,9 +395,7 @@ function handleLineItemKeyDown(e, module, lineIndex, fieldName) {
             if (typeof firstQtyInput.select === 'function') firstQtyInput.select();
           }
         }, 50);
-      }
-      // 2. Nếu đang ở cột Số lượng -> Nhảy lên cột Đơn giá của HÀNG ĐẦU TIÊN
-      else if (fieldName === currentMap.qty) {
+      } else if (fieldName === currentMap.qty) {
         setTimeout(() => {
           const firstPriceInput = document.getElementById(`line-item-${firstLineId}-${currentMap.price}`);
           if (firstPriceInput) {
@@ -421,16 +403,10 @@ function handleLineItemKeyDown(e, module, lineIndex, fieldName) {
             if (typeof firstPriceInput.select === 'function') firstPriceInput.select();
           }
         }, 50);
-      }
-      // 3. Nếu đang ở cột Đơn giá -> Tự động nhảy ra ngoài (hủy focus), không sang ô nào khác
-      else {
+      } else {
         targetInput.blur();
       }
-
     } else {
-      // ==========================================
-      // XỬ LÝ KHI KHÔNG PHẢI DÒNG CUỐI (NHẢY XUỐNG DÒNG DƯỚI)
-      // ==========================================
       const nextLineId = lineItems[lineIndex + 1]?.lineId;
       if (nextLineId) {
         setTimeout(() => {
@@ -497,7 +473,6 @@ async function saveForm(module) {
     return;
   }
 
-  // Validation dữ liệu cơ bản cho các chứng từ giao dịch
   if (['quotations', 'sales-orders', 'returns', 'grn'].includes(module)) {
     const lineItems = state.formData?.lineItems || [];
     for (let i = 0; i < lineItems.length; i++) {
@@ -528,7 +503,6 @@ async function saveForm(module) {
   const tableName = tableMap[module];
   const targetKey = module === 'sales-orders' ? 'orders' : (module === 'grn' ? 'grns' : module);
 
-  // Shallow copy dữ liệu form hiện tại
   let rawData = { ...state.formData };
   if (Array.isArray(state.formData.lineItems)) {
     rawData.lineItems = state.formData.lineItems.map(item => ({ ...item }));
@@ -537,9 +511,7 @@ async function saveForm(module) {
   const currentDate = getTodayDateStr();
   const currentTime = getCurrentTimeStr();
 
-  // =========================================================================
-  // 1. KIỂM TRA XUNG ĐỘT KHI SỬA (NẠP ĐẦY ĐỦ DỮ LIỆU BẢN GHI MỚI NHẤT)
-  // =========================================================================
+  // Kiểm tra xung đột dữ liệu khi chỉnh sửa
   if (state.mode === 'edit') {
     try {
       const { data: latestRecord, error: checkErr } = await supabaseClient
@@ -621,7 +593,6 @@ async function saveForm(module) {
     }
   }
 
-  // Cập nhật thông tin Người tạo / Người sửa
   if (state.mode === 'add') {
     rawData.user_id0 = currentUserId;
     rawData.date0 = currentDate;
@@ -652,7 +623,6 @@ async function saveForm(module) {
     if (rawData.creditLimit !== undefined) rawData.creditlimit = rawData.creditLimit;
   }
 
-  // Mảng chứa các công việc chạy nền (Non-blocking async background tasks)
   const asyncBackgroundTasks = [];
 
   if (module === 'quotations') {
@@ -678,7 +648,6 @@ async function saveForm(module) {
         }
       });
 
-      // Đưa query chuyển báo giá cũ sang Hết hạn vào chạy nền
       asyncBackgroundTasks.push(
         (async () => {
           try {
@@ -733,7 +702,6 @@ async function saveForm(module) {
       console.error('Lỗi chuẩn bị thông báo:', err);
     }
 
-    // CHUẨN HÓA CÁC TRƯỜNG NGÀY & HÀNG HÓA CHO QUOTATIONS
     const validUntilVal = rawData.validUntil || rawData.validuntil || '';
     const validBeginVal = rawData.validbegin || rawData.validBegin || rawData.date || '';
 
@@ -742,7 +710,6 @@ async function saveForm(module) {
     rawData.validbegin = validBeginVal;
     rawData.validBegin = validBeginVal;
 
-    // CHỈ GÁN LINEITEMS NẾU CÓ DỮ LIỆU LINEITEMS TRÁNH LỖI UNDEFINED CHO DANH MỤC
     if (Array.isArray(rawData.lineItems)) {
       rawData.lineitems = rawData.lineItems;
     }
@@ -754,9 +721,6 @@ async function saveForm(module) {
   let dbPayload = { ...rawData };
   let supabasePayload = { ...rawData };
 
-  // =========================================================================
-  // 2. TẠO PAYLOAD CHUẨN CHO TỪNG MODULE (DANH MỤC & CHỨNG TỪ)
-  // =========================================================================
   if (module === 'materials') {
     supabasePayload = {
       id: rawData.id,
@@ -768,7 +732,7 @@ async function saveForm(module) {
       reorder: Number(rawData.reorder || 0),
       cost: Number(rawData.cost || 0),
       status: rawData.status || 'ok',
-      notes: rawData.notes || '', // Lưu ghi chú
+      notes: rawData.notes || '',
       unit: rawData.unit || '',
       user_id0: rawData.user_id0,
       date0: rawData.date0,
@@ -855,13 +819,10 @@ async function saveForm(module) {
 
     if (!Array.isArray(db.grns)) db.grns = [];
 
-    // =========================================================================
-    // LOGIC TỰ ĐỘNG THÊM TẤT CẢ SẢN PHẨM Ở MỤC 02 VÀO DANH MỤC HÀNG HÓA (MATERIALS)
-    // =========================================================================
+    // Tự động thêm sản phẩm vào danh mục hàng hóa khi lập Phiếu nhập kho
     if (lineItems.length > 0) {
       if (!Array.isArray(db.materials)) db.materials = [];
 
-      // 1. Tìm Mã SKU số lớn nhất hiện có trong danh mục để cộng dồn (+1)
       let maxSkuNum = 0;
       db.materials.forEach(m => {
         const num = parseInt(String(m.id || '').replace(/\D/g, ''), 10);
@@ -872,9 +833,8 @@ async function saveForm(module) {
 
       lineItems.forEach((l) => {
         maxSkuNum++;
-        // Định dạng mã hàng tự động (ví dụ: HH0001, HH0002... hoặc 1001, 1002...)
         const newSku = `HH${String(maxSkuNum).padStart(4, '0')}`;
-        l.sku = newSku; // Gán mã SKU vừa sinh cho dòng chi tiết phiếu nhập
+        l.sku = newSku;
 
         const qtyImport = Number(l.receivedQty ?? l.qtyImport ?? 0);
         const costPrice = Number(l.unitCost ?? 0);
@@ -883,12 +843,12 @@ async function saveForm(module) {
           id: newSku,
           name: l.name ? l.name.trim() : '',
           unit: l.unit ? l.unit.trim().toUpperCase() : '',
-          category: '', // Danh mục để trống
-          location: warehouseCode, // Mã kho đẩy vào Vị trí lưu kho
-          stock: qtyImport, // SL nhập đẩy vào Tồn kho ban đầu
+          category: '',
+          location: warehouseCode,
+          stock: qtyImport,
           reorder: 0,
-          cost: costPrice, // Giá nhập đẩy vào Đơn giá
-          status: 'ok', // Mặc định Đủ Hàng
+          cost: costPrice,
+          status: 'ok',
           reserved: 0,
           user_id0: currentUserId,
           date0: currentDate,
@@ -898,10 +858,8 @@ async function saveForm(module) {
           time2: currentTime
         };
 
-        // Đưa vào bộ nhớ tạm Local
         db.materials.unshift(newMatObj);
 
-        // Đưa vào mảng insert đẩy lên CSDL Supabase
         newMaterialsToInsert.push({
           id: newMatObj.id,
           name: newMatObj.name,
@@ -922,7 +880,6 @@ async function saveForm(module) {
         });
       });
 
-      // Đưa query tự động thêm N mặt hàng vào bảng materials chạy nền Supabase
       asyncBackgroundTasks.push(
         (async () => {
           try {
@@ -957,7 +914,7 @@ async function saveForm(module) {
     const warehouseCode = rawData.warehouseCode || (db.warehouses[0] ? (db.warehouses[0].code || db.warehouses[0].id) : '');
     const lineItems = Array.isArray(rawData.lineItems) ? rawData.lineItems : [];
 
-    // TỰ ĐỘNG CẬP NHẬT TRẠNG THÁI TRONG DANH MỤC HÀNG HÓA (DB.MATERIALS)
+    // Tự động cập nhật trạng thái trong danh mục hàng hóa (db.materials)
     if (lineItems.length > 0 && Array.isArray(db.materials)) {
       const updatedMaterialsToSync = [];
 
@@ -1032,12 +989,8 @@ async function saveForm(module) {
     delete supabasePayload.lineItems;
   }
 
-  // =========================================================================
-  // 3. THỰC THI THÊM / CẬP NHẬT CSDL & RENDER LẠI GIAO DIỆN
-  // =========================================================================
   const currentMode = state.mode;
   try {
-    // Kích hoạt các task nền chạy song song
     if (asyncBackgroundTasks.length > 0) {
       Promise.all(asyncBackgroundTasks).catch(err => console.error('Lỗi task nền:', err));
     }
@@ -1053,7 +1006,6 @@ async function saveForm(module) {
       if (error) throw error;
     }
 
-    // Bảo tồn dòng sản phẩm cho Local Memory nếu là các module chứng từ
     if (['quotations', 'sales-orders', 'returns', 'grn'].includes(module)) {
       const lines = rawData.lineItems || rawData.lineitems || [];
       dbPayload.lineItems = lines;
@@ -1113,7 +1065,6 @@ async function deleteItem(module, id) {
   const confirmDelete = await showConfirm(`Bạn có chắc chắn muốn xóa thông tin có ID: ${id}?`, 'Xác nhận xóa');
 
   if (confirmDelete) {
-    // 1. ĐÁNH DẤU CỜ: Người dùng tại máy này đang chủ động xóa bản ghi này
     const targetDeleteId = String(id);
     window.isLocalDeletingId = targetDeleteId;
 
@@ -1130,28 +1081,23 @@ async function deleteItem(module, id) {
     const targetKey = module === 'sales-orders' ? 'orders' : (module === 'grn' ? 'grns' : module);
 
     try {
-      // 1. Thực hiện xóa trực tiếp trên Supabase Database
       const { error } = await supabaseClient.from(tableName).delete().eq('id', id);
       if (error) throw error;
 
-      // 2. CẬP NHẬT NGAY TRÊN BỘ NHỚ LOCAL (db[targetKey])
       if (db[targetKey]) {
         db[targetKey] = db[targetKey].filter(item => String(item.id) !== targetDeleteId);
       }
 
-      // 3. Nếu là vật tư, cập nhật lại Datalist gợi ý
       if (module === 'materials' && typeof updateGlobalMaterialDatalist === 'function') {
         updateGlobalMaterialDatalist();
       }
 
       sessionStorage.removeItem(`scroll_pos_${module}`);
 
-      // 4. XÓA CACHE TỒN KHO VÀ RENDER LẠI MÀN HÌNH DANH SÁCH TỰ ĐỘNG
       if (typeof invalidateStockCache === 'function') {
         invalidateStockCache();
       }
 
-      // 5. Thông báo xóa thành công và chuyển hướng về danh sách nếu đang ở màn hình khác
       showToast('Đã xóa bản ghi thành công!', 'success');
 
       if (state.mode !== 'list') {
@@ -1161,7 +1107,6 @@ async function deleteItem(module, id) {
         render();
       }
 
-      // 6. Đồng bộ Realtime cho các Tab/Cửa sổ khác (nếu dùng BroadcastChannel)
       if (typeof BroadcastChannel !== 'undefined') {
         const appChannel = new BroadcastChannel('app_data_sync_channel');
         appChannel.postMessage('REFRESH_DATA');
@@ -1171,7 +1116,6 @@ async function deleteItem(module, id) {
       console.error('Lỗi khi xóa bản ghi:', error);
       await showAlert('Xóa trên CSDL thất bại: ' + (error.message || error), 'Lỗi kết nối');
     } finally {
-      // 7. Dọn dẹp cờ đánh dấu sau 1.5 giây
       setTimeout(() => {
         if (window.isLocalDeletingId === targetDeleteId) {
           window.isLocalDeletingId = null;
@@ -1214,11 +1158,11 @@ function initFormData(module, id) {
         unit: '',
         category: 'Áo',
         location: '',
-        stock: 1, // Mặc định tồn kho ban đầu là 1
+        stock: 1,
         reorder: 0,
         cost: 0,
         status: 'ok',
-        notes: '' // Ô thông tin ghi chú
+        notes: ''
       };
     }
 
@@ -1262,9 +1206,9 @@ function initFormData(module, id) {
             warehouseCode: defaultWh,
             sku: '',
             name: '',
-            sale_yn: false, // Mặc định khi thêm mới không tích chọn Hàng Bán
+            sale_yn: false,
             qty: 1,
-            unitPrice: 0, // Mặc định không tích chọn Hàng Bán thì Đơn giá bằng 0
+            unitPrice: 0,
             discount: 0,
             tax: 0
           }
@@ -1298,7 +1242,6 @@ function initFormData(module, id) {
 // ==========================================
 // 7. CÁC HÀM XỬ LÝ CHỌN LỌC TỰ ĐỘNG DỮ LIỆU
 // ==========================================
-// Hàm lấy danh sách sản phẩm đã được sắp xếp theo đúng ưu tiên cho Đơn bán hàng
 
 function updateGlobalMaterialDatalist() {
   let dl = document.getElementById('global-materials-list');
@@ -1321,9 +1264,7 @@ function handleOrderSelectInReturn(orderId) {
   const safeOrderId = String(orderId || '').trim();
   state.formData.orderId = safeOrderId;
 
-  // Nếu người dùng chọn "-- Không theo đơn hàng --" (Bỏ chọn đơn)
   if (!safeOrderId) {
-    // Nếu chưa có khách hàng thì khởi tạo 1 dòng trống
     if (!state.formData.customer) {
       state.formData.lineItems = [{
         lineId: Date.now().toString(),
@@ -1337,11 +1278,9 @@ function handleOrderSelectInReturn(orderId) {
     return;
   }
 
-  // Trường hợp chọn 1 Đơn hàng bán cụ thể
   const targetOrder = (db.orders || []).find(o => String(o.id) === safeOrderId);
 
   if (targetOrder) {
-    // Tự động gắn Khách hàng từ Đơn hàng bán và sao chép các dòng sản phẩm
     state.formData.customer = targetOrder.customer || '';
 
     const rawLines = targetOrder.lineItems || targetOrder.lineitems || [];
@@ -1389,7 +1328,6 @@ function handleMaterialSelectInLine(lineId, selectedName) {
     line.name = mat.name || '';
     line.sku = mat.id || '';
     
-    // Đảm bảo sale_yn có giá trị boolean (mặc định false)
     if (line.sale_yn === undefined || line.sale_yn === null) {
       line.sale_yn = false;
     }
@@ -1397,7 +1335,6 @@ function handleMaterialSelectInLine(lineId, selectedName) {
     const currentCustomer = (state.formData.customer || '').trim();
     const orderDate = state.formData.date || getTodayDateStr();
 
-    // Tìm Báo giá hợp lệ gần nhất của Khách hàng
     let activeQuotation = null;
     if (currentCustomer) {
       activeQuotation = (db.quotations || [])
@@ -1428,13 +1365,9 @@ function handleMaterialSelectInLine(lineId, selectedName) {
       );
     }
 
-    // ÁP DỤNG QUY TẮC GIÁ THEO TRẠNG THÁI HÀNG BÁN (sale_yn)
     if (line.sale_yn) {
-      // Khi tích Hàng Bán = true: Lấy Giá bán từ Báo giá, không có -> 0
       line.unitPrice = qItem ? Number(qItem.unitPrice ?? qItem.price ?? 0) : 0;
     } else {
-      // Khi không tích Hàng Bán = false (Cho Thuê):
-      // Ưu tiên lấy Giá Thuê (hirePrice) từ Báo giá. Nếu không có -> Lấy đơn giá trong Danh mục hàng hóa
       if (qItem && qItem.hirePrice !== undefined && qItem.hirePrice !== null) {
         line.unitPrice = Number(qItem.hirePrice) || 0;
       } else {
@@ -1462,7 +1395,6 @@ async function checkAndAddNewCustomerFromOrder() {
     return;
   }
 
-  // Tự động viết hoa chữ cái đầu tiên cho tên khách hàng
   const formattedName = toTitleCase(currentCustName);
   state.formData.customer = formattedName;
 
@@ -1473,7 +1405,6 @@ async function checkAndAddNewCustomerFromOrder() {
   if (existingCustomer) {
     showToast(`Khách hàng "${formattedName}" đã có trong danh mục!`, 'info');
   } else {
-    // Mở Modal thêm nhanh Khách hàng mới với Tên đã được tự động viết hoa chữ cái đầu
     openQuickAddCustomerModal(formattedName);
   }
 }
@@ -1498,30 +1429,11 @@ function generateAutoSku() {
   return `${prefix}${String(maxNum + 1).padStart(4, '0')}`;
 }
 
-function toggleSaleYnInOrderLine(lineId, isChecked) {
-  if (!state.formData || !Array.isArray(state.formData.lineItems)) return;
-  const line = state.formData.lineItems.find(l => l.lineId === lineId);
-  if (!line) return;
-
-  line.sale_yn = Boolean(isChecked);
-
-  if (isChecked) {
-    const mat = (db.materials || []).find(m => (line.sku && m.id === line.sku) || (line.name && m.name === line.name));
-    line.unitPrice = mat ? (mat.cost || mat.price || 0) : 0;
-  } else {
-    line.unitPrice = 0;
-  }
-
-  updateLine(lineId, 'unitPrice', line.unitPrice, 'number');
-  render();
-}
-
 async function handleCustomerSelectInQuotation(customerName) {
   if (!state.formData || state.mode === 'view') return;
   const safeCustomer = String(customerName || '').trim();
   state.formData.customer = safeCustomer;
 
-  // Nếu bỏ chọn khách hàng (về ô trống)
   if (!safeCustomer) {
     state.formData.lineItems = [{
       lineId: Date.now().toString(), sku: '', name: '', qty: 1, unitPrice: 0, discount: 0, tax: 0
@@ -1530,22 +1442,17 @@ async function handleCustomerSelectInQuotation(customerName) {
     return;
   }
 
-  // Tìm báo giá gần nhất của khách hàng này
   const latestQuotation = (db.quotations || [])
     .filter(q => q && q.customer === safeCustomer)
     .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))[0];
 
-  // Nếu tìm thấy báo giá cũ có chi tiết mặt hàng
   if (latestQuotation && Array.isArray(latestQuotation.lineItems) && latestQuotation.lineItems.length > 0) {
-
-    // Hiển thị hộp thoại cảnh báo / hỏi ý kiến người dùng
     const confirmInherit = await showConfirm(
       `Khách hàng "${safeCustomer}" đã có báo giá cũ (${latestQuotation.id}). Bạn có muốn kế thừa thông tin chi tiết từ báo giá này không?`,
       'Xác nhận kế thừa báo giá'
     );
 
     if (confirmInherit) {
-      // Người dùng chọn ĐỒNG Ý -> Sao chép danh sách dòng sản phẩm từ báo giá cũ
       state.formData.lineItems = latestQuotation.lineItems.map(item => ({
         lineId: Date.now().toString() + Math.random().toString(36).substr(2, 4),
         sku: item.sku || '',
@@ -1556,19 +1463,16 @@ async function handleCustomerSelectInQuotation(customerName) {
         tax: item.tax ?? 0
       }));
     } else {
-      // Người dùng chọn HỦY BỎ -> Tạo 1 dòng trống sạch sẽ để nhập mới từ đầu
       state.formData.lineItems = [{
         lineId: Date.now().toString(), sku: '', name: '', qty: 1, unitPrice: 0, discount: 0, tax: 0
       }];
     }
   } else {
-    // Trường hợp Khách hàng chưa từng có báo giá nào trước đó
     state.formData.lineItems = [{
       lineId: Date.now().toString(), sku: '', name: '', qty: 1, unitPrice: 0, discount: 0, tax: 0
     }];
   }
 
-  // Render lại giao diện (Đồng thời mở khóa vùng nhập chi tiết sản phẩm bên dưới)
   render();
 }
 
@@ -1615,7 +1519,6 @@ async function handleCustomerSelectInOrder(customerName) {
       state.formData.quotationId = activeQuotation.id || null;
       if (Array.isArray(activeQuotation.lineItems) && activeQuotation.lineItems.length > 0) {
         state.formData.lineItems = activeQuotation.lineItems.map(item => {
-          // LẤY THEO GIÁ THUÊ (hirePrice), NẾU KHÔNG CÓ THÌ MỚI LẤY unitPrice / price / 0
           const hirePriceVal = (item.hirePrice !== undefined && item.hirePrice !== null)
             ? Number(item.hirePrice)
             : Number(item.unitPrice ?? item.price ?? 0);
@@ -1626,7 +1529,7 @@ async function handleCustomerSelectInOrder(customerName) {
             sku: item.sku || '',
             name: item.name || '',
             qty: item.qty ?? 1,
-            unitPrice: hirePriceVal, // Đã cập nhật lấy theo giá thuê
+            unitPrice: hirePriceVal,
             discount: item.discount ?? 0,
             tax: item.tax ?? 0
           };
@@ -1642,7 +1545,6 @@ async function handleCustomerSelectInOrder(customerName) {
   render();
 }
 
-// Cập nhật đơn giá khi tích/bỏ tích checkbox Hàng Bán (sale_yn) trong Đơn Bán Hàng
 function handleSaleYnChangeInLine(lineId, isSaleChecked) {
   if (!state.formData || !Array.isArray(state.formData.lineItems)) return;
   const line = state.formData.lineItems.find(l => l.lineId === lineId);
@@ -1653,7 +1555,6 @@ function handleSaleYnChangeInLine(lineId, isSaleChecked) {
   const currentCustomer = (state.formData.customer || '').trim();
   const orderDate = state.formData.date || getTodayDateStr();
 
-  // Tìm báo giá khả dụng gần nhất của khách hàng
   let activeQuotation = null;
   if (currentCustomer) {
     activeQuotation = (db.quotations || [])
@@ -1684,10 +1585,8 @@ function handleSaleYnChangeInLine(lineId, isSaleChecked) {
   }
 
   if (isSaleChecked) {
-    // TÍCH HÀNG BÁN (sale_yn = true): Lấy Giá bán từ Báo Giá, nếu không có -> 0
     line.unitPrice = qItem ? Number(qItem.unitPrice ?? qItem.price ?? 0) : 0;
   } else {
-    // KHÔNG TÍCH HÀNG BÁN (sale_yn = false): Lấy Giá Thuê từ Báo Giá, nếu không có -> Lấy Giá danh mục hàng hóa
     if (qItem && (qItem.hirePrice !== undefined && qItem.hirePrice !== null)) {
       line.unitPrice = Number(qItem.hirePrice) || 0;
     } else if (mat) {
@@ -1700,95 +1599,10 @@ function handleSaleYnChangeInLine(lineId, isSaleChecked) {
   render();
 }
 
-// 1. Khi chọn khách hàng từ ô select
-function handleSelectSOCustomer(customerId) {
-  const phoneInput = document.getElementById('so-phone-input');
-  const checkBtn = document.getElementById('btn-check-so-phone');
-
-  if (customerId) {
-    const cust = (db.customers || []).find(c => String(c.id) === String(customerId));
-    const phone = cust ? (cust.phone || '') : '';
-
-    // Cập nhật giá trị vào state & input
-    updateField('customerId', customerId);
-    updateField('customerPhone', phone);
-    if (phoneInput) phoneInput.value = phone;
-
-    // Reset nút về 'Kiểm tra' và Disable nút
-    if (checkBtn) {
-      checkBtn.innerText = 'Kiểm tra';
-      checkBtn.disabled = true;
-    }
-  } else {
-    updateField('customerId', '');
-    updateField('customerPhone', phoneInput ? phoneInput.value : '');
-    handleSOPhoneInput(phoneInput ? phoneInput.value : '');
-  }
-}
-
-// 2. Khi nhập trực tiếp ô Số điện thoại
-function handleSOPhoneInput(phoneVal) {
-  const selectCust = document.getElementById('so-customer-select');
-  const checkBtn = document.getElementById('btn-check-so-phone');
-  const trimmedPhone = phoneVal.trim();
-
-  updateField('customerPhone', trimmedPhone);
-
-  // Nếu chọn từ select thì disable nút
-  if (selectCust && selectCust.value) {
-    if (checkBtn) {
-      checkBtn.innerText = 'Kiểm tra';
-      checkBtn.disabled = true;
-    }
-    return;
-  }
-
-  // Chưa chọn khách hàng: kiểm tra ô SĐT có dữ liệu hay không
-  if (checkBtn) {
-    checkBtn.innerText = 'Kiểm tra'; // Reset label
-    checkBtn.disabled = !trimmedPhone; // Enable nếu có chuỗi SĐT
-  }
-}
-
-// 3. Xử lý khi nhấn nút "Kiểm tra" / "Thêm mới"
-async function handleCheckOrAddCustomer() {
-  const checkBtn = document.getElementById('btn-check-so-phone');
-  const phoneInput = document.getElementById('so-phone-input');
-  const phone = phoneInput ? phoneInput.value.trim() : '';
-
-  if (!phone) return;
-
-  // Nếu nút đang ở trạng thái "Thêm mới", mở Drawer
-  if (checkBtn && checkBtn.innerText.trim() === 'Thêm mới') {
-    openQuickCustomerDrawer(phone);
-    return;
-  }
-
-  // Thực hiện KIỂM TRA SĐT trong danh mục khách hàng
-  const foundCust = (db.customers || []).find(c => c.phone === phone);
-
-  if (foundCust) {
-    // Nếu ĐÃ CÓ: Chọn khách hàng đó tại ô select
-    const selectCust = document.getElementById('so-customer-select');
-    if (selectCust) {
-      selectCust.value = foundCust.id;
-      handleSelectSOCustomer(foundCust.id);
-    }
-    showAlert(`Đã tìm thấy khách hàng: ${foundCust.name}`, 'Thông báo');
-  } else {
-    // Nếu CHƯA CÓ: Đổi tên nút thành "Thêm mới"
-    if (checkBtn) {
-      checkBtn.innerText = 'Thêm mới';
-    }
-    showAlert(`Số điện thoại "${phone}" chưa có trong hệ thống. Vui lòng bấm "Thêm mới" để tạo khách hàng.`, 'Thông báo');
-  }
-}
-
 // ==========================================
 // CÁC HÀM XỬ LÝ SỰ KIỆN ĐƠN BÁN HÀNG (SALES ORDERS HANDLERS)
 // ==========================================
 
-// 1. Xử lý khi chọn Khách hàng trên form Đơn bán hàng
 function handleOrderCustomerSelect(val) {
   const cust = (db.customers || []).find(c => c.name === val);
   const phoneInput = document.getElementById('so-phone-input');
@@ -1819,7 +1633,6 @@ function handleOrderCustomerSelect(val) {
   handleCustomerSelectInOrder(val);
 }
 
-// 2. Xử lý khi gõ Số điện thoại trên form Đơn bán hàng
 function handleOrderPhoneInput(phoneVal) {
   const cleanPhone = phoneVal.replace(/[^0-9]/g, '');
   const phoneInput = document.getElementById('so-phone-input');
@@ -1850,7 +1663,6 @@ function handleOrderPhoneInput(phoneVal) {
   }
 }
 
-// 3. Kiểm tra số điện thoại hoặc gợi ý thêm mới
 function handleCheckOrAddCustomerPhone() {
   const phoneInput = document.getElementById('so-phone-input');
   const phone = phoneInput ? phoneInput.value.trim() : '';
@@ -1863,30 +1675,38 @@ function handleCheckOrAddCustomerPhone() {
 
   if (!foundCustomer) {
     if (noticeEl) {
-      noticeEl.innerText = "⚠ Khách hàng chưa có trong hệ thống";
+      noticeEl.innerText = "* Khách hàng chưa có trong hệ thống";
       noticeEl.style.display = "block";
     }
 
     if (btnCheck) {
       btnCheck.innerText = "Thêm mới";
+      btnCheck.classList.add('btn-add-new');
       btnCheck.onclick = function () {
         openQuickCustomerDrawer(phone);
       };
     }
   } else {
     if (noticeEl) noticeEl.style.display = "none";
+
     if (state.formData) {
       state.formData.customer = foundCustomer.name;
       state.formData.phone = foundCustomer.phone;
     }
-    render();
+
+    if (btnCheck) {
+      btnCheck.innerText = "Kiểm Tra";
+      btnCheck.onclick = handleCheckOrAddCustomerPhone;
+    }
+
+    if (typeof render === 'function') render();
   }
 }
 
-// 4. Mở Drawer Thêm nhanh khách hàng
-function openQuickCustomerDrawer(phoneStr) {
-  const validPhone = (typeof phoneStr === 'string' || typeof phoneStr === 'number') 
-    ? phoneStr 
+// Drawer Thêm nhanh khách hàng chuẩn gán vào window
+window.openQuickCustomerDrawer = function (phoneStr) {
+  const validPhone = (typeof phoneStr === 'string' || typeof phoneStr === 'number')
+    ? phoneStr
     : (state.formData ? state.formData.phone || '' : '');
 
   let drawer = document.getElementById('quick-customer-drawer');
@@ -1902,159 +1722,95 @@ function openQuickCustomerDrawer(phoneStr) {
     <div class="drawer-content">
       <div class="drawer-header">
         <h3>Thêm Nhanh Khách Hàng</h3>
-        <button type="button" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--foreground);" onclick="closeQuickCustomerDrawer()">✕</button>
+        <button type="button" style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="closeQuickCustomerDrawer()">&times;</button>
       </div>
       <div class="drawer-body">
         <form onsubmit="event.preventDefault(); saveQuickCustomer();">
           <div class="form-group" style="margin-bottom: 12px;">
-            <label class="form-label">Tên Công ty / Khách hàng *</label>
-            <input type="text" id="quick-cust-name" class="form-input" required placeholder="Nhập tên khách hàng..." oninput="this.value = toTitleCase(this.value);">
+            <label class="form-label">Tên Công ty / Khách hàng <span style="color:red">*</span></label>
+            <input type="text" id="quick-cust-name" class="form-input" required placeholder="Nhập tên khách hàng..." oninput="if(typeof toTitleCase==='function') this.value = toTitleCase(this.value)">
           </div>
           <div class="form-group" style="margin-bottom: 12px;">
-            <label class="form-label">Số Điện Thoại *</label>
-            <input type="tel" id="quick-cust-phone" class="form-input" value="${validPhone}" required placeholder="090x xxx xxx" oninput="this.value = this.value.replace(/[^0-9]/g, '');">
+            <label class="form-label">Số điện thoại <span style="color:red">*</span></label>
+            <input type="text" id="quick-cust-phone" class="form-input" required value="${validPhone}" placeholder="Nhập số điện thoại...">
           </div>
-          <div class="form-group" style="margin-bottom: 16px;">
-            <label class="form-label">Địa Chỉ</label>
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label class="form-label">Địa chỉ</label>
             <input type="text" id="quick-cust-address" class="form-input" placeholder="Nhập địa chỉ...">
           </div>
-          <div style="display: flex; justify-content: flex-end; gap: 8px;">
-            <button type="button" class="btn-cancel" onclick="closeQuickCustomerDrawer()">Hủy</button>
-            <button type="submit" class="btn-submit">Lưu Khách Hàng</button>
+          <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px;">
+            <button type="button" class="btn-secondary" onclick="closeQuickCustomerDrawer()">Hủy</button>
+            <button type="submit" class="btn-submit">Lưu khách hàng</button>
           </div>
         </form>
       </div>
     </div>
   `;
+  
+  drawer.style.display = 'block';
+};
 
-  setTimeout(() => drawer.classList.add('open'), 10);
-}
-
-// 5. Đóng Drawer Thêm nhanh khách hàng
-function closeQuickCustomerDrawer() {
+window.closeQuickCustomerDrawer = function () {
   const drawer = document.getElementById('quick-customer-drawer');
-  if (drawer) {
-    drawer.classList.remove('open');
-  }
-}
+  if (drawer) drawer.style.display = 'none';
+};
 
-// 6. Lưu Khách hàng tạo nhanh
+window.handleCheckOrAddCustomerPhone = handleCheckOrAddCustomerPhone;
+
 async function saveQuickCustomer() {
   const nameVal = (document.getElementById('quick-cust-name')?.value || '').trim();
   const phoneVal = (document.getElementById('quick-cust-phone')?.value || '').trim();
   const addressVal = (document.getElementById('quick-cust-address')?.value || '').trim();
 
-  if (!nameVal || !phoneVal) return;
+  if (!nameVal || !phoneVal) {
+    if (typeof showAlert === 'function') showAlert('Vui lòng điền đầy đủ Tên và Số điện thoại!', 'Cảnh báo');
+    return;
+  }
 
-  const newId = generateAutoId('customers');
-  const newCust = {
-    id: newId,
+  const newCustomerData = {
     name: nameVal,
     contact: nameVal,
     phone: phoneVal,
     address: addressVal,
-    diachi: addressVal,
     type: 'Khách vãng lai',
     paymentTerms: 'Thanh toán ngay',
     status: 'active',
-    date0: getTodayDateStr(),
-    time0: new Date().toTimeString().split(' ')[0],
-    user_id0: getAuthSession()?.user?.id || ''
-  };
-
-  if (!db.customers) db.customers = [];
-  db.customers.push(newCust);
-
-  if (typeof saveToDatabase === 'function') {
-    await saveToDatabase('customers', newCust);
-  } else if (typeof saveItem === 'function') {
-    await saveItem('customers', newCust);
-  }
-
-  closeQuickCustomerDrawer();
-
-  if (state.formData) {
-    state.formData.customer = nameVal;
-    state.formData.phone = phoneVal;
-  }
-  render();
-}
-
-// 4. Bật/Tắt Drawer trượt từ bên phải
-function openQuickCustomerDrawer(phone) {
-  const drawer = document.getElementById('quick-customer-drawer');
-  const phoneInput = document.getElementById('quick-cust-phone');
-
-  if (phoneInput) phoneInput.value = phone;
-  if (drawer) drawer.classList.add('open');
-}
-
-function closeQuickCustomerDrawer() {
-  const drawer = document.getElementById('quick-customer-drawer');
-  if (drawer) drawer.classList.remove('open');
-}
-
-// 5. Lưu thông tin thêm nhanh khách hàng
-async function submitQuickCustomer() {
-  const nameInput = document.getElementById('quick-cust-name');
-  const phoneInput = document.getElementById('quick-cust-phone');
-  const addressInput = document.getElementById('quick-cust-address');
-
-  const name = nameInput ? nameInput.value.trim() : '';
-  const phone = phoneInput ? phoneInput.value.trim() : '';
-  const address = addressInput ? addressInput.value.trim() : '';
-
-  if (!name || !phone) {
-    showAlert('Vui lòng điền đầy đủ thông tin bắt buộc!', 'Cảnh báo');
-    return;
-  }
-
-  // Chuẩn bị payload theo đúng yêu cầu
-  const newCustomerData = {
-    name: name,               // Tên công ty / khách hàng
-    contact: name,            // Người đại diện trùng với tên KH
-    phone: phone,             // SĐT vừa nhập
-    address: address,         // Địa chỉ
-    type: 'Khách vãng lai',    // Mặc định
-    paymentTerms: 'Thanh toán ngay', // Mặc định
-    status: 'active',         // Đang hoạt động
     creditLimit: 0
   };
 
   try {
-    // Lưu vào Database (Supabase)
-    const { data, error } = await supabaseClient
-      .from('customers')
-      .insert([newCustomerData])
-      .select();
+    if (typeof supabaseClient !== 'undefined') {
+      const { data, error } = await supabaseClient
+        .from('customers')
+        .insert([newCustomerData])
+        .select();
 
-    if (error) throw error;
+      if (error) throw error;
+      if (data && data[0]) {
+        if (!db.customers) db.customers = [];
+        db.customers.push(data[0]);
+      }
+    } else {
+      newCustomerData.id = generateAutoId('customers');
+      if (!db.customers) db.customers = [];
+      db.customers.push(newCustomerData);
+    }
 
-    const savedCust = data[0];
-
-    // Cập nhật bộ nhớ cục bộ local DB
-    if (!db.customers) db.customers = [];
-    db.customers.push(savedCust);
-
-    // Tự động chọn khách hàng mới tạo cho đơn hàng hiện tại
-    const selectCust = document.getElementById('so-customer-select');
-    if (selectCust) {
-      const opt = document.createElement('option');
-      opt.value = savedCust.id;
-      opt.textContent = savedCust.name;
-      selectCust.appendChild(opt);
-      selectCust.value = savedCust.id;
-
-      handleSelectSOCustomer(savedCust.id);
+    if (state.formData) {
+      state.formData.customer = nameVal;
+      state.formData.phone = phoneVal;
     }
 
     closeQuickCustomerDrawer();
-    showAlert('Thêm mới khách hàng thành công!', 'Thành công');
+    if (typeof showToast === 'function') showToast('Thêm mới khách hàng thành công!', 'success');
+    if (typeof render === 'function') render();
+
   } catch (err) {
     console.error('Lỗi khi thêm nhanh khách hàng:', err);
-    showAlert('Không thể thêm mới khách hàng. Vui lòng thử lại!', 'Lỗi');
+    if (typeof showAlert === 'function') showAlert('Không thể thêm mới khách hàng. Vui lòng thử lại!', 'Lỗi');
   }
 }
+window.saveQuickCustomer = saveQuickCustomer;
 
 async function handleSaveCustomer() {
   const phone = (state.formData?.phone || '').trim();
@@ -2065,14 +1821,12 @@ async function handleSaveCustomer() {
     return;
   }
 
-  // Kiếm tra định dạng SĐT Việt Nam
   const phoneRegex = /^(0[3|5|7|8|9])[0-9]{8}$/;
   if (!phoneRegex.test(phone)) {
     showAlert('Số điện thoại không đúng định dạng Việt Nam! (Ví dụ: 0901234567)', 'Cảnh báo định dạng');
     return;
   }
 
-  // 1. Check nhanh trong bộ nhớ Local DB
   const isDuplicateLocal = (db.customers || []).some(c =>
     c.phone === phone && String(c.id) !== String(currentId)
   );
@@ -2082,20 +1836,17 @@ async function handleSaveCustomer() {
     return;
   }
 
-  // 2. Check chính xác trên CSDL Supabase
   try {
     let query = supabaseClient
       .from('customers')
       .select('id, phone')
       .eq('phone', phone);
 
-    // Nếu đang chỉnh sửa thì bỏ qua bản ghi hiện tại
     if (state.mode === 'edit' && currentId) {
       query = query.neq('id', currentId);
     }
 
     const { data, error } = await query;
-
     if (error) throw error;
 
     if (data && data.length > 0) {
@@ -2106,7 +1857,6 @@ async function handleSaveCustomer() {
     console.error('Lỗi kiểm tra số điện thoại:', err);
   }
 
-  // Nếu không trùng thì gọi tiến trình lưu Form tiêu chuẩn
   saveForm('customers');
 }
 
@@ -2188,11 +1938,6 @@ function getSalesAnalyticsData() {
 
   const topCustomersReal = Object.values(customerMap).sort((a, b) => b.revenue - a.revenue);
 
-  // ==========================================
-  // XỬ LÝ DỮ LIỆU HOẠT ĐỘNG MỚI NHẤT & TRA CỨU HỌ TÊN USER
-  // ==========================================
-
-  // Hàm trợ giúp tra cứu Họ tên từ danh sách userinfo theo ID
   const getActorFullName = (userId) => {
     if (!userId) return '';
     const userList = db.userinfo || db.users || db.user_info || [];
@@ -2228,7 +1973,6 @@ function getSalesAnalyticsData() {
     return { isUpdated, timestamp, formattedTime, actionText };
   };
 
-  // 1. Lấy hoạt động từ danh sách Thông báo (Notifications)
   (db.notifications || []).forEach(n => {
     const formattedDate = typeof fmtDateStr === 'function' ? fmtDateStr(n.date || n.created_at) : (n.date || n.created_at);
     const timeStr = n.time ? n.time.substring(0, 5) : '';
@@ -2250,7 +1994,6 @@ function getSalesAnalyticsData() {
     });
   });
 
-  // 2. Lấy hoạt động từ Đơn bán hàng (Orders)
   (db.orders || []).forEach(o => {
     const info = extractActivityInfo(o, 'đơn hàng');
     allActivities.push({
@@ -2264,7 +2007,6 @@ function getSalesAnalyticsData() {
     });
   });
 
-  // 3. Lấy hoạt động từ Báo giá (Quotations)
   (db.quotations || []).forEach(q => {
     const info = extractActivityInfo(q, 'báo giá');
     allActivities.push({
@@ -2278,7 +2020,6 @@ function getSalesAnalyticsData() {
     });
   });
 
-  // 4. Lấy hoạt động từ Phiếu trả hàng (Returns)
   (db.returns || []).forEach(r => {
     const info = extractActivityInfo(r, 'phiếu trả hàng');
     allActivities.push({
@@ -2292,7 +2033,6 @@ function getSalesAnalyticsData() {
     });
   });
 
-  // 5. Lấy hoạt động từ Phiếu nhập kho (GRN)
   (db.grns || []).forEach(g => {
     const info = extractActivityInfo(g, 'phiếu nhập kho');
     allActivities.push({
@@ -2327,7 +2067,6 @@ function getSalesAnalyticsData() {
   };
 }
 
-// Hàm hỗ trợ bật/tắt hiển thị mật khẩu
 function togglePasswordVisibility() {
   const pwdInput = document.getElementById('login-password');
   const eyeIcon = document.getElementById('eye-icon');
@@ -2349,7 +2088,6 @@ function togglePasswordVisibility() {
   }
 }
 
-// Hàm chuẩn hóa chuỗi tìm kiếm (chống lỗi Unicode tổ hợp & khoảng trắng)
 function normalizeSearchText(str) {
   if (!str) return '';
   return String(str)
@@ -2369,13 +2107,13 @@ async function generateAndSharePDF(htmlElement, fileName, shareTitle) {
 
   const fullFileName = `${fileName}.pdf`;
   const opt = {
-    margin: [6, 8, 6, 8], // Lề trên, trái, dưới, phải (mm)
+    margin: [6, 8, 6, 8],
     filename: fullFileName,
     image: { type: 'jpeg', quality: 0.98 },
     html2canvas: { scale: 2, useCORS: true, logging: false },
     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
     pagebreak: {
-      mode: ['css', 'legacy'], // Chỉ ngắt trang theo dòng tr, không chặn toàn bộ bảng
+      mode: ['css', 'legacy'],
       avoid: ['tr', '.signature-block']
     }
   };
@@ -2384,10 +2122,8 @@ async function generateAndSharePDF(htmlElement, fileName, shareTitle) {
     const worker = html2pdf().set(opt).from(htmlElement);
     const pdfBlob = await worker.output('blob');
 
-    // Kiểm tra xem thiết bị có phải di động (Android / iOS) hay không
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-    // 1. DÀNH CHO MOBILE: MỞ BẢNG CHIA SẺ QUA ZALO
     if (isMobile && navigator.canShare) {
       const file = new File([pdfBlob], fullFileName, { type: 'application/pdf' });
       if (navigator.canShare({ files: [file] })) {
@@ -2407,7 +2143,6 @@ async function generateAndSharePDF(htmlElement, fileName, shareTitle) {
       }
     }
 
-    // 2. DÀNH CHO PC: TẢI TRỰC TIẾP FILE PDF VỀ THƯ MỤC MẶC ĐỊNH
     const url = URL.createObjectURL(pdfBlob);
     const a = document.createElement('a');
     a.href = url;
@@ -2716,14 +2451,12 @@ async function exportSalesReportToPDF() {
   const custAddress = selectedCustomer ? getCustomerAddress(selectedCustomer) : 'Tất cả địa chỉ';
   const { dayStr, monthStr, yearStr } = parseDateParts(getTodayDateStr());
 
-  // Hàm bổ trợ lấy ĐVT chuẩn
   const resolveUnit = (sku, name, itemUnit) => {
     if (itemUnit && itemUnit !== '—') return itemUnit;
     const mat = (db.materials || []).find(m => (sku && m.id === sku) || (name && m.name === name));
     return (mat && mat.unit) ? mat.unit : '—';
   };
 
-  // Lọc danh sách đơn hàng đã duyệt / hoàn thành trong tháng
   const filteredOrders = (db.orders || []).filter(o => {
     const status = (o.status || '').toLowerCase();
     const isValidStatus = ['completed', 'hoàn thành', 'accepted', 'approved', 'duyệt', 'đã duyệt'].includes(status);
@@ -2737,7 +2470,6 @@ async function exportSalesReportToPDF() {
   let totalAmount = 0;
 
   if (!isDetail) {
-    // === 1. TẠO BÁO CÁO TỔNG HỢP (CÓ CỘT STT) ===
     const itemSummaryMap = {};
     filteredOrders.forEach(o => {
       if (!selectedCustomer || (o.customer && o.customer.trim().toLowerCase() === selectedCustomer.trim().toLowerCase())) {
@@ -2795,7 +2527,6 @@ async function exportSalesReportToPDF() {
     }
 
   } else {
-    // === 2. TẠO BÁO CÁO CHI TIẾT (ĐÃ ĐIỀU CHỈNH ĐÚNG YÊU CẦU DÒNG MÃ ĐƠN HÀNG) ===
     const customerOrders = filteredOrders.filter(o =>
       o.customer && o.customer.trim().toLowerCase() === selectedCustomer.trim().toLowerCase()
     );
@@ -2826,7 +2557,6 @@ async function exportSalesReportToPDF() {
         let orderTotalAmount = 0;
         let orderItemsHtml = '';
 
-        // Tính toán các mặt hàng trong phiếu và tổng của phiếu
         items.forEach(item => {
           const qty = Number(item.qty || 0);
           const price = Number(item.unitPrice || 0);
@@ -2858,7 +2588,6 @@ async function exportSalesReportToPDF() {
         totalQty += orderTotalQty;
         totalAmount += orderTotalAmount;
 
-        // Dòng tiêu đề Đơn hàng (Cột Tên = Ghi chú, ĐVT/Đơn giá = Trống, SL = Tổng SL phiếu, Thành tiền = Tổng tiền phiếu)
         const orderHeaderHtml = `
           <tr style="height: 22px; background-color: #8db5e251; font-weight: bold; page-break-inside: avoid; break-inside: avoid;">
             <td style="border: 1px solid #000; text-align: left; font-size: 10pt; padding: 2px 5px; color: #d97706;">${o.id || '—'}</td>
@@ -2949,7 +2678,6 @@ async function exportSalesReportToPDF() {
       CÔNG TY TNHH THƯƠNG MẠI HOA QUẢ MINH KHUÊ
     </div>
 
-    <!-- KHU VỰC THÔNG TIN KHÁCH HÀNG & THÁNG BÁO CÁO -->
     <table style="width: 100%; font-size: 10.5pt; margin-bottom: 8px; border-collapse: collapse; line-height: 1.5;">
       <tr>
         <td style="width: 50%; padding: 1px 0; vertical-align: top;">Khách hàng: ${selectedCustomer || 'Tất cả khách hàng'}</td>
@@ -2987,7 +2715,7 @@ async function exportSalesReportToPDF() {
 }
 
 // ==========================================
-// 1. Xuất Excel Báo Giá (ĐÃ NÂNG CẤP XUẤT .XLSX & CHIA SẺ ZALO)
+// 1. Xuất Excel Báo Giá
 // ==========================================
 function exportQuotationToExcel() {
   const d = state.formData;
@@ -3003,7 +2731,6 @@ function exportQuotationToExcel() {
   const fromDateVN = formatDateVN(d.validbegin || d.validBegin || d.date);
   const toDateVN = formatDateVN(d.validUntil || d.validuntil);
 
-  // Tạo mảng dữ liệu 2 chiều cho SheetJS
   const sheetData = [
     ["ĐC: Số 9 - Ngách 35A/2 - đường Tiền Thái 1", "", "", "", "Giấy phép ĐKKD số: 01U8005300", "", "", ""],
     ["Xã Sơn Đồng – TP Hà Nội", "", "", "", "Địa chỉ nhận hóa đơn: nhambc@gmail.com", "", "", ""],
@@ -3011,7 +2738,7 @@ function exportQuotationToExcel() {
     ["CÔNG TY TNHH THƯƠNG MẠI HOA QUẢ MINH KHUÊ", "", "", "", "", "", "", ""],
     [`Khách hàng: ${d.customer || ''}`, "", "", "", `Bảng báo giá: ${d.id || ''}`, "", "", ""],
     [`Địa chỉ: ${custAddress}`, "", "", "", `Ngày hiệu lực: từ ngày ${fromDateVN} - đến ngày ${toDateVN}`, "", "", ""],
-    [""], // Dòng trống
+    [""],
     ["STT", "Tên Hàng", "ĐVT", "Đơn Giá", "Số Lượng", "CK%", "Thuế%", "Thành Tiền"]
   ];
 
@@ -3045,7 +2772,6 @@ function exportQuotationToExcel() {
     ]);
   });
 
-  // Thêm dòng Tổng cộng và Chữ ký
   sheetData.push(
     ["Tổng Cộng", "", "", "", totalQty, "", "", Math.round(totalAmount)],
     [""],
@@ -3056,43 +2782,40 @@ function exportQuotationToExcel() {
     ["", "", "", "", "", "BÙI CAO NHÂM", "", ""]
   );
 
-  // Tạo Worksheet và thêm Merges ô
   const ws = XLSX.utils.aoa_to_sheet(sheetData);
 
   ws['!merges'] = [
     { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } }, { s: { r: 0, c: 4 }, e: { r: 0, c: 7 } },
     { s: { r: 1, c: 0 }, e: { r: 1, c: 3 } }, { s: { r: 1, c: 4 }, e: { r: 1, c: 7 } },
     { s: { r: 2, c: 0 }, e: { r: 2, c: 3 } }, { s: { r: 2, c: 4 }, e: { r: 2, c: 7 } },
-    { s: { r: 3, c: 0 }, e: { r: 3, c: 7 } }, // Tiêu đề công ty
+    { s: { r: 3, c: 0 }, e: { r: 3, c: 7 } },
     { s: { r: 4, c: 0 }, e: { r: 4, c: 3 } }, { s: { r: 4, c: 4 }, e: { r: 4, c: 7 } },
     { s: { r: 5, c: 0 }, e: { r: 5, c: 3 } }, { s: { r: 5, c: 4 }, e: { r: 5, c: 7 } },
-    { s: { r: sheetData.length - 7, c: 0 }, e: { r: sheetData.length - 7, c: 3 } }, // Tổng cộng label
-    { s: { r: sheetData.length - 5, c: 5 }, e: { r: sheetData.length - 5, c: 7 } }, // Ngày tháng
-    { s: { r: sheetData.length - 4, c: 5 }, e: { r: sheetData.length - 4, c: 7 } }, // Chức danh
-    { s: { r: sheetData.length - 1, c: 5 }, e: { r: sheetData.length - 1, c: 7 } }  // Tên người ký
+    { s: { r: sheetData.length - 7, c: 0 }, e: { r: sheetData.length - 7, c: 3 } },
+    { s: { r: sheetData.length - 5, c: 5 }, e: { r: sheetData.length - 5, c: 7 } },
+    { s: { r: sheetData.length - 4, c: 5 }, e: { r: sheetData.length - 4, c: 7 } },
+    { s: { r: sheetData.length - 1, c: 5 }, e: { r: sheetData.length - 1, c: 7 } }
   ];
 
-  // Căn chỉnh độ rộng cột chuẩn
   ws['!cols'] = [
-    { wch: 6 },  // STT
-    { wch: 32 }, // Tên Hàng
-    { wch: 10 }, // ĐVT
-    { wch: 14 }, // Đơn Giá
-    { wch: 10 }, // Số Lượng
-    { wch: 8 },  // CK%
-    { wch: 8 },  // Thuế%
-    { wch: 16 }  // Thành Tiền
+    { wch: 6 },
+    { wch: 32 },
+    { wch: 10 },
+    { wch: 14 },
+    { wch: 10 },
+    { wch: 8 },
+    { wch: 8 },
+    { wch: 16 }
   ];
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "BaoGia");
 
-  // Tiến hành tải xuống hoặc mở bảng Share Zalo
   downloadOrShareXLSX(wb, `BaoGia_${d.id || 'Export'}`);
 }
 
 // ==========================================
-// 2. Xuất Excel Đơn Bán Hàng (ĐÃ NÂNG CẤP XUẤT .XLSX & CHIA SẺ ZALO)
+// 2. Xuất Excel Đơn Bán Hàng
 // ==========================================
 function exportSalesOrderToExcel() {
   const d = state.formData;
@@ -3113,7 +2836,7 @@ function exportSalesOrderToExcel() {
     ["CÔNG TY TNHH THƯƠNG MẠI HOA QUẢ MINH KHUÊ", "", "", "", "", "", "", ""],
     [`Khách hàng: ${d.customer || ''}`, "", "", "", `Đơn hàng bán: ${d.id || ''}`, "", "", ""],
     [`Địa chỉ: ${custAddress}`, "", "", "", `Ghi chú: ${d.notes || ''}`, "", "", ""],
-    [""], // Dòng trống
+    [""],
     ["STT", "Tên Hàng", "ĐVT", "Đơn Giá", "Số Lượng", "CK%", "Thuế%", "Thành Tiền"]
   ];
 
@@ -3189,19 +2912,15 @@ function exportSalesOrderToExcel() {
   downloadOrShareXLSX(wb, `DonHang_${d.id || 'Export'}`);
 }
 
-// Kiểm tra xem form giao dịch hiện tại có dữ liệu chưa lưu hay không
 function hasUnsavedFormData() {
-  // Nếu đang ở màn hình danh sách (list) hoặc xem (view) thì không cảnh báo
   if (!['add', 'edit'].includes(state.mode)) return false;
   if (!['quotations', 'sales-orders', 'returns', 'grn'].includes(state.view)) return false;
 
   const d = state.formData;
   if (!d) return false;
 
-  // Nếu người dùng đã chọn Khách hàng hoặc Nhà cung cấp
   if (d.customer || d.supplier) return true;
 
-  // Nếu đã thêm mặt hàng vào danh sách chi tiết (tên hàng không rỗng)
   const lineItems = Array.isArray(d.lineItems) ? d.lineItems : (d.lineitems || []);
   const hasItems = lineItems.some(item => item.name && item.name.trim() !== '');
 
@@ -3212,7 +2931,7 @@ if (typeof BroadcastChannel !== 'undefined') {
   const syncChannel = new BroadcastChannel('app_data_sync_channel');
   syncChannel.onmessage = (event) => {
     if (event.data === 'REFRESH_DATA' && state.mode === 'list') {
-      render(); // Tự động làm mới danh sách đang xem
+      render();
     }
   };
 }
@@ -3224,7 +2943,6 @@ if (typeof BroadcastChannel !== 'undefined') {
 function initPrintLabelDrawerUI() {
   if (document.getElementById('print-label-drawer')) return;
 
-  // Tải thư viện qrcodejs nếu chưa có
   if (typeof QRCode === 'undefined' && !document.getElementById('qrcode-script-tag')) {
     const script = document.createElement('script');
     script.id = 'qrcode-script-tag';
@@ -3302,7 +3020,6 @@ function renderPrintLabelDrawerContent() {
 
   const searchKey = normalizeSearchText(window.printLabelState.search || '');
 
-  // Sắp xếp mã SKU từ cao xuống thấp
   const sortedMaterials = [...(db.materials || [])].sort((a, b) => {
     return String(b.id || '').localeCompare(String(a.id || ''), undefined, { numeric: true, sensitivity: 'base' });
   });
@@ -3358,7 +3075,6 @@ function renderPrintLabelDrawerContent() {
         </button>
       </div>
 
-      <!-- SEARCH BOX -->
       <div style="display: flex; align-items: center; gap: 8px; border: 1px solid var(--border); background: var(--card); padding: 0 12px; height: 36px; border-radius: 2px;">
         <span style="color: var(--muted-foreground); display: flex; align-items: center;">${Icons.search}</span>
         <input 
@@ -3372,7 +3088,7 @@ function renderPrintLabelDrawerContent() {
       </div>
     </div>
 
-    <!-- BODY HEADER BAR (SELECT ALL & COLUMNS) -->
+    <!-- BODY HEADER BAR -->
     <div style="display: grid; grid-template-columns: 32px 90px 1fr 90px; gap: 8px; align-items: center; padding: 8px 16px; background: var(--card); border-bottom: 1px solid var(--border); font-family: var(--font-dm-mono); font-size: 11px; text-transform: uppercase; color: var(--muted-foreground);">
       <input 
         type="checkbox" 
@@ -3407,7 +3123,6 @@ function renderPrintLabelDrawerContent() {
     </div>
   `;
 
-  // Focus ô tìm kiếm
   const inputEl = document.getElementById('print-label-search-input');
   if (inputEl && document.activeElement !== inputEl) {
     inputEl.focus();
@@ -3448,21 +3163,18 @@ function toggleSelectAllPrintLabels(isChecked) {
   renderPrintLabelDrawerContent();
 }
 
-// Lệnh sinh HTML In tem 4x5 trên A4 và thực hiện In
 async function executePrintLabels() {
   const selectedSet = window.printLabelState.selectedSkus;
   if (selectedSet.size === 0) return;
 
   const selectedMaterials = (db.materials || []).filter(m => selectedSet.has(m.id));
 
-  // Chia danh sách sản phẩm thành các nhóm 20 sản phẩm/trang A4
   const pageSize = 20;
   const pages = [];
   for (let i = 0; i < selectedMaterials.length; i += pageSize) {
     pages.push(selectedMaterials.slice(i, i + pageSize));
   }
 
-  // Tạo iframe ẩn thực hiện lệnh in
   let printFrame = document.getElementById('print-label-frame');
   if (printFrame) printFrame.remove();
 
@@ -3478,7 +3190,6 @@ async function executePrintLabels() {
 
   const frameDoc = printFrame.contentWindow.document;
 
-  // Render HTML cho từng trang A4
   const pagesHtml = pages.map((pageItems, pageIdx) => {
     const itemsHtml = pageItems.map((m, itemIdx) => `
       <div class="label-item">
@@ -3593,13 +3304,11 @@ async function executePrintLabels() {
   `);
   frameDoc.close();
 
-  // Khởi tạo mã QR vuông chuẩn quét bằng camera điện thoại
   setTimeout(() => {
     pages.forEach((pageItems, pageIdx) => {
       pageItems.forEach((m, itemIdx) => {
         const qrBox = frameDoc.getElementById(`qr-${pageIdx}-${itemIdx}`);
         if (qrBox) {
-          // Mã hóa chuỗi Mã SKU (hoặc JSON rút gọn)
           const qrData = String(m.id || '');
 
           new printFrame.contentWindow.QRCode(qrBox, {
@@ -3614,7 +3323,6 @@ async function executePrintLabels() {
       });
     });
 
-    // Mở giao diện in
     setTimeout(() => {
       printFrame.contentWindow.focus();
       printFrame.contentWindow.print();
@@ -3634,7 +3342,6 @@ async function printGRNProductLabels() {
 
   const lineItems = d.lineItems;
 
-  // Lấy dữ liệu sản phẩm tương ứng trong db.materials hoặc dùng thông tin dòng chi tiết
   const productsToPrint = lineItems.map(l => {
     const mat = (db.materials || []).find(m => (l.sku && m.id === l.sku) || (l.name && m.name === l.name));
     return {
@@ -3644,7 +3351,6 @@ async function printGRNProductLabels() {
     };
   });
 
-  // Chia danh sách thành từng trang 20 tem (lưới 4x5 trên A4)
   const pageSize = 20;
   const pages = [];
   for (let i = 0; i < productsToPrint.length; i += pageSize) {
@@ -3780,7 +3486,6 @@ async function printGRNProductLabels() {
   `);
   frameDoc.close();
 
-  // Khởi tạo mã QR Code cho từng thẻ tem
   setTimeout(() => {
     pages.forEach((pageItems, pageIdx) => {
       pageItems.forEach((m, itemIdx) => {

@@ -1883,7 +1883,6 @@ function renderSalesOrderForm(c) {
     d.warehouseCode = db.warehouses[0].code || db.warehouses[0].id;
   }
 
-  // MẶC ĐỊNH SALE_YN = FALSE KHI THÊM MỚI ĐƠN HÀNG HOẶC THÊM DÒNG
   d.lineItems.forEach(l => {
     l.warehouseCode = d.warehouseCode;
     if (l.sale_yn === undefined || l.sale_yn === null) {
