@@ -1452,8 +1452,8 @@ function renderMaterialForm(c) {
                 ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'stock\', this.value, \'number\')"'}>
             </div>
             <div class="form-group">
-              <label class="form-label">Mức định mức</label>
-              <input type="number" step="any" inputmode="decimal" class="form-input" value="${d.reorder ?? 0}" ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'reorder\', this.value, \'number\')"'} >
+              <label class="form-label">Giá Thuê (VNĐ)</label>
+              <input type="number" step="any" inputmode="numeric" class="form-input" value="${d.hireprice ?? 0}" ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'hireprice\', this.value, \'number\')"'}>
             </div>
             <div class="form-group">
               <label class="form-label">Đơn giá (VNĐ)</label>
@@ -2620,8 +2620,8 @@ function renderGRNForm(c) {
 
   // LƯỚI ẢN CỘT MÃ HÀNG VÀ CỘT TỒN KHO: (STT, Tên Hàng, Đơn Vị, Mã Kho, SL Nhập, Giá Nhập, Thành Tiền)
   const gridLayout = isView
-    ? "10px 1.8fr 70px 70px 75px 100px 110px"
-    : "10px 1.8fr 70px 70px 75px 100px 110px 32px";
+    ? "10px 1.8fr 70px 70px 75px 100px 100px 110px"
+    : "10px 1.8fr 70px 70px 75px 100px 100px 110px 32px";
 
   const linesHtml = d.lineItems.map((l, idx) => {
     const qtyVal = l.receivedQty ?? l.qtyImport ?? 1;
@@ -2681,6 +2681,21 @@ function renderGRNForm(c) {
             onfocus="this.value = parseNumberInput(this.value) || ''" 
             onblur="this.value = formatVNDInput(this.value)" 
             onchange="updateLine('${l.lineId}', 'unitCost', parseNumberInput(this.value), 'number')"
+          `}
+        >
+
+        <input 
+          type="text" 
+          id="line-item-${l.lineId}-hireprice"
+          inputmode="numeric"
+          class="form-input" 
+          style="padding: 6px 6px; text-align: right; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" 
+          value="${(l.hireprice ?? 0).toLocaleString('vi-VN')}" 
+          ${(isView || isDetailsDisabled) ? 'readonly' : `
+            onkeydown="handleLineItemKeyDown(event, 'grn', ${idx}, 'hireprice')"
+            onfocus="this.value = parseNumberInput(this.value) || ''" 
+            onblur="this.value = formatVNDInput(this.value)" 
+            onchange="updateLine('${l.lineId}', 'hireprice', parseNumberInput(this.value), 'number')"
           `}
         >
         
@@ -2750,6 +2765,7 @@ function renderGRNForm(c) {
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Mã Kho</span>
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">SL Nhập</span>
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Giá nhập</span>
+              <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Giá thuê</span>
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Thành tiền</span>
               ${!isView ? `<span></span>` : ''}
             </div>

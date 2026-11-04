@@ -319,6 +319,13 @@ function updateLine(lineId, field, value, type = 'text') {
       const price = Number(l.unitCost) || 0;
       lineTotal = qty * price;
       total += lineTotal;
+
+      // Cập nhật giá trị hiển thị Thành tiền ngay trên dòng chi tiết
+      const nameInput = document.getElementById(`line-item-${l.lineId}-name`);
+      if (nameInput && nameInput.parentElement) {
+        const totalDiv = nameInput.parentElement.querySelector('div[style*="text-align: right"]');
+        if (totalDiv) totalDiv.innerText = fmtUSD(lineTotal);
+      }
     }
 
     const skuInput = document.getElementById(`line-item-${l.lineId}-sku`);
@@ -728,9 +735,8 @@ async function saveForm(module) {
       category: rawData.category || 'Áo',
       location: rawData.location || '',
       stock: Number(rawData.stock ?? 1),
-      reserved: Number(rawData.reserved || 0),
-      reorder: Number(rawData.reorder || 0),
       cost: Number(rawData.cost || 0),
+      hireprice: Number(rawData.hireprice || 0), // Đẩy giá thuê vào Database
       status: rawData.status || 'ok',
       notes: rawData.notes || '',
       unit: rawData.unit || '',
@@ -838,6 +844,7 @@ async function saveForm(module) {
 
         const qtyImport = Number(l.receivedQty ?? l.qtyImport ?? 0);
         const costPrice = Number(l.unitCost ?? 0);
+        const hirePriceVal = Number(l.hireprice ?? l.hirePrice ?? 0); // Lấy giá thuê từ dòng nhập kho
 
         const newMatObj = {
           id: newSku,
@@ -848,6 +855,7 @@ async function saveForm(module) {
           stock: qtyImport,
           reorder: 0,
           cost: costPrice,
+          hireprice: hirePriceVal, // Đẩy giá thuê vào danh mục hàng hóa
           status: 'ok',
           reserved: 0,
           user_id0: currentUserId,
@@ -869,6 +877,7 @@ async function saveForm(module) {
           stock: newMatObj.stock,
           reorder: newMatObj.reorder,
           cost: newMatObj.cost,
+          hireprice: newMatObj.hireprice, // Đồng bộ lên Supabase
           status: newMatObj.status,
           reserved: 0,
           user_id0: newMatObj.user_id0,
@@ -1159,8 +1168,8 @@ function initFormData(module, id) {
         category: 'Áo',
         location: '',
         stock: 1,
-        reorder: 0,
         cost: 0,
+        hireprice: 0, // Giá thuê mặc định bằng 0
         status: 'ok',
         notes: ''
       };
@@ -1327,7 +1336,7 @@ function handleMaterialSelectInLine(lineId, selectedName) {
   if (mat) {
     line.name = mat.name || '';
     line.sku = mat.id || '';
-    
+
     if (line.sale_yn === undefined || line.sale_yn === null) {
       line.sale_yn = false;
     }
@@ -1703,8 +1712,8 @@ function handleCheckOrAddCustomerPhone() {
 
 // 4. Mở Drawer Thêm nhanh khách hàng
 function openQuickCustomerDrawer(phoneStr) {
-  const validPhone = (typeof phoneStr === 'string' || typeof phoneStr === 'number') 
-    ? phoneStr 
+  const validPhone = (typeof phoneStr === 'string' || typeof phoneStr === 'number')
+    ? phoneStr
     : (state.formData ? state.formData.phone || '' : '');
 
   let drawer = document.getElementById('quick-customer-drawer');
@@ -1757,6 +1766,7 @@ function closeQuickCustomerDrawer() {
 }
 
 // 6. Lưu Khách hàng tạo nhanh
+// Thay thế/Cập nhật hàm saveQuickCustomer trong handlers_8.js
 async function saveQuickCustomer() {
   const nameVal = (document.getElementById('quick-cust-name')?.value || '').trim();
   const phoneVal = (document.getElementById('quick-cust-phone')?.value || '').trim();
@@ -1785,12 +1795,12 @@ async function saveQuickCustomer() {
     status: 'active',
     creditlimit: 0,
     creditLimit: 0,
+    user_id0: currentUserId,
     date0: currentDate,
     time0: currentTime,
-    user_id0: currentUserId,
+    user_id2: currentUserId,
     date2: currentDate,
-    time2: currentTime,
-    user_id2: currentUserId
+    time2: currentTime
   };
 
   try {
