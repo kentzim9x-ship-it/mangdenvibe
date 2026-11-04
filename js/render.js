@@ -2072,6 +2072,9 @@ function renderSalesOrderForm(c) {
     const cust = (db.customers || []).find(c => c.name === val);
     const phoneInput = document.getElementById('so-phone-input');
     const checkBtn = document.getElementById('so-check-phone-btn');
+    const noticeEl = document.getElementById('phoneNotice');
+
+    if (noticeEl) noticeEl.style.display = 'none';
 
     if (cust) {
       if (phoneInput) phoneInput.value = cust.phone || '';
@@ -2096,15 +2099,28 @@ function renderSalesOrderForm(c) {
   };
 
   window.handleOrderPhoneInput = function (phoneVal) {
-    d.phone = phoneVal;
+    // Chỉ cho phép nhập ký tự số
+    const cleanPhone = phoneVal.replace(/[^0-9]/g, '');
+    const phoneInput = document.getElementById('so-phone-input');
+    if (phoneInput && phoneInput.value !== cleanPhone) {
+      phoneInput.value = cleanPhone;
+    }
+
+    d.phone = cleanPhone;
     const selectCust = d.customer;
     const checkBtn = document.getElementById('so-check-phone-btn');
+    const noticeEl = document.getElementById('phoneNotice');
+
+    if (noticeEl) noticeEl.style.display = 'none';
+
     if (!checkBtn) return;
 
-    if (!selectCust && phoneVal.trim().length > 0) {
+    if (!selectCust && cleanPhone.trim().length > 0) {
       checkBtn.disabled = false;
+      checkBtn.innerText = 'Kiểm Tra';
       checkBtn.style.opacity = '1';
       checkBtn.style.cursor = 'pointer';
+      checkBtn.onclick = window.handleCheckOrAddCustomerPhone;
     } else {
       checkBtn.disabled = true;
       checkBtn.innerText = 'Kiểm Tra';
@@ -2114,32 +2130,41 @@ function renderSalesOrderForm(c) {
   };
 
   window.handleCheckOrAddCustomerPhone = function () {
-    const phone = document.getElementById('so-phone-input').value.trim();
+    const phoneInput = document.getElementById('so-phone-input');
+    const phone = phoneInput ? phoneInput.value.trim() : '';
     const btnCheck = document.getElementById('so-check-phone-btn');
     const noticeEl = document.getElementById('phoneNotice');
 
     if (!phone) return;
 
-    const foundCustomer = db.customers.find(c => c.phone === phone);
+    const foundCustomer = (db.customers || []).find(c => (c.phone || '').trim() === phone);
 
     if (!foundCustomer) {
-      // Nếu KHÔNG tìm thấy trong hệ thống
+      // Nếu KHÔNG tìm thấy trong hệ thống -> Hiện thông báo màu cam giống hệt thông báo Báo giá
       if (noticeEl) {
-        noticeEl.innerText = "Khách hàng chưa có trong hệ thống";
+        noticeEl.innerText = "⚠ Khách hàng chưa có trong hệ thống";
         noticeEl.style.display = "block";
       }
 
-      btnCheck.innerText = "Thêm mới";
-      btnCheck.onclick = window.openQuickCustomerDrawer; // Mở form thêm nhanh KH
+      if (btnCheck) {
+        btnCheck.innerText = "Thêm mới";
+        btnCheck.onclick = function () {
+          window.openQuickCustomerDrawer(phone);
+        };
+      }
     } else {
       // Nếu tìm thấy khách hàng
       if (noticeEl) noticeEl.style.display = "none";
-      btnCheck.innerText = "Kiểm tra";
-      // Chọn khách hàng vào selectbox...
+      d.customer = foundCustomer.name;
+      d.phone = foundCustomer.phone;
+      render();
     }
   };
 
-  window.openQuickCustomerDrawer = function (phone) {
+  window.openQuickCustomerDrawer = function (phoneStr) {
+    // Sửa lỗi [object PointerEvent] bằng cách ép kiểu chuỗi
+    const validPhone = (typeof phoneStr === 'string' || typeof phoneStr === 'number') ? phoneStr : (d.phone || '');
+
     let drawer = document.getElementById('quick-customer-drawer');
     if (!drawer) {
       drawer = document.createElement('div');
@@ -2159,11 +2184,11 @@ function renderSalesOrderForm(c) {
           <form onsubmit="event.preventDefault(); saveQuickCustomer();">
             <div class="form-group" style="margin-bottom: 12px;">
               <label class="form-label">Tên Công ty / Khách hàng *</label>
-              <input type="text" id="quick-cust-name" class="form-input" required placeholder="Nhập tên khách hàng..." 'onchange="updateField(\'type\', this.value)"'>
+              <input type="text" id="quick-cust-name" class="form-input" required placeholder="Nhập tên khách hàng..." oninput="this.value = toTitleCase(this.value);">
             </div>
             <div class="form-group" style="margin-bottom: 12px;">
               <label class="form-label">Số Điện Thoại *</label>
-              <input type="tel" id="quick-cust-phone" class="form-input" value="${phone}" required placeholder="090x xxx xxx">
+              <input type="tel" id="quick-cust-phone" class="form-input" value="${validPhone}" required placeholder="090x xxx xxx" oninput="this.value = this.value.replace(/[^0-9]/g, '');">
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
               <label class="form-label">Địa Chỉ</label>
@@ -2269,7 +2294,8 @@ function renderSalesOrderForm(c) {
                     </button>
                   ` : ''}
                 </div>
-                ${(d.customer && !d.quotationId) ? `<div style="font-size: 11px; color: #f87171; font-family: var(--font-dm-mono); margin-top: 4px;">⚠ Khách hàng chưa có trong hệ thống</div>` : ''}
+                <!-- THÔNG BÁO TƯƠNG TỰ BÁO GIÁ: MÀU CAM, CHỮ NHỎ DM-MONO -->
+                <div id="phoneNotice" style="font-size: 11px; color: var(--primary); font-family: var(--font-dm-mono); margin-top: 4px; display: none;"></div>
               </div>
 
               <div class="form-group">
