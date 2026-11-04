@@ -1614,16 +1614,23 @@ async function handleCustomerSelectInOrder(customerName) {
     if (confirmImport) {
       state.formData.quotationId = activeQuotation.id || null;
       if (Array.isArray(activeQuotation.lineItems) && activeQuotation.lineItems.length > 0) {
-        state.formData.lineItems = activeQuotation.lineItems.map(item => ({
-          lineId: Date.now().toString() + Math.random().toString(36).substr(2, 4),
-          warehouseCode: state.formData.warehouseCode || '',
-          sku: item.sku || '',
-          name: item.name || '',
-          qty: item.qty ?? 1,
-          unitPrice: item.unitPrice ?? 0,
-          discount: item.discount ?? 0,
-          tax: item.tax ?? 0
-        }));
+        state.formData.lineItems = activeQuotation.lineItems.map(item => {
+          // LẤY THEO GIÁ THUÊ (hirePrice), NẾU KHÔNG CÓ THÌ MỚI LẤY unitPrice / price / 0
+          const hirePriceVal = (item.hirePrice !== undefined && item.hirePrice !== null)
+            ? Number(item.hirePrice)
+            : Number(item.unitPrice ?? item.price ?? 0);
+
+          return {
+            lineId: Date.now().toString() + Math.random().toString(36).substr(2, 4),
+            warehouseCode: state.formData.warehouseCode || '',
+            sku: item.sku || '',
+            name: item.name || '',
+            qty: item.qty ?? 1,
+            unitPrice: hirePriceVal, // Đã cập nhật lấy theo giá thuê
+            discount: item.discount ?? 0,
+            tax: item.tax ?? 0
+          };
+        });
       }
     } else {
       state.formData.quotationId = null;
