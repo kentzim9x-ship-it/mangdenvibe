@@ -2006,16 +2006,20 @@ function renderSalesOrderForm(c) {
   }).join('');
 
   const gridLayout = isView
-    ? "10px 100px minmax(170px, 1.5fr) 60px 70px 65px 65px 90px 70px 60px 120px"
-    : "10px 100px minmax(170px, 1.5fr) 60px 70px 65px 65px 90px 70px 60px 120px 32px";
+    ? "10px 100px minmax(170px, 1.5fr) 60px 70px 80px 65px 65px 90px 70px 60px 120px"
+    : "10px 100px minmax(170px, 1.5fr) 60px 70px 80px 65px 65px 90px 70px 60px 120px 32px";
 
   const linesHtml = d.lineItems.map((l, idx) => {
-    const lineSub = (l.qty || 0) * (l.unitPrice || 0) * (1 - (l.discount || 0) / 100);
-    const lineTotal = lineSub * (1 + (l.tax || 0) / 100);
+    const mat = (db.materials || []).find(m => (l.sku && m.id === l.sku) || (l.name && m.name === l.name));
+    const unitName = mat ? (mat.unit || '—') : (l.unit || '—');
+    const isSale = Boolean(l.sale_yn);
 
-    const mat = (db.materials || []).find(m => m.id === l.sku || m.name === l.name);
-    const unitName = mat ? (mat.unit || '—') : '—';
-    const stockQty = calculateRealtimeStock(l.sku, d.warehouseCode, d.id);
+    const qty = Number(l.qty) || 0;
+    const price = Number(l.unitPrice) || 0;
+    const disc = Number(l.discount) || 0;
+    const tax = Number(l.tax) || 0;
+    const lineSub = qty * price * (1 - disc / 100);
+    const lineTotal = lineSub * (1 + tax / 100);
 
     return `
       <div style="display: grid; grid-template-columns: ${gridLayout}; gap: 6px; padding: 10px 16px 10px 10px; border-bottom: 1px solid var(--border); align-items: center; ${isDetailsDisabled ? 'opacity: 0.5; pointer-events: none;' : ''}">
@@ -2029,10 +2033,10 @@ function renderSalesOrderForm(c) {
         <input type="text" id="line-item-${l.lineId}-unit" class="form-input" style="padding: 6px 6px; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; text-align: center;" value="${unitName}" readonly title="Đơn vị tính từ danh mục hàng">
         
         <input type="text" id="line-item-${l.lineId}-warehouseCode" class="form-input" style="padding: 6px 8px; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; text-align: center;" value="${d.warehouseCode || '—'}" readonly title="Mã kho từ mục 01">
+
+        <input type="text" id="line-item-${l.lineId}-type" class="form-input" style="padding: 6px 8px; text-align: center; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" value="${l.type || 'Hàng Bán'}" ${(isView || isDetailsDisabled) ? 'readonly' : `onchange="updateLine('${l.lineId}', 'type', this.value)"`}>
         
         <input type="number" id="line-item-${l.lineId}-qty" step="any" inputmode="decimal" class="form-input" style="padding: 6px 6px; text-align: right; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" value="${l.qty ?? 1}" ${(isView || isDetailsDisabled) ? 'readonly' : `onkeydown="handleLineItemKeyDown(event, 'sales-orders', ${idx}, 'qty')" onchange="updateLine('${l.lineId}', 'qty', this.value, 'number')"`}>
-        
-        <input type="text" id="line-item-${l.lineId}-stock" class="form-input" style="padding: 6px 6px; text-align: right; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; color: ${stockQty < 0 ? '#f87171' : 'var(--foreground)'};" value="${stockQty}" readonly title="Tồn thực tế">
         
         <input 
           type="text" 
@@ -2059,6 +2063,164 @@ function renderSalesOrderForm(c) {
     `;
   }).join('');
 
+  // TÍNH TOÁN LẤY SỐ ĐIỆN THOẠI CỦA KHÁCH HÀNG HIỆN TẠI NẾU ĐÃ CHỌN KHÁCH HÀNG
+  const currentCustObj = (db.customers || []).find(c => c.name === d.customer);
+  const initialPhone = currentCustObj ? (currentCustObj.phone || '') : (d.phone || '');
+
+  // HELPER FUNCTIONS XỬ LÝ TRỰC TIẾP TRÊN INTERFACE
+  window.handleOrderCustomerSelect = function (val) {
+    const cust = (db.customers || []).find(c => c.name === val);
+    const phoneInput = document.getElementById('so-phone-input');
+    const checkBtn = document.getElementById('so-check-phone-btn');
+
+    if (cust) {
+      if (phoneInput) phoneInput.value = cust.phone || '';
+      if (checkBtn) {
+        checkBtn.disabled = true;
+        checkBtn.innerText = 'Kiểm Tra';
+        checkBtn.style.opacity = '0.5';
+        checkBtn.style.cursor = 'not-allowed';
+      }
+      d.phone = cust.phone || '';
+    } else {
+      if (phoneInput) phoneInput.value = '';
+      if (checkBtn) {
+        checkBtn.disabled = true;
+        checkBtn.innerText = 'Kiểm Tra';
+        checkBtn.style.opacity = '0.5';
+        checkBtn.style.cursor = 'not-allowed';
+      }
+      d.phone = '';
+    }
+    handleCustomerSelectInOrder(val);
+  };
+
+  window.handleOrderPhoneInput = function (phoneVal) {
+    d.phone = phoneVal;
+    const selectCust = d.customer;
+    const checkBtn = document.getElementById('so-check-phone-btn');
+    if (!checkBtn) return;
+
+    if (!selectCust && phoneVal.trim().length > 0) {
+      checkBtn.disabled = false;
+      checkBtn.style.opacity = '1';
+      checkBtn.style.cursor = 'pointer';
+    } else {
+      checkBtn.disabled = true;
+      checkBtn.innerText = 'Kiểm Tra';
+      checkBtn.style.opacity = '0.5';
+      checkBtn.style.cursor = 'not-allowed';
+    }
+  };
+
+  window.handleCheckOrAddCustomerPhone = function () {
+    const phone = document.getElementById('so-phone-input').value.trim();
+    const btnCheck = document.getElementById('so-check-phone-btn');
+    const noticeEl = document.getElementById('phoneNotice');
+
+    if (!phone) return;
+
+    const foundCustomer = db.customers.find(c => c.phone === phone);
+
+    if (!foundCustomer) {
+      // Nếu KHÔNG tìm thấy trong hệ thống
+      if (noticeEl) {
+        noticeEl.innerText = "Khách hàng chưa có trong hệ thống";
+        noticeEl.style.display = "block";
+      }
+
+      btnCheck.innerText = "Thêm mới";
+      btnCheck.onclick = window.openQuickCustomerDrawer; // Mở form thêm nhanh KH
+    } else {
+      // Nếu tìm thấy khách hàng
+      if (noticeEl) noticeEl.style.display = "none";
+      btnCheck.innerText = "Kiểm tra";
+      // Chọn khách hàng vào selectbox...
+    }
+  };
+
+  window.openQuickCustomerDrawer = function (phone) {
+    let drawer = document.getElementById('quick-customer-drawer');
+    if (!drawer) {
+      drawer = document.createElement('div');
+      drawer.id = 'quick-customer-drawer';
+      drawer.className = 'customer-drawer';
+      document.body.appendChild(drawer);
+    }
+
+    drawer.innerHTML = `
+      <div class="drawer-overlay" onclick="closeQuickCustomerDrawer()"></div>
+      <div class="drawer-content">
+        <div class="drawer-header">
+          <h3>Thêm Nhanh Khách Hàng</h3>
+          <button type="button" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--foreground);" onclick="closeQuickCustomerDrawer()">✕</button>
+        </div>
+        <div class="drawer-body">
+          <form onsubmit="event.preventDefault(); saveQuickCustomer();">
+            <div class="form-group" style="margin-bottom: 12px;">
+              <label class="form-label">Tên Công ty / Khách hàng *</label>
+              <input type="text" id="quick-cust-name" class="form-input" required placeholder="Nhập tên khách hàng..." 'onchange="updateField(\'type\', this.value)"'>
+            </div>
+            <div class="form-group" style="margin-bottom: 12px;">
+              <label class="form-label">Số Điện Thoại *</label>
+              <input type="tel" id="quick-cust-phone" class="form-input" value="${phone}" required placeholder="090x xxx xxx">
+            </div>
+            <div class="form-group" style="margin-bottom: 16px;">
+              <label class="form-label">Địa Chỉ</label>
+              <input type="text" id="quick-cust-address" class="form-input" placeholder="Nhập địa chỉ...">
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 8px;">
+              <button type="button" class="btn-cancel" onclick="closeQuickCustomerDrawer()">Hủy</button>
+              <button type="submit" class="btn-submit">Lưu Khách Hàng</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+
+    setTimeout(() => drawer.classList.add('open'), 10);
+  };
+
+  window.closeQuickCustomerDrawer = function () {
+    const drawer = document.getElementById('quick-customer-drawer');
+    if (drawer) {
+      drawer.classList.remove('open');
+    }
+  };
+
+  window.saveQuickCustomer = function () {
+    const nameVal = (document.getElementById('quick-cust-name')?.value || '').trim();
+    const phoneVal = (document.getElementById('quick-cust-phone')?.value || '').trim();
+    const addressVal = (document.getElementById('quick-cust-address')?.value || '').trim();
+
+    if (!nameVal || !phoneVal) return;
+
+    const newId = 'KH' + String((db.customers || []).length + 1).padStart(4, '0');
+    const newCust = {
+      id: newId,
+      name: nameVal,
+      contact: nameVal,
+      phone: phoneVal,
+      address: addressVal,
+      diachi: addressVal,
+      type: 'Khách vãng lai',
+      paymentTerms: 'Thanh toán ngay',
+      status: 'active',
+      date0: getTodayDateStr(),
+      time0: new Date().toTimeString().split(' ')[0],
+      user_id0: getAuthSession()?.user?.id || ''
+    };
+
+    if (!db.customers) db.customers = [];
+    db.customers.push(newCust);
+
+    closeQuickCustomerDrawer();
+
+    d.customer = nameVal;
+    d.phone = phoneVal;
+    render();
+  };
+
   c.innerHTML = `
     <div style="max-width: 1050px;">
       ${getBreadcrumb('Đơn bán hàng', isView ? `Xem ${d.id || ''}` : (isEdit ? `Chỉnh sửa ${d.id || ''}` : 'Tạo đơn bán hàng mới'), 'sales-orders')}
@@ -2072,19 +2234,44 @@ function renderSalesOrderForm(c) {
               <span class="section-title">Thông tin đơn bán hàng</span>
             </div>
             <div class="section-body grid-3">
-              <div class="form-group" style="grid-column: span 2;">
+              <div class="form-group">
                 <label class="form-label">Khách hàng *</label>
-                <select class="form-select" ${(isView || isEdit) ? 'disabled style="background: var(--muted); cursor: not-allowed;"' : 'onchange="handleCustomerSelectInOrder(this.value)"'} required>
+                <select class="form-select" ${(isView || isEdit) ? 'disabled style="background: var(--muted); cursor: not-allowed;"' : 'onchange="handleOrderCustomerSelect(this.value)"'} required>
                   <option value="">-- Chọn khách hàng --</option>
                   ${customerOptions}
                 </select>
                 ${d.quotationId ? `<div style="font-size: 11px; color: var(--primary); font-family: var(--font-dm-mono); margin-top: 4px;">✔ Đã tự động áp dụng Báo giá: ${d.quotationId}</div>` : ''}
               </div>
+
+              <!-- THÊM TRƯỜNG SỐ ĐIỆN THOẠI VÀ NÚT KIỂM TRA -->
               <div class="form-group">
                 <label class="form-label">Số điện thoại</label>
-                <input type="tel" class="form-input" value="${d.customerPhone || ''}" readonly style="background: var(--muted); cursor: not-allowed;" placeholder="Số điện thoại...">
+                <div style="display: flex; gap: 6px;">
+                  <input 
+                    type="tel" 
+                    id="so-phone-input" 
+                    class="form-input" 
+                    style="flex: 1; ${isView ? 'background: var(--muted); cursor: not-allowed;' : ''}" 
+                    value="${initialPhone}" 
+                    ${isView ? 'readonly' : 'oninput="handleOrderPhoneInput(this.value)"'} 
+                    placeholder="090x xxx xxx"
+                  >
+                  ${!isView ? `
+                    <button 
+                      type="button" 
+                      id="so-check-phone-btn" 
+                      class="btn-submit"
+                      style="padding: 0 12px; font-size: 13px; height: 38px; white-space: nowrap; opacity: 0.5; cursor: not-allowed;" 
+                      disabled 
+                      onclick="handleCheckOrAddCustomerPhone()"
+                    >
+                      Kiểm Tra
+                    </button>
+                  ` : ''}
+                </div>
                 ${(d.customer && !d.quotationId) ? `<div style="font-size: 11px; color: #f87171; font-family: var(--font-dm-mono); margin-top: 4px;">⚠ Khách hàng chưa có trong hệ thống</div>` : ''}
               </div>
+
               <div class="form-group">
                 <label class="form-label">Mã kho (Xuất kho) *</label>
                 <select class="form-select" ${isView ? 'disabled style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'warehouseCode\', this.value)"'} required>
@@ -2119,27 +2306,25 @@ function renderSalesOrderForm(c) {
             </div>
 
             <div style="overflow-x: auto;">
-              <!-- HEADER BẢNG: ĐỒNG BỘ MIN-WIDTH 1000PX, GAP 6PX VÀ PADDING 10PX 16PX -->
-              <div style="display: grid; grid-template-columns: ${gridLayout}; gap: 6px; padding: 10px 16px 10px 10px; background: var(--secondary); border-bottom: 1px solid var(--border); align-items: center; min-width: 1000px; box-sizing: border-box;">
+              <div style="display: grid; grid-template-columns: ${gridLayout}; gap: 6px; padding: 10px 16px 10px 10px; background: var(--secondary); border-bottom: 1px solid var(--border); align-items: center; min-width: 950px; box-sizing: border-box;">
                 <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;"></span>
-                <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Mã Hàng</span>
-                <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Tên sản phẩm</span>
-                <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Đơn Vị</span>
+                <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Mã SKU</span>
+                <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Tên Hàng</span>
+                <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">ĐVT</span>
                 <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Mã Kho</span>
+                <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Hàng Bán</span>
                 <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Số Lượng</span>
-                <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Tồn</span>
-                <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Đơn giá</span>
-                <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Chiết Khấu %</span>
-                <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Thuế %</span>
-                <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Thành tiền</span>
+                <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Đơn Giá</span>
+                <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">CK%</span>
+                <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Thuế%</span>
+                <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Thành Tiền</span>
                 ${!isView ? `<span></span>` : ''}
               </div>
 
-              <!-- DANH SÁCH CÁC DÒNG SẢN PHẨM -->
-              <div style="min-width: 1000px;">
+              <div style="min-width: 950px;">
                 ${linesHtml}
-              </div>
             </div>
+          </div>
 
             <!-- CẤU TRÚC PHÍA DƯỚI: NÚT THÊM DÒNG THẲNG HÀNG MÃ HÀNG & CÙNG HÀNG NGANG VỚI TẠM TÍNH -->
             <div style="display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 26px 10px 26px; flex-wrap: wrap; gap: 12px;">
