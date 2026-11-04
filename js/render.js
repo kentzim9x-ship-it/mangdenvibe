@@ -1883,6 +1883,7 @@ function renderSalesOrderForm(c) {
     d.warehouseCode = db.warehouses[0].code || db.warehouses[0].id;
   }
 
+  // MẶC ĐỊNH SALE_YN = FALSE KHI THÊM MỚI ĐƠN HÀNG HOẶC THÊM DÒNG
   d.lineItems.forEach(l => {
     l.warehouseCode = d.warehouseCode;
     if (l.sale_yn === undefined || l.sale_yn === null) {
@@ -2072,6 +2073,186 @@ function renderSalesOrderForm(c) {
 
   const currentCustObj = (db.customers || []).find(c => c.name === d.customer);
   const initialPhone = currentCustObj ? (currentCustObj.phone || '') : (d.phone || '');
+
+  window.handleOrderCustomerSelect = function (val) {
+    const cust = (db.customers || []).find(c => c.name === val);
+    const phoneInput = document.getElementById('so-phone-input');
+    const checkBtn = document.getElementById('so-check-phone-btn');
+    const noticeEl = document.getElementById('phoneNotice');
+
+    if (noticeEl) noticeEl.style.display = 'none';
+
+    if (cust) {
+      if (phoneInput) phoneInput.value = cust.phone || '';
+      if (checkBtn) {
+        checkBtn.disabled = true;
+        checkBtn.innerText = 'Kiểm Tra';
+        checkBtn.style.opacity = '0.5';
+        checkBtn.style.cursor = 'not-allowed';
+      }
+      d.phone = cust.phone || '';
+    } else {
+      if (phoneInput) phoneInput.value = '';
+      if (checkBtn) {
+        checkBtn.disabled = true;
+        checkBtn.innerText = 'Kiểm Tra';
+        checkBtn.style.opacity = '0.5';
+        checkBtn.style.cursor = 'not-allowed';
+      }
+      d.phone = '';
+    }
+    handleCustomerSelectInOrder(val);
+  };
+
+  window.handleOrderPhoneInput = function (phoneVal) {
+    const cleanPhone = phoneVal.replace(/[^0-9]/g, '');
+    const phoneInput = document.getElementById('so-phone-input');
+    if (phoneInput && phoneInput.value !== cleanPhone) {
+      phoneInput.value = cleanPhone;
+    }
+
+    d.phone = cleanPhone;
+    const selectCust = d.customer;
+    const checkBtn = document.getElementById('so-check-phone-btn');
+    const noticeEl = document.getElementById('phoneNotice');
+
+    if (noticeEl) noticeEl.style.display = 'none';
+
+    if (!checkBtn) return;
+
+    if (!selectCust && cleanPhone.trim().length > 0) {
+      checkBtn.disabled = false;
+      checkBtn.innerText = 'Kiểm Tra';
+      checkBtn.style.opacity = '1';
+      checkBtn.style.cursor = 'pointer';
+      checkBtn.onclick = window.handleCheckOrAddCustomerPhone;
+    } else {
+      checkBtn.disabled = true;
+      checkBtn.innerText = 'Kiểm Tra';
+      checkBtn.style.opacity = '0.5';
+      checkBtn.style.cursor = 'not-allowed';
+    }
+  };
+
+  window.handleCheckOrAddCustomerPhone = function () {
+    const phoneInput = document.getElementById('so-phone-input');
+    const phone = phoneInput ? phoneInput.value.trim() : '';
+    const btnCheck = document.getElementById('so-check-phone-btn');
+    const noticeEl = document.getElementById('phoneNotice');
+
+    if (!phone) return;
+
+    const foundCustomer = (db.customers || []).find(c => (c.phone || '').trim() === phone);
+
+    if (!foundCustomer) {
+      if (noticeEl) {
+        noticeEl.innerText = "⚠ Khách hàng chưa có trong hệ thống";
+        noticeEl.style.display = "block";
+      }
+
+      if (btnCheck) {
+        btnCheck.innerText = "Thêm mới";
+        btnCheck.onclick = function () {
+          window.openQuickCustomerDrawer(phone);
+        };
+      }
+    } else {
+      if (noticeEl) noticeEl.style.display = "none";
+      d.customer = foundCustomer.name;
+      d.phone = foundCustomer.phone;
+      render();
+    }
+  };
+
+  window.openQuickCustomerDrawer = function (phoneStr) {
+    const validPhone = (typeof phoneStr === 'string' || typeof phoneStr === 'number') ? phoneStr : (d.phone || '');
+
+    let drawer = document.getElementById('quick-customer-drawer');
+    if (!drawer) {
+      drawer = document.createElement('div');
+      drawer.id = 'quick-customer-drawer';
+      drawer.className = 'customer-drawer';
+      document.body.appendChild(drawer);
+    }
+
+    drawer.innerHTML = `
+      <div class="drawer-overlay" onclick="closeQuickCustomerDrawer()"></div>
+      <div class="drawer-content">
+        <div class="drawer-header">
+          <h3>Thêm Nhanh Khách Hàng</h3>
+          <button type="button" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--foreground);" onclick="closeQuickCustomerDrawer()">✕</button>
+        </div>
+        <div class="drawer-body">
+          <form onsubmit="event.preventDefault(); saveQuickCustomer();">
+            <div class="form-group" style="margin-bottom: 12px;">
+              <label class="form-label">Tên Công ty / Khách hàng *</label>
+              <input type="text" id="quick-cust-name" class="form-input" required placeholder="Nhập tên khách hàng..." oninput="this.value = toTitleCase(this.value);">
+            </div>
+            <div class="form-group" style="margin-bottom: 12px;">
+              <label class="form-label">Số Điện Thoại *</label>
+              <input type="tel" id="quick-cust-phone" class="form-input" value="${validPhone}" required placeholder="090x xxx xxx" oninput="this.value = this.value.replace(/[^0-9]/g, '');">
+            </div>
+            <div class="form-group" style="margin-bottom: 16px;">
+              <label class="form-label">Địa Chỉ</label>
+              <input type="text" id="quick-cust-address" class="form-input" placeholder="Nhập địa chỉ...">
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 8px;">
+              <button type="button" class="btn-cancel" onclick="closeQuickCustomerDrawer()">Hủy</button>
+              <button type="submit" class="btn-submit">Lưu Khách Hàng</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+
+    setTimeout(() => drawer.classList.add('open'), 10);
+  };
+
+  window.closeQuickCustomerDrawer = function () {
+    const drawer = document.getElementById('quick-customer-drawer');
+    if (drawer) {
+      drawer.classList.remove('open');
+    }
+  };
+
+  window.saveQuickCustomer = async function () {
+    const nameVal = (document.getElementById('quick-cust-name')?.value || '').trim();
+    const phoneVal = (document.getElementById('quick-cust-phone')?.value || '').trim();
+    const addressVal = (document.getElementById('quick-cust-address')?.value || '').trim();
+
+    if (!nameVal || !phoneVal) return;
+
+    const newId = generateAutoId('customers');
+    const newCust = {
+      id: newId,
+      name: nameVal,
+      contact: nameVal,
+      phone: phoneVal,
+      address: addressVal,
+      diachi: addressVal,
+      type: 'Khách vãng lai',
+      paymentTerms: 'Thanh toán ngay',
+      status: 'active',
+      date0: getTodayDateStr(),
+      time0: new Date().toTimeString().split(' ')[0],
+      user_id0: getAuthSession()?.user?.id || ''
+    };
+
+    if (!db.customers) db.customers = [];
+    db.customers.push(newCust);
+
+    if (typeof saveToDatabase === 'function') {
+      await saveToDatabase('customers', newCust);
+    } else if (typeof saveItem === 'function') {
+      await saveItem('customers', newCust);
+    }
+
+    closeQuickCustomerDrawer();
+
+    d.customer = nameVal;
+    d.phone = phoneVal;
+    render();
+  };
 
   c.innerHTML = `
     <div style="max-width: 1050px;">

@@ -1603,6 +1603,7 @@ function handleSaleYnChangeInLine(lineId, isSaleChecked) {
 // CÁC HÀM XỬ LÝ SỰ KIỆN ĐƠN BÁN HÀNG (SALES ORDERS HANDLERS)
 // ==========================================
 
+// 1. Xử lý khi chọn Khách hàng trên form Đơn bán hàng
 function handleOrderCustomerSelect(val) {
   const cust = (db.customers || []).find(c => c.name === val);
   const phoneInput = document.getElementById('so-phone-input');
@@ -1633,6 +1634,7 @@ function handleOrderCustomerSelect(val) {
   handleCustomerSelectInOrder(val);
 }
 
+// 2. Xử lý khi gõ Số điện thoại trên form Đơn bán hàng
 function handleOrderPhoneInput(phoneVal) {
   const cleanPhone = phoneVal.replace(/[^0-9]/g, '');
   const phoneInput = document.getElementById('so-phone-input');
@@ -1646,12 +1648,8 @@ function handleOrderPhoneInput(phoneVal) {
   const noticeEl = document.getElementById('phoneNotice');
 
   if (noticeEl) noticeEl.style.display = 'none';
-  if (!checkBtn) return;
 
-  // Nếu nút đang là "Thêm mới", giữ nguyên trạng thái để người dùng click
-  if (checkBtn.innerText.trim() === 'Thêm mới') {
-    return;
-  }
+  if (!checkBtn) return;
 
   if (!selectCust && cleanPhone.trim().length > 0) {
     checkBtn.disabled = false;
@@ -1667,64 +1665,43 @@ function handleOrderPhoneInput(phoneVal) {
   }
 }
 
-function handleCheckOrAddCustomerPhone(e) {
-  if (e) e.preventDefault(); // Ngăn submit form mặc định
-
+// 3. Kiểm tra số điện thoại hoặc gợi ý thêm mới
+function handleCheckOrAddCustomerPhone() {
   const phoneInput = document.getElementById('so-phone-input');
   const phone = phoneInput ? phoneInput.value.trim() : '';
   const btnCheck = document.getElementById('so-check-phone-btn');
   const noticeEl = document.getElementById('phoneNotice');
 
-  if (!phone) {
-    if (typeof showAlert === 'function') showAlert('Vui lòng nhập số điện thoại!', 'Thông báo');
-    return;
-  }
+  if (!phone) return;
 
-  // Nếu nút ĐÃ Ở TRẠNG THÁI "Thêm mới" -> Mở Drawer thêm nhanh khách hàng
-  if (btnCheck && btnCheck.innerText.trim() === 'Thêm mới') {
-    openQuickCustomerDrawer(phone);
-    return;
-  }
-
-  // Nếu nút đang là "Kiểm tra" -> Thực hiện kiểm tra trong CSDL
   const foundCustomer = (db.customers || []).find(c => (c.phone || '').trim() === phone);
 
   if (!foundCustomer) {
-    // Không tìm thấy -> Đổi tên nút thành "Thêm mới"
     if (noticeEl) {
-      noticeEl.innerText = "* Khách hàng chưa có trong hệ thống";
+      noticeEl.innerText = "⚠ Khách hàng chưa có trong hệ thống";
       noticeEl.style.display = "block";
     }
 
     if (btnCheck) {
-      btnCheck.disabled = false;
       btnCheck.innerText = "Thêm mới";
-      btnCheck.classList.add('btn-add-new');
-      btnCheck.style.opacity = '1';
-      btnCheck.style.cursor = 'pointer';
+      btnCheck.onclick = function () {
+        openQuickCustomerDrawer(phone);
+      };
     }
   } else {
-    // Đã có trong hệ thống -> Điền tên khách hàng vào Form
     if (noticeEl) noticeEl.style.display = "none";
-
     if (state.formData) {
       state.formData.customer = foundCustomer.name;
       state.formData.phone = foundCustomer.phone;
     }
-
-    if (btnCheck) {
-      btnCheck.innerText = "Kiểm Tra";
-      btnCheck.classList.remove('btn-add-new');
-    }
-
-    if (typeof render === 'function') render();
+    render();
   }
 }
 
-// Drawer Thêm nhanh khách hàng chuẩn gán vào window
-window.openQuickCustomerDrawer = function (phoneStr) {
-  const validPhone = (typeof phoneStr === 'string' || typeof phoneStr === 'number')
-    ? phoneStr
+// 4. Mở Drawer Thêm nhanh khách hàng
+function openQuickCustomerDrawer(phoneStr) {
+  const validPhone = (typeof phoneStr === 'string' || typeof phoneStr === 'number') 
+    ? phoneStr 
     : (state.formData ? state.formData.phone || '' : '');
 
   let drawer = document.getElementById('quick-customer-drawer');
@@ -1740,38 +1717,83 @@ window.openQuickCustomerDrawer = function (phoneStr) {
     <div class="drawer-content">
       <div class="drawer-header">
         <h3>Thêm Nhanh Khách Hàng</h3>
-        <button type="button" style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="closeQuickCustomerDrawer()">&times;</button>
+        <button type="button" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--foreground);" onclick="closeQuickCustomerDrawer()">✕</button>
       </div>
       <div class="drawer-body">
         <form onsubmit="event.preventDefault(); saveQuickCustomer();">
           <div class="form-group" style="margin-bottom: 12px;">
-            <label class="form-label">Tên Công ty / Khách hàng <span style="color:red">*</span></label>
-            <input type="text" id="quick-cust-name" class="form-input" required placeholder="Nhập tên khách hàng..." oninput="if(typeof toTitleCase==='function') this.value = toTitleCase(this.value)">
+            <label class="form-label">Tên Công ty / Khách hàng *</label>
+            <input type="text" id="quick-cust-name" class="form-input" required placeholder="Nhập tên khách hàng..." oninput="this.value = toTitleCase(this.value);">
           </div>
           <div class="form-group" style="margin-bottom: 12px;">
-            <label class="form-label">Số điện thoại <span style="color:red">*</span></label>
-            <input type="text" id="quick-cust-phone" class="form-input" required value="${validPhone}" placeholder="Nhập số điện thoại...">
+            <label class="form-label">Số Điện Thoại *</label>
+            <input type="tel" id="quick-cust-phone" class="form-input" value="${validPhone}" required placeholder="090x xxx xxx" oninput="this.value = this.value.replace(/[^0-9]/g, '');">
           </div>
-          <div class="form-group" style="margin-bottom: 12px;">
-            <label class="form-label">Địa chỉ</label>
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label class="form-label">Địa Chỉ</label>
             <input type="text" id="quick-cust-address" class="form-input" placeholder="Nhập địa chỉ...">
           </div>
-          <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px;">
-            <button type="button" class="btn-secondary" onclick="closeQuickCustomerDrawer()">Hủy</button>
-            <button type="submit" class="btn-submit">Lưu khách hàng</button>
+          <div style="display: flex; justify-content: flex-end; gap: 8px;">
+            <button type="button" class="btn-cancel" onclick="closeQuickCustomerDrawer()">Hủy</button>
+            <button type="submit" class="btn-submit">Lưu Khách Hàng</button>
           </div>
         </form>
       </div>
     </div>
   `;
-  
-  drawer.style.display = 'block';
-};
 
-window.closeQuickCustomerDrawer = function () {
+  setTimeout(() => drawer.classList.add('open'), 10);
+}
+
+// 5. Đóng Drawer Thêm nhanh khách hàng
+function closeQuickCustomerDrawer() {
   const drawer = document.getElementById('quick-customer-drawer');
-  if (drawer) drawer.style.display = 'none';
-};
+  if (drawer) {
+    drawer.classList.remove('open');
+  }
+}
+
+// 6. Lưu Khách hàng tạo nhanh
+async function saveQuickCustomer() {
+  const nameVal = (document.getElementById('quick-cust-name')?.value || '').trim();
+  const phoneVal = (document.getElementById('quick-cust-phone')?.value || '').trim();
+  const addressVal = (document.getElementById('quick-cust-address')?.value || '').trim();
+
+  if (!nameVal || !phoneVal) return;
+
+  const newId = generateAutoId('customers');
+  const newCust = {
+    id: newId,
+    name: nameVal,
+    contact: nameVal,
+    phone: phoneVal,
+    address: addressVal,
+    diachi: addressVal,
+    type: 'Khách vãng lai',
+    paymentTerms: 'Thanh toán ngay',
+    status: 'active',
+    date0: getTodayDateStr(),
+    time0: new Date().toTimeString().split(' ')[0],
+    user_id0: getAuthSession()?.user?.id || ''
+  };
+
+  if (!db.customers) db.customers = [];
+  db.customers.push(newCust);
+
+  if (typeof saveToDatabase === 'function') {
+    await saveToDatabase('customers', newCust);
+  } else if (typeof saveItem === 'function') {
+    await saveItem('customers', newCust);
+  }
+
+  closeQuickCustomerDrawer();
+
+  if (state.formData) {
+    state.formData.customer = nameVal;
+    state.formData.phone = phoneVal;
+  }
+  render();
+}
 
 async function saveQuickCustomer() {
   const nameVal = (document.getElementById('quick-cust-name')?.value || '').trim();
