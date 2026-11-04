@@ -2142,8 +2142,8 @@ function renderSalesOrderForm(c) {
   };
 
   window.handleCheckOrAddCustomerPhone = function () {
-    const phone = document.getElementById('phoneInput').value.trim();
-    const btnCheck = document.getElementById('btnCheckPhone');
+    const phone = document.getElementById('so-phone-input').value.trim();
+    const btnCheck = document.getElementById('so-check-phone-btn');
     const noticeEl = document.getElementById('phoneNotice');
 
     if (!phone) return;
