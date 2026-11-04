@@ -2142,25 +2142,26 @@ function renderSalesOrderForm(c) {
   };
 
   window.handleCheckOrAddCustomerPhone = function () {
-    const phoneInput = document.getElementById('so-phone-input');
-    const checkBtn = document.getElementById('so-check-phone-btn');
-    if (!phoneInput || !checkBtn) return;
+    const phone = document.getElementById('phoneInput').value.trim();
+    const btnCheck = document.getElementById('btnCheckPhone');
+    const noticeEl = document.getElementById('phoneNotice');
 
-    const phoneVal = phoneInput.value.trim();
-    if (!phoneVal) return;
+    if (!phone) return;
 
-    if (checkBtn.innerText === 'Thêm mới') {
-      window.openQuickCustomerDrawer(phoneVal);
-      return;
-    }
+    const foundCustomer = customerList.find(c => c.phone === phone);
 
-    const foundCust = (db.customers || []).find(c => c.phone === phoneVal);
-    if (foundCust) {
-      d.customer = foundCust.name;
-      d.phone = foundCust.phone || '';
-      render();
+    if (!foundCustomer) {
+      // Nếu KHÔNG tìm thấy trong hệ thống
+      noticeEl.innerText = "Khách hàng chưa có trong hệ thống";
+      noticeEl.style.display = "block";
+
+      btnCheck.innerText = "Thêm mới";
+      btnCheck.onclick = openQuickAddCustomerModal; // Mở form thêm nhanh KH
     } else {
-      checkBtn.innerText = 'Thêm mới';
+      // Nếu tìm thấy khách hàng
+      noticeEl.style.display = "none";
+      btnCheck.innerText = "Kiểm tra";
+      // Chọn khách hàng vào selectbox...
     }
   };
 
@@ -2184,7 +2185,7 @@ function renderSalesOrderForm(c) {
           <form onsubmit="event.preventDefault(); saveQuickCustomer();">
             <div class="form-group" style="margin-bottom: 12px;">
               <label class="form-label">Tên Công ty / Khách hàng *</label>
-              <input type="text" id="quick-cust-name" class="form-input" required placeholder="Nhập tên khách hàng...">
+              <input type="text" id="quick-cust-name" class="form-input" required placeholder="Nhập tên khách hàng..." 'onchange="updateField(\'type\', this.value)"'>
             </div>
             <div class="form-group" style="margin-bottom: 12px;">
               <label class="form-label">Số Điện Thoại *</label>
@@ -2293,7 +2294,9 @@ function renderSalesOrderForm(c) {
                       Kiểm Tra
                     </button>
                   ` : ''}
-                </div>
+                    <!-- Thông báo nhỏ bên dưới ô SĐT -->
+                    <small id="phoneNotice" style="color: #e67e22; font-size: 11px; margin-top: 4px; display: none;"></small>
+                  </div>
               </div>
 
               <div class="form-group">

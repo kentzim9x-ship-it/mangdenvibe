@@ -43,7 +43,7 @@ async function handleLogin(e) {
   const un = document.getElementById('login-username').value.trim().toLowerCase();
   const pw = document.getElementById('login-password').value;
   const remember = document.getElementById('login-remember').checked;
-  const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+  const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
 
   try {
     const { data, error } = await supabaseClient
@@ -184,7 +184,7 @@ function updateUserInfoUI() {
 // ==========================================
 
 function initTheme() {
-  let savedTheme = 'dark';
+  let savedTheme = 'light';
 
   const savedCredsRaw = localStorage.getItem('remembered_user');
   const savedCreds = savedCredsRaw ? JSON.parse(savedCredsRaw) : null;
