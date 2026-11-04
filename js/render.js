@@ -2148,7 +2148,7 @@ function renderSalesOrderForm(c) {
 
     if (!phone) return;
 
-    const foundCustomer = customerList.find(c => c.phone === phone);
+    const foundCustomer =  db.customers.find(c => c.phone === phone);
 
     if (!foundCustomer) {
       // Nếu KHÔNG tìm thấy trong hệ thống
