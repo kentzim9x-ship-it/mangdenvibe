@@ -1584,15 +1584,18 @@ function handleSaleYnChangeInLine(lineId, isSaleChecked) {
     });
   }
 
-  if (isSaleChecked) {
-    line.unitPrice = qItem ? Number(qItem.unitPrice ?? qItem.price ?? 0) : 0;
-  } else {
-    if (qItem && (qItem.hirePrice !== undefined && qItem.hirePrice !== null)) {
-      line.unitPrice = Number(qItem.hirePrice) || 0;
-    } else if (mat) {
-      line.unitPrice = Number(mat.unitPrice ?? mat.price ?? mat.cost ?? 0);
+  // CHỈ tự động cập nhật lại Đơn giá nếu người dùng chưa tự nhập đơn giá riêng
+  if (!line.unitPrice || line.unitPrice === 0) {
+    if (isSaleChecked) {
+      line.unitPrice = qItem ? Number(qItem.unitPrice ?? qItem.price ?? 0) : 0;
     } else {
-      line.unitPrice = 0;
+      if (qItem && (qItem.hirePrice !== undefined && qItem.hirePrice !== null)) {
+        line.unitPrice = Number(qItem.hirePrice) || 0;
+      } else if (mat) {
+        line.unitPrice = Number(mat.unitPrice ?? mat.price ?? mat.cost ?? 0);
+      } else {
+        line.unitPrice = 0;
+      }
     }
   }
 
@@ -1759,79 +1762,52 @@ async function saveQuickCustomer() {
   const phoneVal = (document.getElementById('quick-cust-phone')?.value || '').trim();
   const addressVal = (document.getElementById('quick-cust-address')?.value || '').trim();
 
-  if (!nameVal || !phoneVal) return;
+  if (!nameVal || !phoneVal) {
+    if (typeof showAlert === 'function') showAlert('Vui lòng nhập Tên và Số điện thoại khách hàng!', 'Cảnh báo');
+    return;
+  }
 
-  const newId = generateAutoId('customers');
+  const session = typeof getAuthSession === 'function' ? getAuthSession() : null;
+  const currentUserId = session?.currentUser?.id || session?.user?.id || 'Hệ Thống';
+  const currentDate = typeof getTodayDateStr === 'function' ? getTodayDateStr() : new Date().toISOString().split('T')[0];
+  const currentTime = typeof getCurrentTimeStr === 'function' ? getCurrentTimeStr() : new Date().toTimeString().split(' ')[0];
+
   const newCust = {
-    id: newId,
+    id: typeof generateAutoId === 'function' ? generateAutoId('customers') : ('KH' + Date.now()),
     name: nameVal,
     contact: nameVal,
     phone: phoneVal,
     address: addressVal,
     diachi: addressVal,
     type: 'Khách vãng lai',
+    paymentterms: 'Thanh toán ngay',
     paymentTerms: 'Thanh toán ngay',
     status: 'active',
-    date0: getTodayDateStr(),
-    time0: new Date().toTimeString().split(' ')[0],
-    user_id0: getAuthSession()?.user?.id || ''
-  };
-
-  if (!db.customers) db.customers = [];
-  db.customers.push(newCust);
-
-  if (typeof saveToDatabase === 'function') {
-    await saveToDatabase('customers', newCust);
-  } else if (typeof saveItem === 'function') {
-    await saveItem('customers', newCust);
-  }
-
-  closeQuickCustomerDrawer();
-
-  if (state.formData) {
-    state.formData.customer = nameVal;
-    state.formData.phone = phoneVal;
-  }
-  render();
-}
-
-async function saveQuickCustomer() {
-  const nameVal = (document.getElementById('quick-cust-name')?.value || '').trim();
-  const phoneVal = (document.getElementById('quick-cust-phone')?.value || '').trim();
-  const addressVal = (document.getElementById('quick-cust-address')?.value || '').trim();
-
-  if (!nameVal || !phoneVal) {
-    if (typeof showAlert === 'function') showAlert('Vui lòng điền đầy đủ Tên và Số điện thoại!', 'Cảnh báo');
-    return;
-  }
-
-  const newCustomerData = {
-    name: nameVal,
-    contact: nameVal,
-    phone: phoneVal,
-    address: addressVal,
-    type: 'Khách vãng lai',
-    paymentTerms: 'Thanh toán ngay',
-    status: 'active',
-    creditLimit: 0
+    creditlimit: 0,
+    creditLimit: 0,
+    date0: currentDate,
+    time0: currentTime,
+    user_id0: currentUserId,
+    date2: currentDate,
+    time2: currentTime,
+    user_id2: currentUserId
   };
 
   try {
     if (typeof supabaseClient !== 'undefined') {
       const { data, error } = await supabaseClient
         .from('customers')
-        .insert([newCustomerData])
+        .insert([newCust])
         .select();
 
       if (error) throw error;
       if (data && data[0]) {
         if (!db.customers) db.customers = [];
-        db.customers.push(data[0]);
+        db.customers.unshift(data[0]);
       }
     } else {
-      newCustomerData.id = generateAutoId('customers');
       if (!db.customers) db.customers = [];
-      db.customers.push(newCustomerData);
+      db.customers.unshift(newCust);
     }
 
     if (state.formData) {
@@ -1844,8 +1820,8 @@ async function saveQuickCustomer() {
     if (typeof render === 'function') render();
 
   } catch (err) {
-    console.error('Lỗi khi thêm nhanh khách hàng:', err);
-    if (typeof showAlert === 'function') showAlert('Không thể thêm mới khách hàng. Vui lòng thử lại!', 'Lỗi');
+    console.error('Lỗi khi thêm nhanh khách hàng vào Database:', err);
+    if (typeof showAlert === 'function') showAlert('Thêm khách hàng thất bại: ' + (err.message || err), 'Lỗi');
   }
 }
 window.saveQuickCustomer = saveQuickCustomer;
