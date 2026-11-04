@@ -793,7 +793,6 @@ async function saveForm(module) {
       address: rawData.address || '',
       creditLimit: limit,
       paymentterms: terms,
-      paymentTerms: terms,
       status: rawData.status || 'active',
       user_id0: rawData.user_id0,
       date0: rawData.date0,
