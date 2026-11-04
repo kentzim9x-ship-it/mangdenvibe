@@ -1388,57 +1388,66 @@ function handleMaterialSelectInLine(lineId, selectedName) {
   if (mat) {
     line.name = mat.name || '';
     line.sku = mat.id || '';
-    line.sale_yn = false; // Mặc định không tích chọn Hàng Bán khi chọn sản phẩm
-    line.unitPrice = 0;   // Mặc định Đơn giá bằng 0
+    
+    // Đảm bảo sale_yn có giá trị boolean (mặc định false)
+    if (line.sale_yn === undefined || line.sale_yn === null) {
+      line.sale_yn = false;
+    }
 
-    // Đơn giá mặc định lấy từ Danh mục sản phẩm (Giá vốn/Giá niêm yết)
-    let finalUnitPrice = mat.cost || 0;
+    const currentCustomer = (state.formData.customer || '').trim();
+    const orderDate = state.formData.date || getTodayDateStr();
 
-    // KIỂM TRA ƯU TIÊN LẤY GIÁ TỪ BẢNG BÁO GIÁ ĐÃ DUYỆT CỦA KHÁCH HÀNG (cho Sales Orders & Returns)
-    if (['sales-orders', 'returns'].includes(state.view)) {
-      const currentCustomer = (state.formData.customer || '').trim();
-      const orderDate = state.formData.date || getTodayDateStr();
+    // Tìm Báo giá hợp lệ gần nhất của Khách hàng
+    let activeQuotation = null;
+    if (currentCustomer) {
+      activeQuotation = (db.quotations || [])
+        .filter(q => {
+          if (!q || !q.customer) return false;
+          if (q.customer.trim().toLowerCase() !== currentCustomer.toLowerCase()) return false;
 
-      if (currentCustomer) {
-        // Tìm Báo giá có trạng thái "Duyệt" và còn hiệu lực của Khách hàng hiện tại
-        const activeQuotation = (db.quotations || [])
-          .filter(q => {
-            if (!q || !q.customer) return false;
-            if (q.customer.trim().toLowerCase() !== currentCustomer.toLowerCase()) return false;
+          const status = (q.status || '').toLowerCase();
+          const isAccepted = ['accepted', 'approved', 'duyệt', 'đã duyệt'].includes(status);
+          if (!isAccepted) return false;
 
-            const status = (q.status || '').toLowerCase();
-            const isAccepted = ['accepted', 'approved', 'duyệt', 'đã duyệt'].includes(status);
-            if (!isAccepted) return false;
+          const vBegin = q.validbegin || q.validBegin || q.date || '';
+          const vUntil = q.validUntil || q.validuntil || '';
 
-            const vBegin = q.validbegin || q.validBegin || q.date || '';
-            const vUntil = q.validUntil || q.validuntil || '';
-
-            if (vBegin && vUntil) {
-              return orderDate >= vBegin && orderDate <= vUntil;
-            }
-            return true; // Nếu không cài ngày hết hạn thì mặc định hiểu là có hiệu lực
-          })
-          .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))[0];
-
-        // Nếu tìm thấy Báo giá hợp lệ -> Tìm sản phẩm trong Báo giá đó
-        if (activeQuotation && Array.isArray(activeQuotation.lineItems)) {
-          const quotedItem = activeQuotation.lineItems.find(item =>
-            (item.sku && item.sku === mat.id) ||
-            (item.name && item.name.toLowerCase() === mat.name.toLowerCase())
-          );
-
-          if (quotedItem && quotedItem.unitPrice !== undefined && quotedItem.unitPrice !== null) {
-            finalUnitPrice = Number(quotedItem.unitPrice) || 0;
+          if (vBegin && vUntil) {
+            return orderDate >= vBegin && orderDate <= vUntil;
           }
-        }
+          return true;
+        })
+        .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))[0];
+    }
+
+    let qItem = null;
+    if (activeQuotation && Array.isArray(activeQuotation.lineItems)) {
+      qItem = activeQuotation.lineItems.find(item =>
+        (item.sku && item.sku === mat.id) ||
+        (item.name && item.name.toLowerCase() === mat.name.toLowerCase())
+      );
+    }
+
+    // ÁP DỤNG QUY TẮC GIÁ THEO TRẠNG THÁI HÀNG BÁN (sale_yn)
+    if (line.sale_yn) {
+      // Khi tích Hàng Bán = true: Lấy Giá bán từ Báo giá, không có -> 0
+      line.unitPrice = qItem ? Number(qItem.unitPrice ?? qItem.price ?? 0) : 0;
+    } else {
+      // Khi không tích Hàng Bán = false (Cho Thuê):
+      // Ưu tiên lấy Giá Thuê (hirePrice) từ Báo giá. Nếu không có -> Lấy đơn giá trong Danh mục hàng hóa
+      if (qItem && qItem.hirePrice !== undefined && qItem.hirePrice !== null) {
+        line.unitPrice = Number(qItem.hirePrice) || 0;
+      } else {
+        line.unitPrice = Number(mat.unitPrice ?? mat.price ?? mat.cost ?? 0);
       }
     }
 
-    line.unitPrice = finalUnitPrice;
-    line.unitCost = mat.cost || 0;
+    line.unitCost = Number(mat.cost || 0);
   } else {
     line.name = cleanName;
-    line.sale_yn = false;
+    if (line.sale_yn === undefined || line.sale_yn === null) {
+      line.sale_yn = false;
+    }
     line.unitPrice = 0;
   }
 
@@ -1626,6 +1635,64 @@ async function handleCustomerSelectInOrder(customerName) {
   render();
 }
 
+// Cập nhật đơn giá khi tích/bỏ tích checkbox Hàng Bán (sale_yn) trong Đơn Bán Hàng
+function handleSaleYnChangeInLine(lineId, isSaleChecked) {
+  if (!state.formData || !Array.isArray(state.formData.lineItems)) return;
+  const line = state.formData.lineItems.find(l => l.lineId === lineId);
+  if (!line) return;
+
+  line.sale_yn = Boolean(isSaleChecked);
+
+  const currentCustomer = (state.formData.customer || '').trim();
+  const orderDate = state.formData.date || getTodayDateStr();
+
+  // Tìm báo giá khả dụng gần nhất của khách hàng
+  let activeQuotation = null;
+  if (currentCustomer) {
+    activeQuotation = (db.quotations || [])
+      .filter(q => {
+        if (!q || !q.customer) return false;
+        if (q.customer.trim().toLowerCase() !== currentCustomer.toLowerCase()) return false;
+        const status = (q.status || '').toLowerCase();
+        if (!['accepted', 'approved', 'duyệt', 'đã duyệt'].includes(status)) return false;
+        const vBegin = q.validbegin || q.validBegin || q.date || '';
+        const vUntil = q.validUntil || q.validuntil || '';
+        if (vBegin && vUntil) return orderDate >= vBegin && orderDate <= vUntil;
+        return true;
+      })
+      .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))[0];
+  }
+
+  const mat = (db.materials || []).find(m => (line.sku && m.id === line.sku) || (line.name && m.name === line.name));
+
+  let qItem = null;
+  if (activeQuotation && Array.isArray(activeQuotation.lineItems)) {
+    qItem = activeQuotation.lineItems.find(q => {
+      const qSku = (q.sku || q.id || '').trim().toLowerCase();
+      const qName = (q.name || '').trim().toLowerCase();
+      const lSku = (line.sku || '').trim().toLowerCase();
+      const lName = (line.name || '').trim().toLowerCase();
+      return (lSku && qSku === lSku) || (lName && qName === lName);
+    });
+  }
+
+  if (isSaleChecked) {
+    // TÍCH HÀNG BÁN (sale_yn = true): Lấy Giá bán từ Báo Giá, nếu không có -> 0
+    line.unitPrice = qItem ? Number(qItem.unitPrice ?? qItem.price ?? 0) : 0;
+  } else {
+    // KHÔNG TÍCH HÀNG BÁN (sale_yn = false): Lấy Giá Thuê từ Báo Giá, nếu không có -> Lấy Giá danh mục hàng hóa
+    if (qItem && (qItem.hirePrice !== undefined && qItem.hirePrice !== null)) {
+      line.unitPrice = Number(qItem.hirePrice) || 0;
+    } else if (mat) {
+      line.unitPrice = Number(mat.unitPrice ?? mat.price ?? mat.cost ?? 0);
+    } else {
+      line.unitPrice = 0;
+    }
+  }
+
+  render();
+}
+
 // 1. Khi chọn khách hàng từ ô select
 function handleSelectSOCustomer(customerId) {
   const phoneInput = document.getElementById('so-phone-input');
@@ -1708,6 +1775,202 @@ async function handleCheckOrAddCustomer() {
     }
     showAlert(`Số điện thoại "${phone}" chưa có trong hệ thống. Vui lòng bấm "Thêm mới" để tạo khách hàng.`, 'Thông báo');
   }
+}
+
+// ==========================================
+// CÁC HÀM XỬ LÝ SỰ KIỆN ĐƠN BÁN HÀNG (SALES ORDERS HANDLERS)
+// ==========================================
+
+// 1. Xử lý khi chọn Khách hàng trên form Đơn bán hàng
+function handleOrderCustomerSelect(val) {
+  const cust = (db.customers || []).find(c => c.name === val);
+  const phoneInput = document.getElementById('so-phone-input');
+  const checkBtn = document.getElementById('so-check-phone-btn');
+  const noticeEl = document.getElementById('phoneNotice');
+
+  if (noticeEl) noticeEl.style.display = 'none';
+
+  if (cust) {
+    if (phoneInput) phoneInput.value = cust.phone || '';
+    if (checkBtn) {
+      checkBtn.disabled = true;
+      checkBtn.innerText = 'Kiểm Tra';
+      checkBtn.style.opacity = '0.5';
+      checkBtn.style.cursor = 'not-allowed';
+    }
+    if (state.formData) state.formData.phone = cust.phone || '';
+  } else {
+    if (phoneInput) phoneInput.value = '';
+    if (checkBtn) {
+      checkBtn.disabled = true;
+      checkBtn.innerText = 'Kiểm Tra';
+      checkBtn.style.opacity = '0.5';
+      checkBtn.style.cursor = 'not-allowed';
+    }
+    if (state.formData) state.formData.phone = '';
+  }
+  handleCustomerSelectInOrder(val);
+}
+
+// 2. Xử lý khi gõ Số điện thoại trên form Đơn bán hàng
+function handleOrderPhoneInput(phoneVal) {
+  const cleanPhone = phoneVal.replace(/[^0-9]/g, '');
+  const phoneInput = document.getElementById('so-phone-input');
+  if (phoneInput && phoneInput.value !== cleanPhone) {
+    phoneInput.value = cleanPhone;
+  }
+
+  if (state.formData) state.formData.phone = cleanPhone;
+  const selectCust = state.formData ? state.formData.customer : '';
+  const checkBtn = document.getElementById('so-check-phone-btn');
+  const noticeEl = document.getElementById('phoneNotice');
+
+  if (noticeEl) noticeEl.style.display = 'none';
+
+  if (!checkBtn) return;
+
+  if (!selectCust && cleanPhone.trim().length > 0) {
+    checkBtn.disabled = false;
+    checkBtn.innerText = 'Kiểm Tra';
+    checkBtn.style.opacity = '1';
+    checkBtn.style.cursor = 'pointer';
+    checkBtn.onclick = handleCheckOrAddCustomerPhone;
+  } else {
+    checkBtn.disabled = true;
+    checkBtn.innerText = 'Kiểm Tra';
+    checkBtn.style.opacity = '0.5';
+    checkBtn.style.cursor = 'not-allowed';
+  }
+}
+
+// 3. Kiểm tra số điện thoại hoặc gợi ý thêm mới
+function handleCheckOrAddCustomerPhone() {
+  const phoneInput = document.getElementById('so-phone-input');
+  const phone = phoneInput ? phoneInput.value.trim() : '';
+  const btnCheck = document.getElementById('so-check-phone-btn');
+  const noticeEl = document.getElementById('phoneNotice');
+
+  if (!phone) return;
+
+  const foundCustomer = (db.customers || []).find(c => (c.phone || '').trim() === phone);
+
+  if (!foundCustomer) {
+    if (noticeEl) {
+      noticeEl.innerText = "⚠ Khách hàng chưa có trong hệ thống";
+      noticeEl.style.display = "block";
+    }
+
+    if (btnCheck) {
+      btnCheck.innerText = "Thêm mới";
+      btnCheck.onclick = function () {
+        openQuickCustomerDrawer(phone);
+      };
+    }
+  } else {
+    if (noticeEl) noticeEl.style.display = "none";
+    if (state.formData) {
+      state.formData.customer = foundCustomer.name;
+      state.formData.phone = foundCustomer.phone;
+    }
+    render();
+  }
+}
+
+// 4. Mở Drawer Thêm nhanh khách hàng
+function openQuickCustomerDrawer(phoneStr) {
+  const validPhone = (typeof phoneStr === 'string' || typeof phoneStr === 'number') 
+    ? phoneStr 
+    : (state.formData ? state.formData.phone || '' : '');
+
+  let drawer = document.getElementById('quick-customer-drawer');
+  if (!drawer) {
+    drawer = document.createElement('div');
+    drawer.id = 'quick-customer-drawer';
+    drawer.className = 'customer-drawer';
+    document.body.appendChild(drawer);
+  }
+
+  drawer.innerHTML = `
+    <div class="drawer-overlay" onclick="closeQuickCustomerDrawer()"></div>
+    <div class="drawer-content">
+      <div class="drawer-header">
+        <h3>Thêm Nhanh Khách Hàng</h3>
+        <button type="button" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--foreground);" onclick="closeQuickCustomerDrawer()">✕</button>
+      </div>
+      <div class="drawer-body">
+        <form onsubmit="event.preventDefault(); saveQuickCustomer();">
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label class="form-label">Tên Công ty / Khách hàng *</label>
+            <input type="text" id="quick-cust-name" class="form-input" required placeholder="Nhập tên khách hàng..." oninput="this.value = toTitleCase(this.value);">
+          </div>
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label class="form-label">Số Điện Thoại *</label>
+            <input type="tel" id="quick-cust-phone" class="form-input" value="${validPhone}" required placeholder="090x xxx xxx" oninput="this.value = this.value.replace(/[^0-9]/g, '');">
+          </div>
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label class="form-label">Địa Chỉ</label>
+            <input type="text" id="quick-cust-address" class="form-input" placeholder="Nhập địa chỉ...">
+          </div>
+          <div style="display: flex; justify-content: flex-end; gap: 8px;">
+            <button type="button" class="btn-cancel" onclick="closeQuickCustomerDrawer()">Hủy</button>
+            <button type="submit" class="btn-submit">Lưu Khách Hàng</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+
+  setTimeout(() => drawer.classList.add('open'), 10);
+}
+
+// 5. Đóng Drawer Thêm nhanh khách hàng
+function closeQuickCustomerDrawer() {
+  const drawer = document.getElementById('quick-customer-drawer');
+  if (drawer) {
+    drawer.classList.remove('open');
+  }
+}
+
+// 6. Lưu Khách hàng tạo nhanh
+async function saveQuickCustomer() {
+  const nameVal = (document.getElementById('quick-cust-name')?.value || '').trim();
+  const phoneVal = (document.getElementById('quick-cust-phone')?.value || '').trim();
+  const addressVal = (document.getElementById('quick-cust-address')?.value || '').trim();
+
+  if (!nameVal || !phoneVal) return;
+
+  const newId = generateAutoId('customers');
+  const newCust = {
+    id: newId,
+    name: nameVal,
+    contact: nameVal,
+    phone: phoneVal,
+    address: addressVal,
+    diachi: addressVal,
+    type: 'Khách vãng lai',
+    paymentTerms: 'Thanh toán ngay',
+    status: 'active',
+    date0: getTodayDateStr(),
+    time0: new Date().toTimeString().split(' ')[0],
+    user_id0: getAuthSession()?.user?.id || ''
+  };
+
+  if (!db.customers) db.customers = [];
+  db.customers.push(newCust);
+
+  if (typeof saveToDatabase === 'function') {
+    await saveToDatabase('customers', newCust);
+  } else if (typeof saveItem === 'function') {
+    await saveItem('customers', newCust);
+  }
+
+  closeQuickCustomerDrawer();
+
+  if (state.formData) {
+    state.formData.customer = nameVal;
+    state.formData.phone = phoneVal;
+  }
+  render();
 }
 
 // 4. Bật/Tắt Drawer trượt từ bên phải

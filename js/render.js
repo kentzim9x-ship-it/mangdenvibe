@@ -1870,65 +1870,6 @@ function renderQuotationForm(c) {
   `;
 }
 
-// HELPER CẬP NHẬT ĐƠN GIÁ KHI TÍCH / BỎ TÍCH CHECKBOX HÀNG BÁN (sale_yn)
-window.handleSaleYnChangeInLine = function (lineId, isSaleChecked) {
-  const line = (state.formData.lineItems || []).find(l => l.lineId === lineId);
-  if (!line) return;
-
-  line.sale_yn = isSaleChecked;
-
-  const currentCustomer = (state.formData.customer || '').trim();
-  const orderDate = state.formData.date || getTodayDateStr();
-
-  // Tìm báo giá khả dụng
-  let activeQuotation = null;
-  if (currentCustomer) {
-    activeQuotation = (db.quotations || [])
-      .filter(q => {
-        if (!q || !q.customer) return false;
-        if (q.customer.trim().toLowerCase() !== currentCustomer.toLowerCase()) return false;
-        const status = (q.status || '').toLowerCase();
-        if (!['accepted', 'approved', 'duyệt', 'đã duyệt'].includes(status)) return false;
-        const vBegin = q.validbegin || q.validBegin || q.date || '';
-        const vUntil = q.validUntil || q.validuntil || '';
-        if (vBegin && vUntil) return orderDate >= vBegin && orderDate <= vUntil;
-        return true;
-      })
-      .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))[0];
-  }
-
-  const mat = (db.materials || []).find(m => (line.sku && m.id === line.sku) || (line.name && m.name === line.name));
-  
-  let qItem = null;
-  if (activeQuotation && Array.isArray(activeQuotation.lineItems)) {
-    qItem = activeQuotation.lineItems.find(q => {
-      const qSku = (q.sku || q.id || '').trim().toLowerCase();
-      const qName = (q.name || '').trim().toLowerCase();
-      const lSku = (line.sku || '').trim().toLowerCase();
-      const lName = (line.name || '').trim().toLowerCase();
-      return (lSku && qSku === lSku) || (lName && qName === lName);
-    });
-  }
-
-  if (isSaleChecked) {
-    // KHI TÍCH CHỌN HÀNG BÁN (sale_yn = true)
-    // Lấy Giá Bán từ Báo Giá, nếu không có/không khả dụng thì mặc định = 0
-    line.unitPrice = qItem ? (qItem.unitPrice ?? qItem.price ?? 0) : 0;
-  } else {
-    // KHI KHÔNG TÍCH HÀNG BÁN (sale_yn = false - Cho Thuê)
-    // Lấy Giá Thuê từ Báo Giá, không có thì lấy Đơn Giá từ Danh Mục Hàng Hóa
-    if (qItem && (qItem.hirePrice !== undefined && qItem.hirePrice !== null)) {
-      line.unitPrice = qItem.hirePrice;
-    } else if (mat) {
-      line.unitPrice = mat.unitPrice ?? mat.price ?? mat.cost ?? 0;
-    } else {
-      line.unitPrice = 0;
-    }
-  }
-
-  render();
-};
-
 function renderSalesOrderForm(c) {
   const d = state.formData || {};
   const isView = state.mode === 'view';
@@ -1942,7 +1883,7 @@ function renderSalesOrderForm(c) {
     d.warehouseCode = db.warehouses[0].code || db.warehouses[0].id;
   }
 
-  // MẶC ĐỊNH SALE_YN = FALSE KHI THÊM MỚI ĐƠN HÀNG
+  // MẶC ĐỊNH SALE_YN = FALSE KHI THÊM MỚI ĐƠN HÀNG HOẶC THÊM DÒNG
   d.lineItems.forEach(l => {
     l.warehouseCode = d.warehouseCode;
     if (l.sale_yn === undefined || l.sale_yn === null) {
@@ -2006,7 +1947,6 @@ function renderSalesOrderForm(c) {
         const matKey = (mat.id || mat.name || '').toLowerCase();
         if (!matchedSkusAndNames.has(matKey)) {
           matchedSkusAndNames.add(matKey);
-          // Mặc định chọn sản phẩm hiển thị Giá Thuê từ Báo giá
           const displayPrice = (qItem.hirePrice !== undefined && qItem.hirePrice !== null) ? qItem.hirePrice : (mat.unitPrice ?? mat.price ?? mat.cost ?? 0);
           inQuotationList.push({
             ...mat,
@@ -2087,13 +2027,13 @@ function renderSalesOrderForm(c) {
         </span>
         <input type="text" id="line-item-${l.lineId}-sku" class="form-input" style="padding: 6px 8px; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; color: var(--primary);" value="${l.sku || ''}" readonly title="Mã hàng tự động">
         
-        <input type="text" id="line-item-${l.lineId}-name" autocomplete="off" ${(isView || isDetailsDisabled) ? '' : 'list="global-materials-list"'} class="form-input" style="padding: 6px 8px; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" value="${l.name || ''}" ${(isView || isDetailsDisabled) ? 'readonly' : 'onkeydown="handleLineItemKeyDown(event, \'sales-orders\', ' + idx + ', \'name\')" onchange="handleMaterialSelectInLine(\'' + l.lineId + '\', this.value)"'} placeholder="${isDetailsDisabled ? 'Vui lòng chọn khách hàng...' : 'Chọn/nhập tên hàng...'}" required>
+        <input type="text" id="line-item-${l.lineId}-name" autocomplete="off" ${(isView || isDetailsDisabled) ? '' : 'list="global-materials-list"'} class="form-input" style="padding: 6px 8px; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" value="${l.name || ''}" ${(isView || isDetailsDisabled) ? 'readonly' : `onkeydown="handleLineItemKeyDown(event, 'sales-orders', ${idx}, 'name')" onchange="handleMaterialSelectInLine('${l.lineId}', this.value)"`} placeholder="${isDetailsDisabled ? 'Vui lòng chọn khách hàng...' : 'Chọn/nhập tên hàng...'}" required>
         
         <input type="text" id="line-item-${l.lineId}-unit" class="form-input" style="padding: 6px 6px; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; text-align: center;" value="${unitName}" readonly title="Đơn vị tính từ danh mục hàng">
         
         <input type="text" id="line-item-${l.lineId}-warehouseCode" class="form-input" style="padding: 6px 8px; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; text-align: center;" value="${d.warehouseCode || '—'}" readonly title="Mã kho từ mục 01">
 
-        <!-- CỘT HÀNG BÁN: CHECKBOX sale_yn (GỌI HANDLE RIÊNG ĐỂ TỰ ĐỘNG CẬP NHẬT ĐƠN GIÁ) -->
+        <!-- CỘT HÀNG BÁN: CHECKBOX sale_yn -->
         <div style="display: flex; justify-content: center; align-items: center;">
           <input 
             type="checkbox" 
@@ -2133,186 +2073,6 @@ function renderSalesOrderForm(c) {
 
   const currentCustObj = (db.customers || []).find(c => c.name === d.customer);
   const initialPhone = currentCustObj ? (currentCustObj.phone || '') : (d.phone || '');
-
-  window.handleOrderCustomerSelect = function (val) {
-    const cust = (db.customers || []).find(c => c.name === val);
-    const phoneInput = document.getElementById('so-phone-input');
-    const checkBtn = document.getElementById('so-check-phone-btn');
-    const noticeEl = document.getElementById('phoneNotice');
-
-    if (noticeEl) noticeEl.style.display = 'none';
-
-    if (cust) {
-      if (phoneInput) phoneInput.value = cust.phone || '';
-      if (checkBtn) {
-        checkBtn.disabled = true;
-        checkBtn.innerText = 'Kiểm Tra';
-        checkBtn.style.opacity = '0.5';
-        checkBtn.style.cursor = 'not-allowed';
-      }
-      d.phone = cust.phone || '';
-    } else {
-      if (phoneInput) phoneInput.value = '';
-      if (checkBtn) {
-        checkBtn.disabled = true;
-        checkBtn.innerText = 'Kiểm Tra';
-        checkBtn.style.opacity = '0.5';
-        checkBtn.style.cursor = 'not-allowed';
-      }
-      d.phone = '';
-    }
-    handleCustomerSelectInOrder(val);
-  };
-
-  window.handleOrderPhoneInput = function (phoneVal) {
-    const cleanPhone = phoneVal.replace(/[^0-9]/g, '');
-    const phoneInput = document.getElementById('so-phone-input');
-    if (phoneInput && phoneInput.value !== cleanPhone) {
-      phoneInput.value = cleanPhone;
-    }
-
-    d.phone = cleanPhone;
-    const selectCust = d.customer;
-    const checkBtn = document.getElementById('so-check-phone-btn');
-    const noticeEl = document.getElementById('phoneNotice');
-
-    if (noticeEl) noticeEl.style.display = 'none';
-
-    if (!checkBtn) return;
-
-    if (!selectCust && cleanPhone.trim().length > 0) {
-      checkBtn.disabled = false;
-      checkBtn.innerText = 'Kiểm Tra';
-      checkBtn.style.opacity = '1';
-      checkBtn.style.cursor = 'pointer';
-      checkBtn.onclick = window.handleCheckOrAddCustomerPhone;
-    } else {
-      checkBtn.disabled = true;
-      checkBtn.innerText = 'Kiểm Tra';
-      checkBtn.style.opacity = '0.5';
-      checkBtn.style.cursor = 'not-allowed';
-    }
-  };
-
-  window.handleCheckOrAddCustomerPhone = function () {
-    const phoneInput = document.getElementById('so-phone-input');
-    const phone = phoneInput ? phoneInput.value.trim() : '';
-    const btnCheck = document.getElementById('so-check-phone-btn');
-    const noticeEl = document.getElementById('phoneNotice');
-
-    if (!phone) return;
-
-    const foundCustomer = (db.customers || []).find(c => (c.phone || '').trim() === phone);
-
-    if (!foundCustomer) {
-      if (noticeEl) {
-        noticeEl.innerText = "⚠ Khách hàng chưa có trong hệ thống";
-        noticeEl.style.display = "block";
-      }
-
-      if (btnCheck) {
-        btnCheck.innerText = "Thêm mới";
-        btnCheck.onclick = function () {
-          window.openQuickCustomerDrawer(phone);
-        };
-      }
-    } else {
-      if (noticeEl) noticeEl.style.display = "none";
-      d.customer = foundCustomer.name;
-      d.phone = foundCustomer.phone;
-      render();
-    }
-  };
-
-  window.openQuickCustomerDrawer = function (phoneStr) {
-    const validPhone = (typeof phoneStr === 'string' || typeof phoneStr === 'number') ? phoneStr : (d.phone || '');
-
-    let drawer = document.getElementById('quick-customer-drawer');
-    if (!drawer) {
-      drawer = document.createElement('div');
-      drawer.id = 'quick-customer-drawer';
-      drawer.className = 'customer-drawer';
-      document.body.appendChild(drawer);
-    }
-
-    drawer.innerHTML = `
-      <div class="drawer-overlay" onclick="closeQuickCustomerDrawer()"></div>
-      <div class="drawer-content">
-        <div class="drawer-header">
-          <h3>Thêm Nhanh Khách Hàng</h3>
-          <button type="button" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--foreground);" onclick="closeQuickCustomerDrawer()">✕</button>
-        </div>
-        <div class="drawer-body">
-          <form onsubmit="event.preventDefault(); saveQuickCustomer();">
-            <div class="form-group" style="margin-bottom: 12px;">
-              <label class="form-label">Tên Công ty / Khách hàng *</label>
-              <input type="text" id="quick-cust-name" class="form-input" required placeholder="Nhập tên khách hàng..." oninput="this.value = toTitleCase(this.value);">
-            </div>
-            <div class="form-group" style="margin-bottom: 12px;">
-              <label class="form-label">Số Điện Thoại *</label>
-              <input type="tel" id="quick-cust-phone" class="form-input" value="${validPhone}" required placeholder="090x xxx xxx" oninput="this.value = this.value.replace(/[^0-9]/g, '');">
-            </div>
-            <div class="form-group" style="margin-bottom: 16px;">
-              <label class="form-label">Địa Chỉ</label>
-              <input type="text" id="quick-cust-address" class="form-input" placeholder="Nhập địa chỉ...">
-            </div>
-            <div style="display: flex; justify-content: flex-end; gap: 8px;">
-              <button type="button" class="btn-cancel" onclick="closeQuickCustomerDrawer()">Hủy</button>
-              <button type="submit" class="btn-submit">Lưu Khách Hàng</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    `;
-
-    setTimeout(() => drawer.classList.add('open'), 10);
-  };
-
-  window.closeQuickCustomerDrawer = function () {
-    const drawer = document.getElementById('quick-customer-drawer');
-    if (drawer) {
-      drawer.classList.remove('open');
-    }
-  };
-
-  window.saveQuickCustomer = async function () {
-    const nameVal = (document.getElementById('quick-cust-name')?.value || '').trim();
-    const phoneVal = (document.getElementById('quick-cust-phone')?.value || '').trim();
-    const addressVal = (document.getElementById('quick-cust-address')?.value || '').trim();
-
-    if (!nameVal || !phoneVal) return;
-
-    const newId = generateAutoId('customers');
-    const newCust = {
-      id: newId,
-      name: nameVal,
-      contact: nameVal,
-      phone: phoneVal,
-      address: addressVal,
-      diachi: addressVal,
-      type: 'Khách vãng lai',
-      paymentTerms: 'Thanh toán ngay',
-      status: 'active',
-      date0: getTodayDateStr(),
-      time0: new Date().toTimeString().split(' ')[0],
-      user_id0: getAuthSession()?.user?.id || ''
-    };
-
-    if (!db.customers) db.customers = [];
-    db.customers.push(newCust);
-
-    if (typeof saveToDatabase === 'function') {
-      await saveToDatabase('customers', newCust);
-    } else if (typeof saveItem === 'function') {
-      await saveItem('customers', newCust);
-    }
-
-    closeQuickCustomerDrawer();
-
-    d.customer = nameVal;
-    d.phone = phoneVal;
-    render();
-  };
 
   c.innerHTML = `
     <div style="max-width: 1050px;">
@@ -2414,8 +2174,8 @@ function renderSalesOrderForm(c) {
 
               <div style="min-width: 950px;">
                 ${linesHtml}
+              </div>
             </div>
-          </div>
 
             <div style="display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 26px 10px 26px; flex-wrap: wrap; gap: 12px;">
               <div style="width: 110px; flex-shrink: 0;">
@@ -2431,13 +2191,13 @@ function renderSalesOrderForm(c) {
           </div>
 
           <div class="action-bar" style="display: flex; justify-content: space-between; align-items: center;">
-            <button type="button" class="btn-cancel" style="padding: 8px 16px; font-size: 13px;" event.preventDefault(); onclick="state.mode === 'edit' ? navigate('sales-orders', 'view', '${d.id}') : navigate('sales-orders')">
+            <button type="button" class="btn-cancel" style="padding: 8px 16px; font-size: 13px;" onclick="state.mode === 'edit' ? navigate('sales-orders', 'view', '${d.id}') : navigate('sales-orders')">
               ${isView ? 'Quay Lại' : 'Hủy'}
             </button>
             <div style="display: flex; gap: 8px;">              
               ${isView ? `
                 ${hasPermission ? `
-                  <button type="button" class="btn-action" style="padding: 8px 16px; font-size: 13px;" event.preventDefault(); onclick="navigate('sales-orders', 'edit', '${d.id}')">${Icons.edit} Sửa</button>
+                  <button type="button" class="btn-action" style="padding: 8px 16px; font-size: 13px;" onclick="navigate('sales-orders', 'edit', '${d.id}')">${Icons.edit} Sửa</button>
                   <button type="button" class="btn-action btn-action-del" style="padding: 8px 16px; font-size: 13px;" onclick="deleteItem('sales-orders', '${d.id}')">${Icons.trash} Xóa</button>
                 ` : ''}
                 <button type="button" class="btn-primary" onclick="exportSalesOrderToPDF()" style="background: #e11d48; color: #ffffff; padding: 8px 16px; font-size: 13px; cursor: pointer;">Xuất PDF</button>
@@ -2451,7 +2211,7 @@ function renderSalesOrderForm(c) {
           </div>
       </form>
     </div>
-    `;
+  `;
 }
 
 function renderReturnForm(c) {
