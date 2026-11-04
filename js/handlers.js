@@ -1263,8 +1263,9 @@ function initFormData(module, id) {
             warehouseCode: defaultWh,
             sku: '',
             name: '',
+            sale_yn: false, // Mặc định khi thêm mới không tích chọn Hàng Bán
             qty: 1,
-            unitPrice: 0,
+            unitPrice: 0, // Mặc định không tích chọn Hàng Bán thì Đơn giá bằng 0
             discount: 0,
             tax: 0
           }
@@ -1368,6 +1369,8 @@ function handleMaterialSelectInLine(lineId, selectedName) {
   if (!valStr) {
     line.name = '';
     line.sku = '';
+    line.sale_yn = false;
+    line.unitPrice = 0;
     render();
     return;
   }
@@ -1386,6 +1389,8 @@ function handleMaterialSelectInLine(lineId, selectedName) {
   if (mat) {
     line.name = mat.name || '';
     line.sku = mat.id || '';
+    line.sale_yn = false; // Mặc định không tích chọn Hàng Bán khi chọn sản phẩm
+    line.unitPrice = 0;   // Mặc định Đơn giá bằng 0
 
     // Đơn giá mặc định lấy từ Danh mục sản phẩm (Giá vốn/Giá niêm yết)
     let finalUnitPrice = mat.cost || 0;
@@ -1434,6 +1439,8 @@ function handleMaterialSelectInLine(lineId, selectedName) {
     line.unitCost = mat.cost || 0;
   } else {
     line.name = cleanName;
+    line.sale_yn = false;
+    line.unitPrice = 0;
   }
 
   render();
