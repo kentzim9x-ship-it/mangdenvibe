@@ -384,12 +384,14 @@ function getBadgeClass(status) {
     'verified': 'badge-emerald', 'đã xác minh': 'badge-emerald',
     'active': 'badge-emerald', 'hoạt động': 'badge-emerald', 'đang hoạt động': 'badge-emerald',
     'ok': 'badge-emerald', 'đủ hàng': 'badge-emerald', 'còn hàng': 'badge-emerald',
+    'Còn Hàng': 'badge-emerald',
 
     // 🟡 VÀNG / CAM (Đang xử lý / Chờ duyệt / Đã nhận / Sắp hết)
     'processing': 'badge-amber', 'đang xử lý': 'badge-amber',
     'received': 'badge-amber', 'đã nhận': 'badge-amber',
     'maintenance': 'badge-amber', 'bảo trì': 'badge-amber',
     'low': 'badge-amber', 'sắp hết': 'badge-amber',
+    'Cho Thuê': 'badge-amber',
 
     // 🔘 XÁM (Ngừng hoạt động / Bản nháp)
     'inactive': 'badge-zinc', 'ngừng hoạt động': 'badge-zinc',
@@ -448,10 +450,12 @@ function getStatusLabel(status) {
     'closed': 'Đóng cửa',
 
     // Vật tư & Tồn kho
-    'ok': 'Đủ hàng',
+    'ok': 'Còn Hàng',
     'còn hàng': 'Còn hàng',
     'low': 'Sắp hết',
     'sắp hết': 'Sắp hết',
+    'cho thuê': 'Cho Thuê',
+    'rent': 'Cho Thuê',
     'out': 'Hết hàng',
     'hết hàng': 'Hết hàng'
   };

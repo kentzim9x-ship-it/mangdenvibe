@@ -375,15 +375,15 @@ function renderMaterialsList(c) {
   const paginatedItems = filtered.slice(startIndex, startIndex + state.pageSize);
 
   const totalSku = db.materials.length;
-  const totalStock = db.materials.reduce((a, i) => a + (Number(i.stock) || 0), 0);
-  const lowCount = db.materials.filter(i => (i.status || '').toLowerCase() === 'low').length;
+  const totalStock = db.materials.filter(i => (i.status || '').toLowerCase() === 'ok').length;
+  const lowCount = db.materials.filter(i => (i.status || '').toLowerCase() === 'rent').length;
   const outCount = db.materials.filter(i => (i.status || '').toLowerCase() === 'out').length;
 
   const kpiHtml = [
     { label: 'TỔNG SỐ SKU', value: fmt(totalSku), color: 'var(--foreground)' },
-    { label: 'TỔNG TỒN KHO', value: fmt(totalStock), color: '#34d399' },
-    { label: 'SẮP HẾT', value: fmt(lowCount), color: '#fbbf24' },   // Thống kê Sắp hết (Màu vàng/cam)
-    { label: 'HẾT HÀNG', value: fmt(outCount), color: '#f87171' }    // Thống kê Hết hàng (Màu đỏ)
+    { label: 'TỔNG CÒN HÀNG', value: fmt(totalStock), color: '#34d399' },
+    { label: 'TỔNG CHO THUÊ', value: fmt(lowCount), color: '#fbbf24' },
+    { label: 'HẾT HÀNG', value: fmt(outCount), color: '#f87171' }
   ].map(s => `
     <div style="background-color: var(--card); padding: 16px 20px;">
       <div style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">${s.label}</div>
@@ -459,7 +459,7 @@ function renderMaterialsList(c) {
         ${kpiHtml}
       </div>
       <div class="filter-search-container" style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
-        ${getFilterBar([['all', 'TẤT CẢ'], ['ok', 'CÒN HÀNG'], ['rent', 'CHO THUÊ'], ['out', 'HẾT HÀNG']])}
+        ${getFilterBar([['all', 'Tất Cả'], ['ok', 'Còn Hàng'], ['rent', 'Cho Thuê'], ['out', 'Hết Hàng']])}
         <div class="mobile-search-action-group" style="display: flex; gap: 8px; flex-wrap: wrap; width: 100%; max-width: 550px;">
           <div style="display: flex; align-items: center; gap: 8px; border: 1px solid var(--border); background: var(--card); padding: 0 12px; flex: 1; min-width: 200px; height: 38px; box-sizing: border-box;">
             <span style="color: var(--muted-foreground); display: flex; align-items: center;">${Icons.search}</span>

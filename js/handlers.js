@@ -350,8 +350,8 @@ function updateLine(lineId, field, value, type = 'text') {
   const currentLineTotal = (qty * price * (1 - disc / 100)) * (1 + tax / 100);
 
   // Tìm ô hiển thị thành tiền trên dòng tương ứng
-  const lineRow = document.getElementById(`line-item-row-${lineId}`) || 
-                  document.querySelector(`tr[data-line-id="${lineId}"]`);
+  const lineRow = document.getElementById(`line-item-row-${lineId}`) ||
+    document.querySelector(`tr[data-line-id="${lineId}"]`);
 
   if (lineRow) {
     const totalCell = lineRow.querySelector('.line-total-val') || lineRow.querySelector('td:nth-last-child(2)');
@@ -1362,7 +1362,10 @@ function updateGlobalMaterialDatalist() {
     dl.id = 'global-materials-list';
     document.body.appendChild(dl);
   }
-  dl.innerHTML = (db.materials || []).map(m => {
+
+  const availableMaterials = (db.materials || []).filter(m => m.status === 'ok');
+
+  dl.innerHTML = availableMaterials.map(m => {
     const safeName = m.name || '';
     const safeId = m.id || '';
     const safeCost = m.cost || 0;
@@ -1417,7 +1420,7 @@ function handleReturnSalesOrderChange(soId) {
 function handleReturnCustomerChange(val) {
   const custName = val.trim();
   updateField('customer', custName);
-  
+
   // Tự động tìm SĐT tương ứng trong danh mục khách hàng
   const custObj = (db.customers || []).find(c => c.name.toLowerCase() === custName.toLowerCase());
   if (custObj && custObj.phone) {
@@ -1464,9 +1467,12 @@ function handleMaterialSelectInLine(lineId, selectedName) {
     cleanName = parts.length > 1 ? parts.slice(1).join(' - ').split(' (')[0].trim() : valStr;
   }
 
+  // CHỈ TRA CỨU TRONG CÁC SẢN PHẨM CÓ STATUS = 'ok'
   const mat = (db.materials || []).find(m =>
-    (m.name && m.name.toLowerCase() === cleanName.toLowerCase()) ||
-    (m.id && m.id.toLowerCase() === valStr.toLowerCase())
+    m.status === 'ok' && (
+      (m.name && m.name.toLowerCase() === cleanName.toLowerCase()) ||
+      (m.id && m.id.toLowerCase() === valStr.toLowerCase())
+    )
   );
 
   if (mat) {
@@ -1700,8 +1706,8 @@ function handleSaleYnChangeInLine(lineId, isSaleChecked) {
   }
 
   // 3. Tìm sản phẩm trong Danh mục hàng hóa (db.materials)
-  const mat = (db.materials || []).find(m => 
-    (line.sku && m.id === line.sku) || 
+  const mat = (db.materials || []).find(m =>
+    (line.sku && m.id === line.sku) ||
     (line.name && m.name.toLowerCase() === line.name.toLowerCase())
   );
 
