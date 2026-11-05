@@ -2027,7 +2027,7 @@ function renderSalesOrderForm(c) {
         </span>
         <input type="text" id="line-item-${l.lineId}-sku" class="form-input" style="padding: 6px 8px; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; color: var(--primary);" value="${l.sku || ''}" readonly title="Mã hàng tự động">
         
-        <input type="text" id="line-item-${l.lineId}-name" autocomplete="off" ${(isView || isDetailsDisabled) ? '' : 'list="global-materials-list"'} class="form-input" style="padding: 6px 8px; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" value="${l.name || ''}" ${(isView || isDetailsDisabled) ? 'readonly' : `onkeydown="handleLineItemKeyDown(event, 'sales-orders', ${idx}, 'name')" onchange="handleMaterialSelectInLine('${l.lineId}', this.value)"`} placeholder="${isDetailsDisabled ? 'Vui lòng chọn khách hàng...' : 'Chọn/nhập tên hàng...'}" required>
+        <input type="text" id="line-item-${l.lineId}-name" autocomplete="off" ${(isView || isDetailsDisabled) ? '' : 'list="global-materials-list"'} class="form-input" style="padding: 6px 8px; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" value="${l.name || ''}" ${(isView || isDetailsDisabled) ? 'readonly' : `onkeydown="handleLineItemKeyDown(event, 'sales-orders', ${idx}, 'name')" onchange="handleMaterialSelectInLine('${l.lineId}', this.value)"`} placeholder="${isDetailsDisabled ? 'Chọn/nhập tên hàng...' : 'Chọn/nhập tên hàng...'}" required>
         
         <input type="text" id="line-item-${l.lineId}-unit" class="form-input" style="padding: 6px 6px; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; text-align: center;" value="${unitName}" readonly title="Đơn vị tính từ danh mục hàng">
         
@@ -2117,20 +2117,22 @@ function renderSalesOrderForm(c) {
     const noticeEl = document.getElementById('phoneNotice');
 
     if (noticeEl) noticeEl.style.display = 'none';
-
     if (!checkBtn) return;
 
-    if (!selectCust && cleanPhone.trim().length > 0) {
+    // Nếu có nhập số điện thoại, mở khóa nút Kiểm Tra
+    if (cleanPhone.trim().length > 0) {
       checkBtn.disabled = false;
       checkBtn.innerText = 'Kiểm Tra';
       checkBtn.style.opacity = '1';
       checkBtn.style.cursor = 'pointer';
+      checkBtn.style.pointerEvents = 'auto';
       checkBtn.onclick = window.handleCheckOrAddCustomerPhone;
     } else {
       checkBtn.disabled = true;
       checkBtn.innerText = 'Kiểm Tra';
       checkBtn.style.opacity = '0.5';
       checkBtn.style.cursor = 'not-allowed';
+      checkBtn.style.pointerEvents = 'none';
     }
   };
 
@@ -2152,14 +2154,20 @@ function renderSalesOrderForm(c) {
 
       if (btnCheck) {
         btnCheck.innerText = "Thêm mới";
+        btnCheck.disabled = false; // Đảm bảo nút được mở khóa để bấm
+        btnCheck.style.opacity = '1';
+        btnCheck.style.cursor = 'pointer';
+        // Gán sự kiện mở drawer thêm nhanh khách hàng
         btnCheck.onclick = function () {
           window.openQuickCustomerDrawer(phone);
         };
       }
     } else {
       if (noticeEl) noticeEl.style.display = "none";
-      d.customer = foundCustomer.name;
-      d.phone = foundCustomer.phone;
+      if (d) {
+        d.customer = foundCustomer.name;
+        d.phone = foundCustomer.phone;
+      }
       render();
     }
   };
@@ -2459,7 +2467,7 @@ function renderReturnForm(c) {
         </span>
         <input type="text" id="line-item-${l.lineId}-sku" class="form-input" style="padding: 6px 8px; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; color: var(--primary);" value="${l.sku || ''}" readonly title="Mã hàng không cho sửa">
         
-        <input type="text" id="line-item-${l.lineId}-name" autocomplete="off" ${(isView || isDetailsDisabled) ? '' : 'list="global-materials-list"'} class="form-input" style="padding: 6px 8px; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" value="${l.name || ''}" ${(isView || isDetailsDisabled) ? 'readonly' : 'onkeydown="handleLineItemKeyDown(event, \'returns\', ' + idx + ', \'name\')" onchange="handleMaterialSelectInLine(\'' + l.lineId + '\', this.value)"'} placeholder="${isDetailsDisabled ? 'Vui lòng chọn khách hàng...' : 'Chọn/nhập tên hàng...'}" required>
+        <input type="text" id="line-item-${l.lineId}-name" autocomplete="off" ${(isView || isDetailsDisabled) ? '' : 'list="global-materials-list"'} class="form-input" style="padding: 6px 8px; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" value="${l.name || ''}" ${(isView || isDetailsDisabled) ? 'readonly' : 'onkeydown="handleLineItemKeyDown(event, \'returns\', ' + idx + ', \'name\')" onchange="handleMaterialSelectInLine(\'' + l.lineId + '\', this.value)"'} placeholder="${isDetailsDisabled ? 'Chọn/nhập tên hàng...' : 'Chọn/nhập tên hàng...'}" required>
         
         <input type="text" id="line-item-${l.lineId}-unit" class="form-input" style="padding: 6px 8px; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; text-align: center;" value="${unitName}" readonly title="Đơn vị tính lấy từ Material">
         
@@ -2645,7 +2653,7 @@ function renderGRNForm(c) {
             oninput="this.value = toTitleCase(this.value); updateLine('${l.lineId}', 'name', this.value);"
             onchange="this.value = toTitleCase(this.value.trim()); updateLine('${l.lineId}', 'name', this.value.trim());"
           `} 
-          placeholder="${isDetailsDisabled ? 'Vui lòng nhập nhà cung cấp...' : 'Nhập tên sản phẩm...'}" 
+          placeholder="${isDetailsDisabled ? 'Nhập tên sản phẩm...' : 'Nhập tên sản phẩm...'}" 
           required
         >
         
@@ -2662,7 +2670,7 @@ function renderGRNForm(c) {
             oninput="this.value = toUpperCaseStr(this.value); updateLine('${l.lineId}', 'unit', this.value);"
             onchange="this.value = toUpperCaseStr(this.value.trim()); updateLine('${l.lineId}', 'unit', this.value.trim());"
           `} 
-          placeholder="KG, CÁI..."
+          placeholder="CÁI, BỘ..."
         >
         
         <input type="text" id="line-item-${l.lineId}-warehouseCode" class="form-input" style="padding: 6px 8px; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; text-align: center;" value="${d.warehouseCode || '—'}" readonly title="Mã kho từ mục 01 xuống">

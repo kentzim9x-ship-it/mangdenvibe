@@ -491,12 +491,12 @@ function getFilterBar(options) {
 }
 
 function generateAutoId(module) {
-  const collection = db[module === 'sales-orders' ? 'orders' : module] || [];
+  const collection = db[module === 'sales-orders' ? 'orders' : (module === 'grn' ? 'grns' : module)] || [];
   const now = new Date();
   const yy = String(now.getFullYear()).slice(-2);
   const mm = String(now.getMonth() + 1).padStart(2, '0');
 
-  // 1. DANH MỤC HÀNG HÓA: SKU-YYMM0001
+  // 1. SKU: SKU-YYMM0001
   if (module === 'materials') {
     const prefix = `SKU-${yy}${mm}`;
     const maxNum = collection.reduce((m, x) => {
@@ -508,7 +508,7 @@ function generateAutoId(module) {
     return `${prefix}${String(maxNum + 1).padStart(4, '0')}`;
   }
 
-  // 2. DANH MỤC KHÁCH HÀNG: CUS-YYMM0001
+  // 2. Khách hàng: CUS-YYMM0001
   if (module === 'customers') {
     const prefix = `CUS-${yy}${mm}`;
     const maxNum = collection.reduce((m, x) => {
@@ -520,6 +520,7 @@ function generateAutoId(module) {
     return `${prefix}${String(maxNum + 1).padStart(4, '0')}`;
   }
 
+  // 3. Kho hàng: WH-01
   if (module === 'warehouses') {
     const maxNum = collection.reduce((m, x) => {
       const match = ((x.code || x.id) || '').match(/(?:WH|KHO)-(\d+)/i);
@@ -528,69 +529,51 @@ function generateAutoId(module) {
     return `WH-${String(maxNum + 1).padStart(2, '0')}`;
   }
 
+  // 4. Báo giá: BBG-YYMM0001
   if (module === 'quotations') {
-    const now = new Date();
-    const yy = String(now.getFullYear()).slice(-2);
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
     const prefix = `BBG-${yy}${mm}`;
-
     const maxNum = collection.reduce((m, x) => {
       if (!x.id) return m;
-      const regex = new RegExp(`^${prefix}-(\\d+)`, 'i');
+      const regex = new RegExp(`^${prefix}-?(\\d+)`, 'i');
       const match = x.id.match(regex);
       return match ? Math.max(m, parseInt(match[1], 10)) : m;
     }, 0);
-
     return `${prefix}-${String(maxNum + 1).padStart(4, '0')}`;
   }
 
+  // 5. Đơn bán hàng: DHB-YYMM0001
   if (module === 'sales-orders') {
-    const now = new Date();
-    const yy = String(now.getFullYear()).slice(-2);
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
     const prefix = `DHB-${yy}${mm}`;
-
     const maxNum = collection.reduce((m, x) => {
       if (!x.id) return m;
-      const regex = new RegExp(`^${prefix}-(\\d+)`, 'i');
+      const regex = new RegExp(`^${prefix}-?(\\d+)`, 'i');
       const match = x.id.match(regex);
       return match ? Math.max(m, parseInt(match[1], 10)) : m;
     }, 0);
-
     return `${prefix}-${String(maxNum + 1).padStart(4, '0')}`;
   }
 
+  // 6. Nhận trả lại: HBTL-YYMM0001
   if (module === 'returns') {
-    const now = new Date();
-    const yy = String(now.getFullYear()).slice(-2);
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
     const prefix = `HBTL-${yy}${mm}`;
-
     const maxNum = collection.reduce((m, x) => {
       if (!x.id) return m;
-      const regex = new RegExp(`^${prefix}-(\\d+)`, 'i');
+      const regex = new RegExp(`^${prefix}-?(\\d+)`, 'i');
       const match = x.id.match(regex);
       return match ? Math.max(m, parseInt(match[1], 10)) : m;
     }, 0);
-
     return `${prefix}-${String(maxNum + 1).padStart(4, '0')}`;
   }
 
+  // 7. Phiếu nhập kho: PNK-YYMM0001
   if (module === 'grn') {
-    const now = new Date();
-    const yy = String(now.getFullYear()).slice(-2);
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
     const prefix = `PNK-${yy}${mm}`;
-
-    const list = Array.isArray(db.grns) ? db.grns : [];
-
-    const maxNum = list.reduce((m, x) => {
+    const maxNum = collection.reduce((m, x) => {
       const currentId = String(x.id || '');
       const regex = new RegExp(`^${prefix}-?(\\d+)`, 'i');
       const match = currentId.match(regex);
       return match ? Math.max(m, parseInt(match[1], 10)) : m;
     }, 0);
-
     return `${prefix}-${String(maxNum + 1).padStart(4, '0')}`;
   }
 }

@@ -320,30 +320,39 @@ function updateLine(lineId, field, value, type = 'text') {
       lineTotal = qty * price;
       total += lineTotal;
 
-      // Cập nhật giá trị hiển thị Thành tiền ngay trên dòng chi tiết
+      // Cập nhật giá trị hiển thị Thành tiền ngay trên dòng chi tiết của Phiếu nhập kho (nếu có phần tử DOM)
       const nameInput = document.getElementById(`line-item-${l.lineId}-name`);
       if (nameInput && nameInput.parentElement) {
         const totalDiv = nameInput.parentElement.querySelector('div[style*="text-align: right"]');
-        if (totalDiv) totalDiv.innerText = fmtUSD(lineTotal);
+        if (totalDiv && typeof fmtUSD === 'function') {
+          totalDiv.innerText = fmtUSD(lineTotal);
+        }
       }
     }
 
+    // Cập nhật giá trị hiển thị thành tiền trên giao diện dòng chi tiết
     const skuInput = document.getElementById(`line-item-${l.lineId}-sku`);
     if (skuInput && skuInput.parentElement) {
       const divs = skuInput.parentElement.querySelectorAll('div');
-      if (divs.length > 0) divs[0].innerText = fmtUSD(lineTotal);
+      if (divs.length > 0 && typeof fmtUSD === 'function') {
+        divs[0].innerText = fmtUSD(lineTotal);
+      }
     }
   });
 
   if (state.view === 'quotations' || state.view === 'sales-orders') {
     total = subtotal - discountTotal + taxTotal;
-    state.formData.subtotal = subtotal; state.formData.discountTotal = discountTotal; state.formData.tax = taxTotal; state.formData.total = total;
+    state.formData.subtotal = subtotal; 
+    state.formData.discountTotal = discountTotal; 
+    state.formData.tax = taxTotal; 
+    state.formData.total = total;
   } else if (state.view === 'returns') {
     state.formData.total = total;
   } else if (state.view === 'grn') {
     state.formData.totalValue = total;
   }
 
+  // Cập nhật hiển thị tổng số tiền trên bảng Tổng kết (Summary) ở cuối Form
   const summaryDivs = document.querySelectorAll('div[style*="justify-content: space-between"]');
   summaryDivs.forEach(div => {
     const spans = div.querySelectorAll('span');
@@ -351,11 +360,13 @@ function updateLine(lineId, field, value, type = 'text') {
       const lbl = spans[0].innerText.trim().toLowerCase();
       const valSpan = spans[spans.length - 1];
 
-      if (lbl === 'tạm tính') valSpan.innerText = fmtUSD(subtotal);
-      else if (lbl === 'chiết khấu') valSpan.innerText = '-' + fmtUSD(discountTotal);
-      else if (lbl === 'tổng thuế') valSpan.innerText = fmtUSD(taxTotal);
-      else if (lbl === 'tổng cộng' || lbl === 'tổng hoàn tiền' || lbl === 'tổng giá trị') {
-        valSpan.innerText = fmtUSD(total);
+      if (typeof fmtUSD === 'function') {
+        if (lbl === 'tạm tính') valSpan.innerText = fmtUSD(subtotal);
+        else if (lbl === 'chiết khấu') valSpan.innerText = '-' + fmtUSD(discountTotal);
+        else if (lbl === 'tổng thuế') valSpan.innerText = fmtUSD(taxTotal);
+        else if (lbl === 'tổng cộng' || lbl === 'tổng hoàn tiền' || lbl === 'tổng giá trị') {
+          valSpan.innerText = fmtUSD(total);
+        }
       }
     }
   });
@@ -1318,7 +1329,13 @@ function handleMaterialSelectInLine(lineId, selectedName) {
     line.sku = '';
     line.sale_yn = false;
     line.unitPrice = 0;
-    render();
+    
+    // Cập nhật lại tổng tiền đơn hàng nếu đang mở phiếu có tính tổng
+    if (typeof updateLine === 'function') {
+      updateLine(lineId, 'name', '');
+    } else {
+      render();
+    }
     return;
   }
 
@@ -1342,7 +1359,7 @@ function handleMaterialSelectInLine(lineId, selectedName) {
     }
 
     const currentCustomer = (state.formData.customer || '').trim();
-    const orderDate = state.formData.date || getTodayDateStr();
+    const orderDate = state.formData.date || (typeof getTodayDateStr === 'function' ? getTodayDateStr() : new Date().toISOString().split('T')[0]);
 
     let activeQuotation = null;
     if (currentCustomer) {
@@ -1393,7 +1410,12 @@ function handleMaterialSelectInLine(lineId, selectedName) {
     line.unitPrice = 0;
   }
 
-  render();
+  // Kích hoạt tính toán lại tổng tiền của dòng và của phiếu
+  if (typeof updateLine === 'function') {
+    updateLine(lineId, 'unitPrice', line.unitPrice);
+  } else {
+    render();
+  }
 }
 
 async function checkAndAddNewCustomerFromOrder() {
@@ -1746,14 +1768,17 @@ function closeQuickCustomerDrawer() {
 }
 
 // 6. Lưu Khách hàng tạo nhanh
-// Thay thế/Cập nhật hàm saveQuickCustomer trong handlers_8.js
 async function saveQuickCustomer() {
   const nameVal = (document.getElementById('quick-cust-name')?.value || '').trim();
   const phoneVal = (document.getElementById('quick-cust-phone')?.value || '').trim();
   const addressVal = (document.getElementById('quick-cust-address')?.value || '').trim();
 
   if (!nameVal || !phoneVal) {
-    if (typeof showAlert === 'function') showAlert('Vui lòng nhập Tên và Số điện thoại khách hàng!', 'Cảnh báo');
+    if (typeof showAlert === 'function') {
+      showAlert('Vui lòng nhập Tên và Số điện thoại khách hàng!', 'Cảnh báo');
+    } else {
+      alert('Vui lòng nhập Tên và Số điện thoại khách hàng!');
+    }
     return;
   }
 
@@ -1811,7 +1836,11 @@ async function saveQuickCustomer() {
 
   } catch (err) {
     console.error('Lỗi khi thêm nhanh khách hàng vào Database:', err);
-    if (typeof showAlert === 'function') showAlert('Thêm khách hàng thất bại: ' + (err.message || err), 'Lỗi');
+    if (typeof showAlert === 'function') {
+      showAlert('Thêm khách hàng thất bại: ' + (err.message || err), 'Lỗi');
+    } else {
+      alert('Thêm khách hàng thất bại: ' + (err.message || err));
+    }
   }
 }
 window.saveQuickCustomer = saveQuickCustomer;
