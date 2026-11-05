@@ -1571,7 +1571,7 @@ function handleSaleYnChangeInLine(lineId, isSaleChecked) {
   const currentCustomer = (state.formData.customer || '').trim();
   const orderDate = state.formData.date || (typeof getTodayDateStr === 'function' ? getTodayDateStr() : new Date().toISOString().split('T')[0]);
 
-  // 2. Tra cứu Bảng báo giá hợp lệ của khách hàng hiện tại (nếu có)
+  // 2. Tra cứu Bảng báo giá hợp lệ của khách hàng (nếu có)
   let activeQuotation = null;
   if (currentCustomer) {
     activeQuotation = (db.quotations || [])
@@ -1588,13 +1588,13 @@ function handleSaleYnChangeInLine(lineId, isSaleChecked) {
       .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))[0];
   }
 
-  // 3. Tìm sản phẩm tương ứng trong danh mục hàng hóa (db.materials)
+  // 3. Tìm sản phẩm trong Danh mục hàng hóa (db.materials)
   const mat = (db.materials || []).find(m => 
     (line.sku && m.id === line.sku) || 
     (line.name && m.name.toLowerCase() === line.name.toLowerCase())
   );
 
-  // 4. Tìm dòng sản phẩm tương ứng trong Bảng báo giá (nếu tìm thấy báo giá)
+  // 4. Tìm dòng tương ứng trong Báo giá (nếu có)
   let qItem = null;
   if (activeQuotation && Array.isArray(activeQuotation.lineItems)) {
     qItem = activeQuotation.lineItems.find(q => {
@@ -1606,39 +1606,39 @@ function handleSaleYnChangeInLine(lineId, isSaleChecked) {
     });
   }
 
-  // 5. Cập nhật Đơn giá tự động dựa trên trạng thái tích chọn "Hàng bán"
+  // 5. Tính toán Đơn giá dựa theo cờ isSaleChecked
+  let newUnitPrice = 0;
   if (isSaleChecked) {
-    // --- TRƯỜNG HỢP: HÀNG BÁN ---
+    // TÍCH CHỌN: Lấy giá bán trong Báo giá -> Nếu không có lấy Giá bán (cost/price) trong Danh mục hàng hóa
     if (qItem && (qItem.unitPrice !== undefined || qItem.price !== undefined)) {
-      // Ưu tiên Giá bán trong Báo giá
-      line.unitPrice = Number(qItem.unitPrice ?? qItem.price ?? 0);
+      newUnitPrice = Number(qItem.unitPrice ?? qItem.price ?? 0);
     } else if (mat) {
-      // Nếu không có báo giá, lấy Giá bán trong Danh mục hàng hóa (cost/price)
-      line.unitPrice = Number(mat.cost ?? mat.price ?? mat.unitPrice ?? 0);
-    } else {
-      line.unitPrice = 0;
+      newUnitPrice = Number(mat.cost ?? mat.price ?? mat.unitPrice ?? 0);
     }
   } else {
-    // --- TRƯỜNG HỢP: HÀNG THUÊ ---
+    // BỎ TÍCH CHỌN: Lấy giá thuê trong Báo giá -> Nếu không có lấy Giá thuê (hireprice/hirePrice) trong Danh mục hàng hóa
     if (qItem && (qItem.hirePrice !== undefined && qItem.hirePrice !== null)) {
-      // Ưu tiên Giá thuê trong Báo giá
-      line.unitPrice = Number(qItem.hirePrice) || 0;
+      newUnitPrice = Number(qItem.hirePrice) || 0;
     } else if (mat && (mat.hireprice !== undefined || mat.hirePrice !== undefined)) {
-      // Nếu không có báo giá, lấy Giá thuê trong Danh mục hàng hóa (hireprice/hirePrice)
-      line.unitPrice = Number(mat.hireprice ?? mat.hirePrice ?? 0);
+      newUnitPrice = Number(mat.hireprice ?? mat.hirePrice ?? 0);
     } else if (mat) {
-      // Fallback về giá vốn/đơn giá chung nếu chưa thiết lập giá thuê
-      line.unitPrice = Number(mat.unitPrice ?? mat.price ?? mat.cost ?? 0);
-    } else {
-      line.unitPrice = 0;
+      newUnitPrice = Number(mat.unitPrice ?? mat.price ?? mat.cost ?? 0);
     }
   }
 
-  // 6. Tính toán lại tổng tiền của dòng và của toàn bộ đơn hàng
+  line.unitPrice = newUnitPrice;
+
+  // 6. ĐỒNG BỘ TRỰC TIẾP LÊN Ô INPUT ĐƠN GIÁ TRÊN GIAO DIỆN (DOM)
+  const unitPriceInput = document.getElementById(`line-item-${lineId}-unitPrice`);
+  if (unitPriceInput) {
+    unitPriceInput.value = newUnitPrice.toLocaleString('vi-VN');
+  }
+
+  // 7. Gọi updateLine để tính lại Thành tiền và các dòng Tổng phía dưới
   if (typeof updateLine === 'function') {
-    updateLine(lineId, 'unitPrice', line.unitPrice);
-  } else {
-    if (typeof render === 'function') render();
+    updateLine(lineId, 'unitPrice', line.unitPrice, 'number');
+  } else if (typeof render === 'function') {
+    render();
   }
 }
 
