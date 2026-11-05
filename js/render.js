@@ -2513,26 +2513,26 @@ function renderReturnForm(c) {
     return `<option value="${wCode}" ${d.warehouseCode === wCode ? 'selected' : ''}>${wCode} - ${w.name}</option>`;
   }).join('');
 
+  // Danh sách khách hàng cho Datalist
   const customerOptions = (db.customers || []).map(cust => 
-    `<option value="${cust.name}" ${d.customer === cust.name ? 'selected' : ''}>${cust.name}${cust.phone ? ' - ' + cust.phone : ''}</option>`
+    `<option value="${cust.name}">${cust.name}${cust.phone ? ' - ' + cust.phone : ''}</option>`
   ).join('');
 
-  const salesOrderOptions = (db.salesOrders || []).map(so => 
+  // Lọc Đơn hàng bán: Nếu d.customer đã có giá trị -> Lọc theo d.customer; nếu không -> Lấy tất cả đơn hàng bán
+  const filteredSalesOrders = (db.salesOrders || []).filter(so => {
+    if (!d.customer || !d.customer.trim()) return true;
+    return (so.customer || '').toLowerCase().trim() === d.customer.toLowerCase().trim();
+  });
+
+  const salesOrderOptions = filteredSalesOrders.map(so => 
     `<option value="${so.id}" ${d.salesOrderId === so.id ? 'selected' : ''}>${so.id} - ${so.customer || 'Khách lẻ'}</option>`
   ).join('');
-
-  // Lọc danh sách Đơn Hàng Bán: Nếu đã chọn Khách Hàng -> Chỉ lấy các đơn của KH đó
-  const filteredOrders = (db.orders || []).filter(o => {
-    if (!d.customer) return true; // Nếu chưa chọn Khách Hàng -> Hiển thị tất cả đơn hàng
-    return o.customer && String(o.customer).trim().toLowerCase() === String(d.customer).trim().toLowerCase();
-  });
 
   const gridLayout = isView ? "10px 120px 1fr 70px 70px 70px 100px 130px" : "10px 120px 1fr 70px 70px 70px 100px 130px 32px";
 
   const linesHtml = d.lineItems.map((l, idx) => {
     const mat = (db.materials || []).find(m => m.id === l.sku || m.name === l.name);
     const unitName = mat ? (mat.unit || '—') : '—';
-    const stockQty = calculateRealtimeStock(l.sku, d.warehouseCode, d.id);
 
     return `
       <div style="display: grid; grid-template-columns: ${gridLayout}; gap: 6px; padding: 10px 16px 10px 10px; border-bottom: 1px solid var(--border); align-items: center; ${isDetailsDisabled ? 'opacity: 0.5; pointer-events: none;' : ''}">
@@ -2578,14 +2578,6 @@ function renderReturnForm(c) {
           <div class="section-header"><span class="section-num">01</span><span class="section-title">Thông tin trả hàng</span></div>
           <div class="section-body grid-3">
             <div class="form-group">
-              <label class="form-label">Chọn đơn hàng bán (nếu có)</label>
-              <select class="form-select" ${isView ? 'disabled style="background: var(--muted); cursor: not-allowed;"' : 'onchange="handleReturnSalesOrderChange(this.value)"'}>
-                <option value="">-- Chọn đơn hàng --</option>
-                ${salesOrderOptions}
-              </select>
-            </div>
-
-            <div class="form-group">
               <label class="form-label">Khách hàng *</label>
               <input 
                 type="text" 
@@ -2603,7 +2595,7 @@ function renderReturnForm(c) {
               </datalist>
             </div>
 
-            <!-- CỘT SỐ ĐIỆN THOẠI BÊN CẠNH CỘT KHÁCH HÀNG -->
+            <!-- CỘT SỐ ĐIỆN THOẠI BÊN CẠNH KHÁCH HÀNG -->
             <div class="form-group">
               <label class="form-label">Số điện thoại</label>
               <input 
@@ -2618,6 +2610,15 @@ function renderReturnForm(c) {
                 `} 
                 placeholder="Nhập SĐT khách hàng..."
               >
+            </div>
+
+            <!-- ĐƠN HÀNG BÁN ĐƯỢC FILTER THEO KHÁCH HÀNG ĐÃ CHỌN (NẾU CÓ) -->
+            <div class="form-group">
+              <label class="form-label">Chọn đơn hàng bán (nếu có)</label>
+              <select class="form-select" ${isView ? 'disabled style="background: var(--muted); cursor: not-allowed;"' : 'onchange="handleReturnSalesOrderChange(this.value)"'}>
+                <option value="">-- Tất cả đơn hàng ${d.customer ? 'của ' + d.customer : ''} --</option>
+                ${salesOrderOptions}
+              </select>
             </div>
 
             <div class="form-group">
