@@ -2721,7 +2721,6 @@ function renderGRNForm(c) {
           style="padding: 6px 8px; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" 
           value="${l.name || ''}" 
           ${(isView || isDetailsDisabled) ? 'readonly' : `
-            onkeydown="handleLineItemKeyDown(event, 'grn', ${idx}, 'name')" 
             oninput="updateLine('${l.lineId}', 'name', this.value);"
             onchange="this.value = toTitleCase(this.value.trim()); updateLine('${l.lineId}', 'name', this.value.trim());"
           `} 
