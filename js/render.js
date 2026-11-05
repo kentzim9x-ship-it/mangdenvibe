@@ -433,7 +433,7 @@ function renderMaterialsList(c) {
         <td data-label="Vị Trí Lưu Kho" style="padding: 11px 16px; font-family: var(--font-dm-mono); font-size: 12px; text-align: center;">${m.location || '—'}</td>
         <td data-label="Đơn Giá" style="padding: 11px 16px; font-family: var(--font-dm-mono); font-size: 12px; text-align: right;">${fmtUSD(m.hireprice || 0)}</td>
         <td data-label="Đơn Giá" style="padding: 11px 16px; font-family: var(--font-dm-mono); font-size: 12px; text-align: right;">${fmtUSD(m.cost || 0)}</td>
-        <td data-label="Trạng Thái" style="padding: 11px 16px; text-align: center;">${statusBadge}</td>
+        <td data-label="Trạng Thái" style="padding: 11px 16px; text-align: center;"><span class="badge ${getBadgeClass(m.status)}">${getStatusLabel(m.status)}</span></td>
         
         <td data-label="Người Tạo" style="padding: 11px 16px; font-size: 12px;">${getUserFullName(m.user_id0)}</td>
         <td data-label="Ngày Tạo" style="padding: 11px 16px; font-family: var(--font-dm-mono); font-size: 11px; text-align: center; color: var(--muted-foreground);">${fmtDateStr(m.date0)}</td>
@@ -1925,7 +1925,7 @@ function renderSalesOrderForm(c) {
   }
 
   const sortBySkuAsc = (a, b) => (a.id || '').localeCompare(b.id || '', undefined, { numeric: true, sensitivity: 'base' });
-  const allMaterials = JSON.parse(JSON.stringify(db.materials || []));
+  const allMaterials = JSON.parse(JSON.stringify((db.materials || []).filter(m => m.status === 'ok')));
 
   let inQuotationList = [];
   let outQuotationList = [];
@@ -2685,12 +2685,12 @@ function renderReturnForm(c) {
         </div>
 
         <div class="action-bar" style="display: flex; justify-content: space-between; align-items: center;">
-          <button type="button" class="btn-cancel" style="padding: 8px 16px; font-size: 13px;" event.preventDefault(); onclick="state.mode === 'edit' ? navigate('returns', 'view', '${d.id}') : navigate('returns')">
+          <button type="button" class="btn-cancel" style="padding: 8px 16px; font-size: 13px;" onclick="state.mode === 'edit' ? navigate('returns', 'view', '${d.id}') : navigate('returns')">
             ${isView ? 'Quay Lại' : 'Hủy'}
           </button>
           <div style="display: flex; gap: 8px;">
             ${isView && hasPermission ? `
-              <button type="button" class="btn-action" style="padding: 8px 16px; font-size: 13px;" event.preventDefault(); onclick="navigate('returns', 'edit', '${d.id}')">${Icons.edit} Sửa</button>
+              <button type="button" class="btn-action" style="padding: 8px 16px; font-size: 13px;" onclick="navigate('returns', 'edit', '${d.id}')">${Icons.edit} Sửa</button>
               <button type="button" class="btn-action btn-action-del" style="padding: 8px 16px; font-size: 13px;" onclick="deleteItem('returns', '${d.id}')">${Icons.trash} Xóa</button>
             ` : ''}
             ${!isView ? `<button type="submit" class="btn-submit" style="padding: 8px 16px; font-size: 13px;" ${isDetailsDisabled ? 'disabled style="opacity: 0.5; cursor: not-allowed; pointer-events: none;"' : ''}>${state.mode === 'add' ? 'Tạo phiếu nhận trả' : 'Cập nhật'}</button>` : ''}
@@ -2698,7 +2698,7 @@ function renderReturnForm(c) {
         </div>
       </form>
     </div>
-    `;
+  `;
 }
 
 function renderGRNForm(c) {

@@ -350,8 +350,8 @@ function updateLine(lineId, field, value, type = 'text') {
   const currentLineTotal = (qty * price * (1 - disc / 100)) * (1 + tax / 100);
 
   // Tìm ô hiển thị thành tiền trên dòng tương ứng
-  const lineRow = document.getElementById(`line-item-row-${lineId}`) ||
-    document.querySelector(`tr[data-line-id="${lineId}"]`);
+  const lineRow = document.getElementById(`line-item-row-${lineId}`) || 
+                  document.querySelector(`tr[data-line-id="${lineId}"]`);
 
   if (lineRow) {
     const totalCell = lineRow.querySelector('.line-total-val') || lineRow.querySelector('td:nth-last-child(2)');
@@ -1362,10 +1362,7 @@ function updateGlobalMaterialDatalist() {
     dl.id = 'global-materials-list';
     document.body.appendChild(dl);
   }
-
-  const availableMaterials = (db.materials || []).filter(m => m.status === 'ok');
-
-  dl.innerHTML = availableMaterials.map(m => {
+  dl.innerHTML = (db.materials || []).map(m => {
     const safeName = m.name || '';
     const safeId = m.id || '';
     const safeCost = m.cost || 0;
@@ -1420,7 +1417,7 @@ function handleReturnSalesOrderChange(soId) {
 function handleReturnCustomerChange(val) {
   const custName = val.trim();
   updateField('customer', custName);
-
+  
   // Tự động tìm SĐT tương ứng trong danh mục khách hàng
   const custObj = (db.customers || []).find(c => c.name.toLowerCase() === custName.toLowerCase());
   if (custObj && custObj.phone) {
@@ -1467,12 +1464,9 @@ function handleMaterialSelectInLine(lineId, selectedName) {
     cleanName = parts.length > 1 ? parts.slice(1).join(' - ').split(' (')[0].trim() : valStr;
   }
 
-  // CHỈ TRA CỨU TRONG CÁC SẢN PHẨM CÓ STATUS = 'ok'
   const mat = (db.materials || []).find(m =>
-    m.status === 'ok' && (
-      (m.name && m.name.toLowerCase() === cleanName.toLowerCase()) ||
-      (m.id && m.id.toLowerCase() === valStr.toLowerCase())
-    )
+    (m.name && m.name.toLowerCase() === cleanName.toLowerCase()) ||
+    (m.id && m.id.toLowerCase() === valStr.toLowerCase())
   );
 
   if (mat) {
@@ -1677,6 +1671,61 @@ async function handleCustomerSelectInOrder(customerName) {
   render();
 }
 
+function handleOrderSelectInReturn(orderId) {
+  if (!state.formData || state.mode === 'view') return;
+
+  const safeOrderId = String(orderId || '').trim();
+  state.formData.orderId = safeOrderId;
+
+  // Nếu người dùng chọn "-- Không theo đơn hàng --" (Bỏ chọn đơn)
+  if (!safeOrderId) {
+    if (!state.formData.customer) {
+      state.formData.lineItems = [{
+        lineId: Date.now().toString(),
+        sku: '',
+        name: '',
+        qtyReturned: 1,
+        unitPrice: 0
+      }];
+    }
+    render();
+    return;
+  }
+
+  // Trường hợp chọn 1 Đơn hàng bán cụ thể
+  const targetOrder = (db.orders || []).find(o => String(o.id) === safeOrderId);
+
+  if (targetOrder) {
+    // Tự động gắn Khách hàng & SĐT từ Đơn hàng bán
+    state.formData.customer = targetOrder.customer || '';
+
+    if (targetOrder.phone || targetOrder.customerPhone) {
+      state.formData.phone = targetOrder.phone || targetOrder.customerPhone;
+      state.formData.customerPhone = targetOrder.phone || targetOrder.customerPhone;
+    } else {
+      const custObj = (db.customers || []).find(c => c.name === targetOrder.customer);
+      if (custObj && custObj.phone) {
+        state.formData.phone = custObj.phone;
+        state.formData.customerPhone = custObj.phone;
+      }
+    }
+
+    // Sao chép các dòng sản phẩm từ đơn bán hàng sang phiếu nhận trả
+    const rawLines = targetOrder.lineItems || targetOrder.lineitems || [];
+    if (Array.isArray(rawLines) && rawLines.length > 0) {
+      state.formData.lineItems = rawLines.map(item => ({
+        lineId: Date.now().toString() + Math.random().toString(36).substr(2, 4),
+        sku: item.sku || '',
+        name: item.name || '',
+        qtyReturned: Number(item.qty || item.quantity) || 1,
+        unitPrice: Number(item.unitPrice || item.price) || 0
+      }));
+    }
+  }
+
+  render();
+}
+
 function handleSaleYnChangeInLine(lineId, isSaleChecked) {
   if (!state.formData || !Array.isArray(state.formData.lineItems)) return;
   const line = state.formData.lineItems.find(l => l.lineId === lineId);
@@ -1706,8 +1755,8 @@ function handleSaleYnChangeInLine(lineId, isSaleChecked) {
   }
 
   // 3. Tìm sản phẩm trong Danh mục hàng hóa (db.materials)
-  const mat = (db.materials || []).find(m =>
-    (line.sku && m.id === line.sku) ||
+  const mat = (db.materials || []).find(m => 
+    (line.sku && m.id === line.sku) || 
     (line.name && m.name.toLowerCase() === line.name.toLowerCase())
   );
 
