@@ -2513,8 +2513,12 @@ function renderReturnForm(c) {
     return `<option value="${wCode}" ${d.warehouseCode === wCode ? 'selected' : ''}>${wCode} - ${w.name}</option>`;
   }).join('');
 
-  const customerOptions = (db.customers || []).map(cust =>
-    `<option value="${cust.name || ''}" ${d.customer === cust.name ? 'selected' : ''}>${cust.name || ''}</option>`
+  const customerOptions = (db.customers || []).map(cust => 
+    `<option value="${cust.name}" ${d.customer === cust.name ? 'selected' : ''}>${cust.name}${cust.phone ? ' - ' + cust.phone : ''}</option>`
+  ).join('');
+
+  const salesOrderOptions = (db.salesOrders || []).map(so => 
+    `<option value="${so.id}" ${d.salesOrderId === so.id ? 'selected' : ''}>${so.id} - ${so.customer || 'Khách lẻ'}</option>`
   ).join('');
 
   // Lọc danh sách Đơn Hàng Bán: Nếu đã chọn Khách Hàng -> Chỉ lấy các đơn của KH đó
@@ -2522,11 +2526,6 @@ function renderReturnForm(c) {
     if (!d.customer) return true; // Nếu chưa chọn Khách Hàng -> Hiển thị tất cả đơn hàng
     return o.customer && String(o.customer).trim().toLowerCase() === String(d.customer).trim().toLowerCase();
   });
-
-  // Tạo các thẻ <option> từ danh sách đã lọc
-  const orderOptions = filteredOrders.map(o =>
-    `<option value="${o.id}" ${d.orderId === o.id ? 'selected' : ''}>${o.id} - ${o.customer || 'Khách không tên'}</option>`
-  ).join('');
 
   const gridLayout = isView ? "10px 120px 1fr 70px 70px 70px 100px 130px" : "10px 120px 1fr 70px 70px 70px 100px 130px 32px";
 
@@ -2573,106 +2572,126 @@ function renderReturnForm(c) {
 
   c.innerHTML = `
     <div style="max-width: 1050px;">
-      ${getBreadcrumb('Nhận Hàng Trả Lại', isView ? `Xem ${d.id}` : (isEdit ? `Chỉnh sửa ${d.id}` : 'Tạo phiếu nhận trả mới'), 'returns')}
-      <form onsubmit="event.preventDefault(); saveForm('returns');">
+      ${getBreadcrumb('Phiếu trả hàng', isView ? `Xem ${d.id}` : (state.mode === 'edit' ? `Chỉnh sửa ${d.id}` : 'Tạo phiếu trả hàng mới'), 'return')}
+      <form onsubmit="event.preventDefault(); saveForm('return');">
         <div class="section-panel">
-          <div class="section-header"><span class="section-num">01</span><span class="section-title">Thông tin phiếu nhận trả</span></div>
+          <div class="section-header"><span class="section-num">01</span><span class="section-title">Thông tin trả hàng</span></div>
           <div class="section-body grid-3">
             <div class="form-group">
-              <label class="form-label">Đơn hàng bán (Tùy chọn)</label>
-              <select class="form-select" ${(isView || isEdit) ? 'disabled style="background: var(--muted); cursor: not-allowed;"' : 'onchange="handleOrderSelectInReturn(this.value)"'}>
-                <option value="">-- Không theo đơn hàng --</option>
-                ${orderOptions}
+              <label class="form-label">Chọn đơn hàng bán (nếu có)</label>
+              <select class="form-select" ${isView ? 'disabled style="background: var(--muted); cursor: not-allowed;"' : 'onchange="handleReturnSalesOrderChange(this.value)"'}>
+                <option value="">-- Chọn đơn hàng --</option>
+                ${salesOrderOptions}
               </select>
             </div>
+
             <div class="form-group">
-              <label class="form-label">Tên khách hàng *</label>
-              <select class="form-select" ${(isView || isEdit || hasOrder) ? 'disabled style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'customer\', this.value); render();"'} required>
-                <option value="">-- Chọn khách hàng --</option>
+              <label class="form-label">Khách hàng *</label>
+              <input 
+                type="text" 
+                list="customer-list-return"
+                class="form-input" 
+                value="${d.customer || ''}" 
+                ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : `
+                  onchange="handleReturnCustomerChange(this.value)"
+                `} 
+                placeholder="Chọn hoặc nhập tên khách hàng..." 
+                required
+              >
+              <datalist id="customer-list-return">
                 ${customerOptions}
-              </select>
+              </datalist>
             </div>
+
+            <!-- CỘT SỐ ĐIỆN THOẠI BÊN CẠNH CỘT KHÁCH HÀNG -->
             <div class="form-group">
-              <label class="form-label">Mã kho *</label>
-              <select class="form-select" ${isView ? 'disabled style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'warehouseCode\', this.value)"'} required>
-                ${warehouseOptions}
-              </select>
+              <label class="form-label">Số điện thoại</label>
+              <input 
+                type="text" 
+                id="return-customer-phone"
+                class="form-input" 
+                value="${d.phone || d.customerPhone || ''}" 
+                ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : `
+                  onkeydown="if(event.key === 'Enter'){ event.preventDefault(); handleReturnPhoneChange(this.value); }"
+                  onblur="handleReturnPhoneChange(this.value)"
+                  onchange="handleReturnPhoneChange(this.value)"
+                `} 
+                placeholder="Nhập SĐT khách hàng..."
+              >
             </div>
+
             <div class="form-group">
-              <label class="form-label">Lý do *</label>
-              <select class="form-select" ${isView ? 'disabled style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'reason\', this.value)"'}>
-                ${['Hàng thuê trả lại', 'Hàng lỗi/hỏng', 'Đặt hàng thừa', 'Hủy đơn hàng', 'Khác'].map(w => `<option value="${w}" ${d.reason === w ? 'selected' : ''}>${w}</option>`).join('')}
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Ngày nhận trả *</label>
+              <label class="form-label">Ngày trả hàng *</label>
               <input type="date" class="form-input" value="${d.date || getTodayDateStr()}" ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'date\', this.value)"'} required>
             </div>
+            
             <div class="form-group">
               <label class="form-label">Trạng thái</label>
-              <select class="form-select" ${isView ? 'disabled style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'status\', this.value)"'}>                                                      
-                <option value="completed" ${d.status && ['completed', 'hoàn thành', 'đã xử lý'].includes((d.status || '').toLowerCase()) ? 'selected' : ''}>Hoàn thành</option>
-                <option value="accepted" ${(!d.status || ['accepted', 'duyệt', 'đã duyệt'].includes((d.status || '').toLowerCase())) ? 'selected' : ''}>Duyệt</option>
-                <option value="pending" ${d.status && ['pending', 'chờ duyệt'].includes((d.status || '').toLowerCase()) ? 'selected' : ''}>Chờ duyệt</option>
-                <option value="rejected" ${d.status && ['rejected', 'từ chối'].includes((d.status || '').toLowerCase()) ? 'selected' : ''}>Từ chối</option>
+              <select class="form-select" ${isView ? 'disabled style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'status\', this.value)"'}>
+                <option value="Đã nhận" ${d.status === 'Đã nhận' || d.status === 'received' ? 'selected' : ''}>Đã nhận</option>
+                <option value="Bản nháp" ${d.status === 'Bản nháp' || d.status === 'draft' ? 'selected' : ''}>Bản nháp</option>
+                <option value="Đã hoàn tiền" ${d.status === 'Đã hoàn tiền' || d.status === 'refunded' ? 'selected' : ''}>Đã hoàn tiền</option>
               </select>
             </div>
+
             <div class="form-group" style="grid-column: span 3;">
-              <label class="form-label">Ghi chú nhập tay</label>
-              <textarea class="form-textarea" rows="2" style="resize: vertical; ${isView ? 'background: var(--muted); cursor: not-allowed;' : ''}" ${isView ? 'readonly' : 'onchange="updateField(\'notes\', this.value)"'} placeholder="Nhập ghi chú chi tiết...">${d.notes || ''}</textarea>
+              <label class="form-label">Ghi chú / Lý do trả</label>
+              <textarea class="form-textarea" rows="2" style="resize: vertical; ${isView ? 'background: var(--muted); cursor: not-allowed;' : ''}" ${isView ? 'readonly' : 'onchange="updateField(\'notes\', this.value)"'} placeholder="Nhập lý do trả hàng...">${d.notes || ''}</textarea>
             </div>
           </div>
         </div>
 
         <div class="section-panel">
           <div class="section-header" style="justify-content: space-between;">
-            <div style="display:flex; gap:10px;"><span class="section-num">02</span><span class="section-title">Danh sách hàng nhận trả</span></div>
-            ${getAddLineButton('returns', isDetailsDisabled, 'header')}
+            <div style="display:flex; gap:10px;"><span class="section-num">02</span><span class="section-title">Danh sách sản phẩm trả</span></div>
+            ${getAddLineButton('return', false, 'header')}
           </div>
           <div style="overflow-x: auto;">
-            <!-- HEADER BẢNG: ĐỒNG BỘ MIN-WIDTH 850PX, GAP 6PX VÀ PADDING 10PX 16PX -->
-            <div style="display: grid; grid-template-columns: ${gridLayout}; gap: 6px; padding: 10px 16px 10px 10px; background: var(--secondary); border-bottom: 1px solid var(--border); align-items: center; min-width: 850px; box-sizing: border-box;">
+            <div style="display: grid; grid-template-columns: ${gridLayout}; gap: 6px; padding: 10px 16px 10px 10px; background: var(--secondary); border-bottom: 1px solid var(--border); align-items: center; min-width: 800px; box-sizing: border-box;">
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;"></span>
-              <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Mã Hàng</span>
+              <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Mã hàng</span>
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Tên Hàng</span>
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Đơn Vị</span>
-              <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Mã Kho</span>
-              <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">SL Nhận Lại</span>
+              <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">SL Trả</span>
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Đơn giá</span>
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Thành tiền</span>
               ${!isView ? `<span></span>` : ''}
             </div>
 
-            <!-- DANH SÁCH CÁC DÒNG SẢN PHẨM -->
-            <div style="min-width: 850px;">
+            <div style="min-width: 800px;">
               ${linesHtml}
             </div>
           </div>
 
-          <!-- NÚT THÊM DÒNG RỘNG BẰNG CỘT MÃ HÀNG VÀ THẲNG HÀNG DỌC -->
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 26px 10px 26px; flex-wrap: wrap; gap: 12px;">
-              <div style="width: 110px; flex-shrink: 0;">
-                ${getAddLineButton('returns', isDetailsDisabled, 'footer')}
-              </div>
-            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 8px; min-width: 260px; height: 36px;"><span class="form-label" style="font-weight: 600; margin:0;">Tổng hoàn tiền</span><span style="font-family: var(--font-dm-mono); font-size: 15px; color: #f87171; font-weight: 500;">${fmtUSD(d.total)}</span></div>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 26px 10px 26px; flex-wrap: wrap; gap: 12px;">
+            <div style="width: 110px; flex-shrink: 0;">
+              ${getAddLineButton('return', false, 'footer')}
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 8px; min-width: 260px; height: 36px;">
+              <span class="form-label" style="font-weight: 600; margin: 0;">Tổng giá trị trả</span>
+              <span style="font-family: var(--font-dm-mono); font-size: 15px; color: var(--primary); font-weight: 500;">${fmtUSD(d.totalValue)}</span>
+            </div>
           </div>
         </div>
 
         <div class="action-bar" style="display: flex; justify-content: space-between; align-items: center;">
-          <button type="button" class="btn-cancel" style="padding: 8px 16px; font-size: 13px;" event.preventDefault(); onclick="state.mode === 'edit' ? navigate('returns', 'view', '${d.id}') : navigate('returns')">
+          <button type="button" class="btn-cancel" style="padding: 8px 16px; font-size: 13px;" onclick="state.mode === 'edit' ? navigate('return', 'view', '${d.id}') : navigate('return')">
             ${isView ? 'Quay Lại' : 'Hủy'}
           </button>
           <div style="display: flex; gap: 8px;">
-            ${isView && hasPermission ? `
-              <button type="button" class="btn-action" style="padding: 8px 16px; font-size: 13px;" event.preventDefault(); onclick="navigate('returns', 'edit', '${d.id}')">${Icons.edit} Sửa</button>
-              <button type="button" class="btn-action btn-action-del" style="padding: 8px 16px; font-size: 13px;" onclick="deleteItem('returns', '${d.id}')">${Icons.trash} Xóa</button>
+            ${isView ? `
+              ${hasPermission ? `
+                <button type="button" class="btn-action" style="padding: 8px 16px; font-size: 13px;" onclick="navigate('return', 'edit', '${d.id}')">${Icons.edit} Sửa</button>
+                <button type="button" class="btn-action btn-action-del" style="padding: 8px 16px; font-size: 13px;" onclick="deleteItem('return', '${d.id}')">${Icons.trash} Xóa</button>
+              ` : ''}
             ` : ''}
-            ${!isView ? `<button type="submit" class="btn-submit" style="padding: 8px 16px; font-size: 13px;" ${isDetailsDisabled ? 'disabled style="opacity: 0.5; cursor: not-allowed; pointer-events: none;"' : ''}>${state.mode === 'add' ? 'Tạo phiếu nhận trả' : 'Cập nhật'}</button>` : ''}
+            ${!isView ? `<button type="submit" class="btn-submit" style="padding: 8px 16px; font-size: 13px;">${state.mode === 'add' ? 'Tạo phiếu trả' : 'Cập nhật'}</button>` : ''}
           </div>
         </div>
       </form>
     </div>
-    `;
+  `;
 }
 
 function renderGRNForm(c) {

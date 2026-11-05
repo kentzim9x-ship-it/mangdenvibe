@@ -1370,44 +1370,77 @@ function updateGlobalMaterialDatalist() {
   }).join('');
 }
 
-function handleOrderSelectInReturn(orderId) {
-  if (!state.formData || state.mode === 'view') return;
+// Khi chọn đơn hàng bán trong phiếu trả hàng
+function handleReturnSalesOrderChange(soId) {
+  updateField('salesOrderId', soId);
+  if (!soId) return;
 
-  const safeOrderId = String(orderId || '').trim();
-  state.formData.orderId = safeOrderId;
-
-  if (!safeOrderId) {
-    if (!state.formData.customer) {
-      state.formData.lineItems = [{
-        lineId: Date.now().toString(),
-        sku: '',
-        name: '',
-        qtyReturned: 1,
-        unitPrice: 0
-      }];
+  const so = (db.salesOrders || []).find(item => item.id === soId);
+  if (so) {
+    if (so.customer) updateField('customer', so.customer);
+    if (so.phone || so.customerPhone) {
+      updateField('phone', so.phone || so.customerPhone);
+      updateField('customerPhone', so.phone || so.customerPhone);
+    } else {
+      // Tìm phone trong DB khách hàng nếu trên đơn hàng không ghi SĐT
+      const custObj = (db.customers || []).find(c => c.name === so.customer);
+      if (custObj && custObj.phone) {
+        updateField('phone', custObj.phone);
+        updateField('customerPhone', custObj.phone);
+      }
     }
-    render();
-    return;
-  }
 
-  const targetOrder = (db.orders || []).find(o => String(o.id) === safeOrderId);
+    // Lấy thông tin dòng hàng: sale_yn === false thì đơn giá = 0
+    if (Array.isArray(so.lineItems) && so.lineItems.length > 0) {
+      state.formData.lineItems = so.lineItems.map(l => {
+        const isSale = l.sale_yn !== false && l.sale_yn !== 'false' && l.sale_yn !== 0;
+        const unitPriceVal = isSale ? (l.unitPrice ?? l.price ?? 0) : 0;
 
-  if (targetOrder) {
-    state.formData.customer = targetOrder.customer || '';
-
-    const rawLines = targetOrder.lineItems || targetOrder.lineitems || [];
-    if (Array.isArray(rawLines) && rawLines.length > 0) {
-      state.formData.lineItems = rawLines.map(item => ({
-        lineId: Date.now().toString() + Math.random().toString(36).substr(2, 4),
-        sku: item.sku || '',
-        name: item.name || '',
-        qtyReturned: Number(item.qty) || 1,
-        unitPrice: Number(item.unitPrice) || 0
-      }));
+        return {
+          lineId: generateId(),
+          itemCode: l.itemCode || l.code || '',
+          name: l.name || '',
+          unit: l.unit || '',
+          returnQty: l.qty || l.quantity || 1,
+          qty: l.qty || l.quantity || 1,
+          unitPrice: unitPriceVal,
+          price: unitPriceVal,
+          sale_yn: l.sale_yn
+        };
+      });
     }
   }
-
   render();
+}
+
+// Khi chọn hoặc đổi Khách hàng trong phiếu trả
+function handleReturnCustomerChange(val) {
+  const custName = val.trim();
+  updateField('customer', custName);
+  
+  // Tự động tìm SĐT tương ứng trong danh mục khách hàng
+  const custObj = (db.customers || []).find(c => c.name.toLowerCase() === custName.toLowerCase());
+  if (custObj && custObj.phone) {
+    updateField('phone', custObj.phone);
+    updateField('customerPhone', custObj.phone);
+  }
+  render();
+}
+
+// Khi nhập xong SĐT và rời ô hoặc Enter/Tab
+function handleReturnPhoneChange(phoneVal) {
+  const cleanPhone = (phoneVal || '').trim();
+  updateField('phone', cleanPhone);
+  updateField('customerPhone', cleanPhone);
+
+  if (!cleanPhone) return;
+
+  // Tự động tìm khách hàng theo SĐT trong danh mục
+  const custObj = (db.customers || []).find(c => (c.phone || '').trim() === cleanPhone);
+  if (custObj && custObj.name) {
+    updateField('customer', custObj.name);
+    render();
+  }
 }
 
 function handleMaterialSelectInLine(lineId, selectedName) {
