@@ -2148,17 +2148,25 @@ function renderSalesOrderForm(c) {
     const foundCustomer = (db.customers || []).find(c => (c.phone || '').trim() === phone);
 
     if (!foundCustomer) {
-      // KHÔNG TÌM THẤY: Đặt tên khách hàng về rỗng và render lại để reset thẻ <select>
-      if (d) {
-        d.customer = '';
-        d.phone = phone;
+      // 1. Nếu không có trong hệ thống -> Reset ô chọn khách hàng về mặc định ban đầu
+      if (state.formData) {
+        state.formData.customer = '';
+        state.formData.phone = phone;
       }
 
+      // 2. Cập nhật thẻ <select> trên giao diện về option mặc định
+      const selectCust = document.querySelector('select[onchange*="handleOrderCustomerSelect"]');
+      if (selectCust) {
+        selectCust.value = '';
+      }
+
+      // 3. Hiển thị thông báo bên dưới ô số điện thoại
       if (noticeEl) {
         noticeEl.innerText = "⚠ Khách hàng chưa có trong hệ thống";
         noticeEl.style.display = "block";
       }
 
+      // 4. Đổi tên nút "Kiểm Tra" thành "Thêm mới", enable nút và gán sự kiện mở drawer thêm nhanh
       if (btnCheck) {
         btnCheck.innerText = "Thêm mới";
         btnCheck.disabled = false;
@@ -2166,21 +2174,36 @@ function renderSalesOrderForm(c) {
         btnCheck.style.cursor = 'pointer';
         btnCheck.style.pointerEvents = 'auto';
         btnCheck.onclick = function () {
-          window.openQuickCustomerDrawer(phone);
+          if (typeof window.openQuickCustomerDrawer === 'function') {
+            window.openQuickCustomerDrawer(phone);
+          }
         };
       }
-
-      // Render lại giao diện để ô Khách hàng quay về "-- Chọn khách hàng --"
-      render();
-
     } else {
-      // TÌM THẤY: Cập nhật tên và SĐT khách hàng
+      // Tìm thấy khách hàng -> Điền thông tin và ẩn thông báo
       if (noticeEl) noticeEl.style.display = "none";
-      if (d) {
-        d.customer = foundCustomer.name || '';
-        d.phone = foundCustomer.phone || '';
+      if (state.formData) {
+        state.formData.customer = foundCustomer.name || '';
+        state.formData.phone = foundCustomer.phone || '';
       }
-      render();
+
+      const selectCust = document.querySelector('select[onchange*="handleOrderCustomerSelect"]');
+      if (selectCust) {
+        selectCust.value = foundCustomer.name || '';
+      }
+
+      if (btnCheck) {
+        btnCheck.innerText = "Kiểm Tra";
+        btnCheck.disabled = true;
+        btnCheck.style.opacity = '0.5';
+        btnCheck.style.cursor = 'not-allowed';
+      }
+
+      if (typeof handleCustomerSelectInOrder === 'function') {
+        handleCustomerSelectInOrder(foundCustomer.name);
+      } else if (typeof render === 'function') {
+        render();
+      }
     }
   };
 
