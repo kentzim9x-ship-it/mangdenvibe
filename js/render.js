@@ -397,7 +397,7 @@ function renderMaterialsList(c) {
     { title: 'Đơn Vị', width: '20px', align: 'center' },
     { title: 'Danh Mục', width: '40px', align: 'center' },
     { title: 'Vị Trí Lưu Kho', width: '40px', align: 'center' },
-    { title: 'Ghi Chú', width: '60px', align: 'center' }, // Thay cột Tồn kho ban đầu bằng Ghi chú
+    { title: 'Giá Thuê', width: '30px', align: 'center' },
     { title: 'Đơn Giá', width: '30px', align: 'center' },
     { title: 'Trạng Thái', width: '50px', align: 'center' },
     { title: 'Người Tạo', width: '50px', align: 'center' },
@@ -431,7 +431,7 @@ function renderMaterialsList(c) {
         <td data-label="Đơn Vị" style="padding: 11px 16px; font-family: var(--font-dm-mono); font-size: 12px; text-align: center; color: var(--foreground);">${m.unit || '—'}</td>
         <td data-label="Danh Mục" style="padding: 11px 16px; font-family: var(--font-dm-mono); font-size: 11px; text-align: center; color: var(--muted-foreground);">${m.category || '—'}</td>
         <td data-label="Vị Trí Lưu Kho" style="padding: 11px 16px; font-family: var(--font-dm-mono); font-size: 12px; text-align: center;">${m.location || '—'}</td>
-        <td data-label="Ghi Chú" style="padding: 11px 16px; font-size: 12px; text-align: left; color: var(--muted-foreground); max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${m.notes || ''}">${m.notes || '—'}</td>
+        <td data-label="Đơn Giá" style="padding: 11px 16px; font-family: var(--font-dm-mono); font-size: 12px; text-align: right;">${fmtUSD(m.hireprice || 0)}</td>
         <td data-label="Đơn Giá" style="padding: 11px 16px; font-family: var(--font-dm-mono); font-size: 12px; text-align: right;">${fmtUSD(m.cost || 0)}</td>
         <td data-label="Trạng Thái" style="padding: 11px 16px; text-align: center;">${statusBadge}</td>
         
@@ -2006,8 +2006,8 @@ function renderSalesOrderForm(c) {
   }).join('');
 
   const gridLayout = isView
-    ? "10px 100px minmax(170px, 1.5fr) 60px 70px 65px 65px 65px 90px 70px 60px 120px"
-    : "10px 100px minmax(170px, 1.5fr) 60px 70px 65px 65px 65px 90px 70px 60px 120px 32px";
+    ? "10px 100px minmax(170px, 1.5fr) 60px 70px 65px 65px 85px 65px 65px 65px 120px"
+    : "10px 100px minmax(170px, 1.5fr) 60px 70px 65px 65px 85px 65px 65px 65px 120px 32px";
 
   const linesHtml = d.lineItems.map((l, idx) => {
     const mat = (db.materials || []).find(m => (l.sku && m.id === l.sku) || (l.name && m.name === l.name));
@@ -2520,7 +2520,7 @@ function renderReturnForm(c) {
             <div class="form-group">
               <label class="form-label">Lý do *</label>
               <select class="form-select" ${isView ? 'disabled style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'reason\', this.value)"'}>
-                ${['Hàng lỗi/hỏng', 'Giao nhầm sản phẩm', 'Đặt hàng thừa', 'Hủy đơn hàng', 'Hư hỏng do vận chuyển', 'Khác'].map(w => `<option value="${w}" ${d.reason === w ? 'selected' : ''}>${w}</option>`).join('')}
+                ${['Hàng thuê trả lại', 'Hàng lỗi/hỏng', 'Đặt hàng thừa', 'Hủy đơn hàng', 'Khác'].map(w => `<option value="${w}" ${d.reason === w ? 'selected' : ''}>${w}</option>`).join('')}
               </select>
             </div>
             <div class="form-group">
@@ -2556,7 +2556,7 @@ function renderReturnForm(c) {
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Tên Hàng</span>
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Đơn Vị</span>
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Mã Kho</span>
-              <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">SL Trả Lại</span>
+              <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">SL Nhận Lại</span>
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Tồn</span>
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Đơn giá</span>
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Thành tiền</span>

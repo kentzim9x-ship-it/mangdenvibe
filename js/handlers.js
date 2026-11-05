@@ -839,7 +839,7 @@ async function saveForm(module) {
 
       lineItems.forEach((l) => {
         maxSkuNum++;
-        const newSku = `HH${String(maxSkuNum).padStart(4, '0')}`;
+        const newSku = generateAutoId('materials');
         l.sku = newSku;
 
         const qtyImport = Number(l.receivedQty ?? l.qtyImport ?? 0);
@@ -1162,7 +1162,7 @@ function initFormData(module, id) {
     const autoId = generateAutoId(module);
     if (module === 'materials') {
       state.formData = {
-        id: generateAutoSku(),
+        id: autoId,
         name: '',
         unit: '',
         category: 'Áo',
@@ -1228,7 +1228,7 @@ function initFormData(module, id) {
     if (module === 'returns') {
       const defaultWh = db.warehouses[0] ? (db.warehouses[0].code || db.warehouses[0].id) : '';
       state.formData = {
-        id: autoId, warehouseCode: defaultWh, orderId: '', customer: '', date: getTodayDateStr(), reason: 'Hàng lỗi/hỏng', notes: '', status: 'approved',
+        id: autoId, warehouseCode: defaultWh, orderId: '', customer: '', date: getTodayDateStr(), reason: 'Hàng thuê trả lại', notes: '', status: 'approved',
         lineItems: [{ lineId: Date.now().toString(), sku: '', name: '', qtyReturned: 1, unitPrice: 0 }]
       };
     }
@@ -1416,26 +1416,6 @@ async function checkAndAddNewCustomerFromOrder() {
   } else {
     openQuickAddCustomerModal(formattedName);
   }
-}
-
-function generateAutoSku() {
-  const now = new Date();
-  const yy = String(now.getFullYear()).slice(-2);
-  const mm = String(now.getMonth() + 1).padStart(2, '0');
-  const prefix = `SKU${yy}${mm}`;
-
-  let maxNum = 0;
-  (db.materials || []).forEach(m => {
-    const idStr = String(m.id || '');
-    if (idStr.startsWith(prefix)) {
-      const numPart = parseInt(idStr.substring(prefix.length), 10);
-      if (!isNaN(numPart) && numPart > maxNum) {
-        maxNum = numPart;
-      }
-    }
-  });
-
-  return `${prefix}${String(maxNum + 1).padStart(4, '0')}`;
 }
 
 async function handleCustomerSelectInQuotation(customerName) {
@@ -1836,52 +1816,64 @@ async function saveQuickCustomer() {
 }
 window.saveQuickCustomer = saveQuickCustomer;
 
+// Đảm bảo khi gọi saveForm hoặc hàm lưu khách hàng, bạn dùng await để chờ ghi vào database thành công:
 async function handleSaveCustomer() {
-  const phone = (state.formData?.phone || '').trim();
-  const currentId = state.formData?.id || '';
-
-  if (!phone) {
-    showAlert('Vui lòng nhập số điện thoại khách hàng!', 'Thông báo');
+  if (!checkModulePermission('customers')) {
+    alert('Tài khoản của bạn chỉ có quyền xem, không thể thực hiện thao tác lưu!');
     return;
   }
 
-  const phoneRegex = /^(0[3|5|7|8|9])[0-9]{8}$/;
-  if (!phoneRegex.test(phone)) {
-    showAlert('Số điện thoại không đúng định dạng Việt Nam! (Ví dụ: 0901234567)', 'Cảnh báo định dạng');
-    return;
-  }
-
-  const isDuplicateLocal = (db.customers || []).some(c =>
-    c.phone === phone && String(c.id) !== String(currentId)
-  );
-
-  if (isDuplicateLocal) {
-    showAlert(`Số điện thoại "${phone}" đã có trong hệ thống!`, 'Cảnh báo trùng lặp');
+  // 1. Lấy dữ liệu từ state.formData hoặc form inputs
+  const formData = state.formData || {};
+  
+  // Kiểm tra dữ liệu bắt buộc (ví dụ: tên, điện thoại)
+  if (!formData.name || !formData.phone) {
+    alert('Vui lòng nhập đầy đủ Tên và Số điện thoại khách hàng!');
     return;
   }
 
   try {
-    let query = supabaseClient
-      .from('customers')
-      .select('id, phone')
-      .eq('phone', phone);
+    // 2. Thực hiện đẩy dữ liệu trực tiếp lên Supabase Database
+    if (typeof supabaseClient !== 'undefined') {
+      const payload = {
+        id: formData.id || ('KH' + Date.now()),
+        name: formData.name.trim(),
+        contact: formData.contact || formData.name.trim(),
+        phone: formData.phone.trim(),
+        address: formData.address || '',
+        diachi: formData.address || '',
+        type: formData.type || 'Khách vãng lai',
+        paymentterms: formData.paymentterms || 'Thanh toán ngay',
+        status: 'active',
+        user_id0: session?.currentUser?.id || 'Hệ Thống',
+        date0: new Date().toISOString().split('T')[0],
+        time0: new Date().toTimeString().split(' ')[0]
+      };
 
-    if (state.mode === 'edit' && currentId) {
-      query = query.neq('id', currentId);
+      const { data, error } = await supabaseClient
+        .from('customers')
+        .insert([payload])
+        .select();
+
+      if (error) throw error;
+
+      if (data && data[0]) {
+        if (!db.customers) db.customers = [];
+        db.customers.unshift(data[0]); // Đưa vào mảng local sau khi db đã nhận
+      }
     }
 
-    const { data, error } = await query;
-    if (error) throw error;
-
-    if (data && data.length > 0) {
-      showAlert(`Số điện thoại "${phone}" đã có trong hệ thống!`, 'Cảnh báo trùng lặp');
-      return;
+    // 3. Đóng form và render lại giao diện
+    if (typeof closeDrawer === 'function') closeDrawer();
+    if (typeof showToast === 'function') {
+      showToast('Lưu khách hàng vào database thành công!', 'success');
     }
+    if (typeof render === 'function') render();
+
   } catch (err) {
-    console.error('Lỗi kiểm tra số điện thoại:', err);
+    console.error('Lỗi khi lưu khách hàng vào database:', err);
+    alert('Lưu thất bại: ' + (err.message || err));
   }
-
-  saveForm('customers');
 }
 
 function getSalesAnalyticsData() {
