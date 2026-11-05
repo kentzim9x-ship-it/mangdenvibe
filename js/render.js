@@ -2493,8 +2493,9 @@ function renderReturnForm(c) {
     d.warehouseCode = db.warehouses[0].code || db.warehouses[0].id;
   }
 
-  // Kiểm tra xem SĐT nhập vào có khớp với khách hàng nào trong hệ thống không
   const currentPhone = (d.phone || d.customerPhone || '').trim();
+  const matchedCustomer = currentPhone ? (db.customers || []).find(cust => (cust.phone || '').trim() === currentPhone) : null;
+  const isPhoneNotFound = Boolean(currentPhone && !matchedCustomer);
 
   let datalistEl = document.getElementById('global-materials-list');
   if (!datalistEl) {
