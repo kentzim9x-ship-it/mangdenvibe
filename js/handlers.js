@@ -464,7 +464,7 @@ function handleGRNLineKeyDown(event, currentIndex, currentField) {
   const currentLine = lineItems[currentIndex];
   const targetInput = event.target;
 
-  // 1. Cập nhật dữ liệu từ input hiện tại vào state.formData trước khi chuyển focus
+  // 1. Cập nhật dữ liệu từ input hiện tại vào state.formData
   if (currentLine && targetInput) {
     if (currentField === 'name') {
       const val = targetInput.value.trim();
@@ -484,13 +484,12 @@ function handleGRNLineKeyDown(event, currentIndex, currentField) {
       currentLine.qtyImport = numVal;
     }
 
-    // Tự động cập nhật tổng tiền
     if (typeof updateLine === 'function') {
       updateLine(currentLine.lineId, currentField, currentLine[currentField], ['receivedQty', 'unitCost', 'hireprice'].includes(currentField) ? 'number' : 'text');
     }
   }
 
-  // 2. Thứ tự nhập liệu: Tên Hàng -> Đơn Vị Tính -> Giá Nhập -> Giá Thuê (bỏ qua ô Mã kho readonly)
+  // 2. Thứ tự nhập liệu: Tên Hàng -> Đơn Vị Tính -> Giá Nhập -> Giá Thuê
   const fieldSequence = ['name', 'unit', 'unitCost', 'hireprice'];
 
   let nextIndex = currentIndex;
@@ -500,13 +499,14 @@ function handleGRNLineKeyDown(event, currentIndex, currentField) {
     // Chưa đến dòng cuối: Nhảy xuống dòng tiếp theo trên CÙNG CỘT
     nextIndex = currentIndex + 1;
   } else {
-    // Đang ở dòng cuối cùng: Nhảy sang dòng ĐẦU TIÊN (index 0) của CỘT TIẾP THEO
+    // Đang ở dòng cuối cùng
     const currentFieldIndex = fieldSequence.indexOf(currentField);
     if (currentFieldIndex !== -1 && currentFieldIndex < fieldSequence.length - 1) {
+      // Nhảy sang CỘT TIẾP THEO ở DÒNG ĐẦU TIÊN (index 0)
       nextField = fieldSequence[currentFieldIndex + 1];
       nextIndex = 0;
     } else {
-      // Ô cuối cùng (Giá Thuê) của dòng cuối -> Blur ra ngoài ngắt focus
+      // ĐÃ Ở Ô GIÁ THUÊ CỦA DÒNG CUỐI CÙNG -> CHỈ THOÁT FOCUS (BLUR)
       if (targetInput && typeof targetInput.blur === 'function') {
         targetInput.blur();
       }
@@ -514,7 +514,7 @@ function handleGRNLineKeyDown(event, currentIndex, currentField) {
     }
   }
 
-  // 3. Chuyển focus và bôi đen nội dung ô tiếp theo
+  // 3. Chuyển focus tới ô tiếp theo
   requestAnimationFrame(() => {
     const nextLineObj = lineItems[nextIndex];
     if (!nextLineObj) return;
