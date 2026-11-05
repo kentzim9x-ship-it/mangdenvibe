@@ -1698,7 +1698,7 @@ function renderQuotationForm(c) {
 
     const qty = Number(l.qty) || 0;
     const price = Number(l.unitPrice) || 0; // Giá Bán
-    const hirePrice = Number(l.hirePrice) || 0; // Giá Thuê (mặc định 0)
+    const hireprice = Number(l.hireprice) || 0; // Giá Thuê (mặc định 0)
     const disc = Number(l.discount) || 0;
     const tax = Number(l.tax) || 0;
     const lineSub = qty * price * (1 - disc / 100);
@@ -1720,16 +1720,16 @@ function renderQuotationForm(c) {
         <!-- CỘT GIÁ THUÊ (MẶC ĐỊNH BẰNG 0) -->
         <input 
           type="text" 
-          id="line-item-${l.lineId}-hirePrice"
+          id="line-item-${l.lineId}-hireprice"
           inputmode="numeric"
           class="form-input" 
           style="padding: 6px 6px; text-align: right; ${isView ? 'background: var(--muted); cursor: not-allowed;' : ''}" 
-          value="${(l.hirePrice ?? 0).toLocaleString('vi-VN')}" 
+          value="${(l.hireprice ?? 0).toLocaleString('vi-VN')}" 
           ${isView ? 'readonly' : `
-            onkeydown="handleLineItemKeyDown(event, 'quotations', ${idx}, 'hirePrice')"
+            onkeydown="handleLineItemKeyDown(event, 'quotations', ${idx}, 'hireprice')"
             onfocus="this.value = parseNumberInput(this.value) || ''" 
             onblur="this.value = formatVNDInput(this.value)" 
-            onchange="updateLine('${l.lineId}', 'hirePrice', parseNumberInput(this.value), 'number')"
+            onchange="updateLine('${l.lineId}', 'hireprice', parseNumberInput(this.value), 'number')"
           `}
         >
         <!-- CỘT GIÁ BÁN (ĐỔI TÊN TỪ ĐƠN GIÁ) -->
@@ -1947,7 +1947,7 @@ function renderSalesOrderForm(c) {
         const matKey = (mat.id || mat.name || '').toLowerCase();
         if (!matchedSkusAndNames.has(matKey)) {
           matchedSkusAndNames.add(matKey);
-          const displayPrice = (qItem.hirePrice !== undefined && qItem.hirePrice !== null) ? qItem.hirePrice : (mat.unitPrice ?? mat.price ?? mat.cost ?? 0);
+          const displayPrice = (qItem.hireprice !== undefined && qItem.hireprice !== null) ? qItem.hireprice : (mat.unitPrice ?? mat.price ?? mat.cost ?? 0);
           inQuotationList.push({
             ...mat,
             quotedPrice: displayPrice
