@@ -2021,52 +2021,93 @@ function renderSalesOrderForm(c) {
     const lineTotal = lineSub * (1 + tax / 100);
 
     return `
-      <div id="line-item-row-${l.lineId}" style="display: grid; grid-template-columns: ${gridLayout}; gap: 6px; padding: 10px 16px 10px 10px; border-bottom: 1px solid var(--border); align-items: center; ${isDetailsDisabled ? 'opacity: 0.5; pointer-events: none;' : ''}">
+      <div style="display: grid; grid-template-columns: ${gridLayout}; gap: 6px; padding: 10px 16px 10px 10px; border-bottom: 1px solid var(--border); align-items: center; ${isDetailsDisabled ? 'opacity: 0.5; pointer-events: none;' : ''}">
         <span style="font-family: var(--font-dm-mono, monospace); font-size: 10px; font-weight: 400; color: var(--muted-foreground); min-width: 14px; text-align: right; user-select: none;">
           ${idx + 1}.
         </span>
-        <input type="text" id="line-item-${l.lineId}-sku" class="form-input" style="padding: 6px 8px; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; color: var(--primary);" value="${l.sku || ''}" readonly title="Mã hàng tự động">
         
-        <input type="text" id="line-item-${l.lineId}-name" autocomplete="off" ${(isView || isDetailsDisabled) ? '' : 'list="global-materials-list"'} class="form-input" style="padding: 6px 8px; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" value="${l.name || ''}" ${(isView || isDetailsDisabled) ? 'readonly' : `onkeydown="handleLineItemKeyDown(event, 'sales-orders', ${idx}, 'name')" onchange="handleMaterialSelectInLine('${l.lineId}', this.value)"`} placeholder="${isDetailsDisabled ? 'Chọn/nhập tên hàng...' : 'Chọn/nhập tên hàng...'}" required>
-        
-        <input type="text" id="line-item-${l.lineId}-unit" class="form-input" style="padding: 6px 6px; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; text-align: center;" value="${unitName}" readonly title="Đơn vị tính từ danh mục hàng">
-        
-        <input type="text" id="line-item-${l.lineId}-warehouseCode" class="form-input" style="padding: 6px 8px; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; text-align: center;" value="${d.warehouseCode || '—'}" readonly title="Mã kho từ mục 01">
-
-        <!-- CỘT HÀNG BÁN: CHECKBOX sale_yn -->
-        <div style="display: flex; justify-content: center; align-items: center;">
-          <input 
-            type="checkbox" 
-            id="line-item-${l.lineId}-sale_yn" 
-            style="width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary);" 
-            ${l.sale_yn === true ? 'checked' : ''} 
-            ${(isView || isDetailsDisabled) ? 'disabled' : `onchange="if(typeof handleSaleYnChangeInLine === 'function'){ handleSaleYnChangeInLine('${l.lineId}', this.checked); } else { updateLine('${l.lineId}', 'sale_yn', this.checked); }"`}
-          >
-        </div>
-        
-        <input type="number" id="line-item-${l.lineId}-qty" step="any" inputmode="decimal" class="form-input" style="padding: 6px 6px; text-align: right; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" value="${l.qty ?? 1}" ${(isView || isDetailsDisabled) ? 'readonly' : `onkeydown="handleLineItemKeyDown(event, 'sales-orders', ${idx}, 'qty')" oninput="updateLine('${l.lineId}', 'qty', this.value, 'number')" onchange="updateLine('${l.lineId}', 'qty', this.value, 'number')"`}>
-        
+        <!-- CỘT TÊN HÀNG -->
         <input 
           type="text" 
-          id="line-item-${l.lineId}-unitPrice"
-          inputmode="numeric"
+          id="line-item-${l.lineId}-name" 
+          class="form-input" 
+          style="padding: 6px 8px; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" 
+          value="${l.name || ''}" 
+          ${(isView || isDetailsDisabled) ? 'readonly' : `
+            onkeydown="handleGRNLineKeyDown(event, ${idx}, 'name')" 
+            oninput="applyTitleCaseOnInput(this); updateLine('${l.lineId}', 'name', this.value);"
+            onchange="this.value = toTitleCase(this.value.trim()); updateLine('${l.lineId}', 'name', this.value.trim());"
+          `} 
+          placeholder="${isDetailsDisabled ? 'Nhập tên sản phẩm...' : 'Nhập tên sản phẩm...'}" 
+          required
+        >
+        
+        <!-- CỘT ĐƠN VỊ TÍNH -->
+        <input 
+          type="text" 
+          id="line-item-${l.lineId}-unit" 
+          class="form-input" 
+          maxlength="10"
+          style="padding: 6px 8px; font-family: var(--font-dm-mono); text-align: center; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" 
+          value="${unitVal}" 
+          ${(isView || isDetailsDisabled) ? 'readonly' : `
+            onkeydown="handleGRNLineKeyDown(event, ${idx}, 'unit')" 
+            oninput="applyUpperCaseOnInput(this); updateLine('${l.lineId}', 'unit', this.value);"
+            onchange="this.value = toUpperCaseStr(this.value.trim()); updateLine('${l.lineId}', 'unit', this.value.trim());"
+          `}
+          placeholder="CÁI, BỘ..."
+        >
+        
+        <input type="text" id="line-item-${l.lineId}-warehouseCode" class="form-input" style="padding: 6px 8px; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; text-align: center;" value="${d.warehouseCode || '—'}" readonly title="Mã kho từ mục 01 xuống">
+        
+        <!-- CỘT SỐ LƯỢNG NHẬP -->
+        <input 
+          type="number" 
+          id="line-item-${l.lineId}-receivedQty" 
+          step="any" 
+          inputmode="decimal" 
           class="form-input" 
           style="padding: 6px 6px; text-align: right; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" 
-          value="${(l.unitPrice ?? 0).toLocaleString('vi-VN')}" 
+          value="${qtyVal}" 
           ${(isView || isDetailsDisabled) ? 'readonly' : `
-            onkeydown="handleLineItemKeyDown(event, 'sales-orders', ${idx}, 'unitPrice')"
-            onfocus="this.value = parseNumberInput(this.value) || ''" 
-            onblur="this.value = formatVNDInput(this.value)" 
-            oninput="updateLine('${l.lineId}', 'unitPrice', parseNumberInput(this.value), 'number')"
-            onchange="updateLine('${l.lineId}', 'unitPrice', parseNumberInput(this.value), 'number')"
+            onkeydown="handleGRNLineKeyDown(event, ${idx}, 'receivedQty')" 
+            onchange="updateLine('${l.lineId}', 'receivedQty', this.value, 'number'); updateLine('${l.lineId}', 'qtyImport', this.value, 'number');"
           `}
         >
         
-        <input type="number" id="line-item-${l.lineId}-discount" step="any" inputmode="decimal" class="form-input" style="padding: 6px 6px; text-align: right; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" value="${l.discount ?? 0}" ${(isView || isDetailsDisabled) ? 'readonly' : `onkeydown="handleLineItemKeyDown(event, 'sales-orders', ${idx}, 'discount')" oninput="updateLine('${l.lineId}', 'discount', this.value, 'number')" onchange="updateLine('${l.lineId}', 'discount', this.value, 'number')"`}>
+        <!-- CỘT GIÁ NHẬP -->
+        <input 
+          type="text" 
+          id="line-item-${l.lineId}-unitCost"
+          inputmode="numeric"
+          class="form-input" 
+          style="padding: 6px 6px; text-align: right; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" 
+          value="${(l.unitCost ?? 0).toLocaleString('vi-VN')}" 
+          ${(isView || isDetailsDisabled) ? 'readonly' : `
+            onkeydown="handleGRNLineKeyDown(event, ${idx}, 'unitCost')"
+            onfocus="this.value = parseNumberInput(this.value) || ''" 
+            onblur="this.value = formatVNDInput(this.value)" 
+            onchange="updateLine('${l.lineId}', 'unitCost', parseNumberInput(this.value), 'number')"
+          `}
+        >
+
+        <!-- CỘT GIÁ THUÊ -->
+        <input 
+          type="text" 
+          id="line-item-${l.lineId}-hireprice"
+          inputmode="numeric"
+          class="form-input" 
+          style="padding: 6px 6px; text-align: right; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" 
+          value="${(l.hireprice ?? 0).toLocaleString('vi-VN')}" 
+          ${(isView || isDetailsDisabled) ? 'readonly' : `
+            onkeydown="handleGRNLineKeyDown(event, ${idx}, 'hireprice')"
+            onfocus="this.value = parseNumberInput(this.value) || ''" 
+            onblur="this.value = formatVNDInput(this.value)" 
+            onchange="updateLine('${l.lineId}', 'hireprice', parseNumberInput(this.value), 'number')"
+          `}
+        >
         
-        <input type="number" id="line-item-${l.lineId}-tax" step="any" inputmode="decimal" class="form-input" style="padding: 6px 6px; text-align: right; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" value="${l.tax ?? 0}" ${(isView || isDetailsDisabled) ? 'readonly' : `onkeydown="handleLineItemKeyDown(event, 'sales-orders', ${idx}, 'tax')" oninput="updateLine('${l.lineId}', 'tax', this.value, 'number')" onchange="updateLine('${l.lineId}', 'tax', this.value, 'number')"`}>
-        
-        <div id="line-item-${l.lineId}-total" class="line-total-val" style="font-family: var(--font-dm-mono); text-align: right; font-weight: 500; font-size: 12px;">${fmtUSD(lineTotal)}</div>
+        <div style="font-family: var(--font-dm-mono); text-align: right; font-weight: 500; font-size: 12px;">${fmtUSD((qtyVal) * (l.unitCost || 0))}</div>
         ${(!isView && !isDetailsDisabled) ? `<button type="button" style="background: none; border: none; cursor: pointer; color: var(--muted-foreground); display: flex; align-items: center; justify-content: center;" onclick="removeLineItem('${l.lineId}')">${Icons.trash}</button>` : ''}
       </div>
     `;

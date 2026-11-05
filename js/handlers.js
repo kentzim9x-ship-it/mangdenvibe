@@ -455,28 +455,30 @@ function handleLineItemKeyDown(e, module, lineIndex, fieldName) {
 
 function handleGRNLineKeyDown(event, currentIndex, currentField) {
   if (event.key !== 'Enter') return;
-  event.preventDefault(); // Ngăn submit form mặc định
+  event.preventDefault(); // Ngăn submit form mặc định khi nhấn Enter
 
-  const totalLines = (state.formData?.lineItems || []).length;
+  const lineItems = state.formData?.lineItems || [];
+  const totalLines = lineItems.length;
   if (totalLines === 0) return;
 
   // Luồng chuyển đổi thứ tự các cột khi hết dòng: Tên Hàng -> Đơn Vị -> SL Nhập -> Giá Nhập -> Giá Thuê -> Kết thúc
   const fieldSequence = ['name', 'unit', 'receivedQty', 'unitCost', 'hireprice'];
 
-  let nextInputId = '';
+  let nextIndex = currentIndex;
+  let nextField = currentField;
 
   if (currentIndex < totalLines - 1) {
-    // Nếu chưa phải dòng cuối: Xuống dòng tiếp theo của CỘT HIỆN TẠI
-    nextInputId = `line-item-${state.formData.lineItems[currentIndex + 1].lineId}-${currentField}`;
+    // Nếu chưa phải dòng cuối: Chuyển xuống dòng tiếp theo của CỘT HIỆN TẠI
+    nextIndex = currentIndex + 1;
   } else {
     // Nếu là DÒNG CUỐI CÙNG: Nhảy sang ô DÒNG ĐẦU TIÊN (index 0) của CỘT KẾ TIẾP
     const currentFieldIndex = fieldSequence.indexOf(currentField);
     
     if (currentFieldIndex !== -1 && currentFieldIndex < fieldSequence.length - 1) {
-      const nextField = fieldSequence[currentFieldIndex + 1];
-      nextInputId = `line-item-${state.formData.lineItems[0].lineId}-${nextField}`;
+      nextField = fieldSequence[currentFieldIndex + 1];
+      nextIndex = 0;
     } else {
-      // Ô Giá Thuê ở dòng cuối cùng -> Blur ra ngoài
+      // Nếu là ô Giá Thuê ở DÒNG CUỐI CÙNG -> Blur ra ngoài ngắt focus
       if (event.target && typeof event.target.blur === 'function') {
         event.target.blur();
       }
@@ -484,18 +486,21 @@ function handleGRNLineKeyDown(event, currentIndex, currentField) {
     }
   }
 
-  // Dùng setTimeout để đảm bảo ô mới nhận Focus sau khi DOM render xong
-  if (nextInputId) {
-    setTimeout(() => {
-      const nextInput = document.getElementById(nextInputId);
-      if (nextInput) {
-        nextInput.focus();
-        if (typeof nextInput.select === 'function') {
-          nextInput.select(); // Bôi đen giá trị để người dùng gõ đè số mới tiện lợi
-        }
+  // Chờ 50ms để các sự kiện updateLine / re-render hoàn tất rồi mới focus & bôi đen ô tiếp theo
+  setTimeout(() => {
+    const nextLineObj = lineItems[nextIndex];
+    if (!nextLineObj) return;
+
+    const nextInputId = `line-item-${nextLineObj.lineId}-${nextField}`;
+    const nextInput = document.getElementById(nextInputId);
+
+    if (nextInput) {
+      nextInput.focus();
+      if (typeof nextInput.select === 'function') {
+        nextInput.select(); // Bôi đen toàn bộ số/chữ để tiện nhập đè
       }
-    }, 50);
-  }
+    }
+  }, 50);
 }
 
 function addLineItem(module, focusNewName = false) {
