@@ -2738,7 +2738,7 @@ function renderGRNForm(c) {
     return `<option value="${wCode}" ${d.warehouseCode === wCode ? 'selected' : ''}>${wCode} - ${w.name}</option>`;
   }).join('');
 
-  // LƯỚI ẢN CỘT MÃ HÀNG VÀ CỘT TỒN KHO: (STT, Tên Hàng, Đơn Vị, Mã Kho, SL Nhập, Giá Nhập, Thành Tiền)
+  // LƯỚI ẢN CỘT MÃ HÀNG VÀ CỘT TỒN KHO: (STT, Tên Hàng, Đơn Vị, Mã Kho, SL Nhập, Giá Nhập, Giá Thuê, Thành Tiền)
   const gridLayout = isView
     ? "10px 1.8fr 70px 70px 75px 100px 100px 110px"
     : "10px 1.8fr 70px 70px 75px 100px 100px 110px 32px";
@@ -2753,6 +2753,7 @@ function renderGRNForm(c) {
           ${idx + 1}.
         </span>
         
+        <!-- CỘT TÊN HÀNG: Cho phép nhập bình thường, tự động viết hoa chữ cái đầu mỗi từ khi rời ô -->
         <input 
           type="text" 
           id="line-item-${l.lineId}-name" 
@@ -2761,14 +2762,13 @@ function renderGRNForm(c) {
           value="${l.name || ''}" 
           ${(isView || isDetailsDisabled) ? 'readonly' : `
             onkeydown="handleGRNLineKeyDown(event, ${idx}, 'name')" 
-            oninput="applyTitleCaseOnInput(this); updateLine('${l.lineId}', 'name', this.value);"
             onchange="this.value = toTitleCase(this.value.trim()); updateLine('${l.lineId}', 'name', this.value.trim());"
           `} 
           placeholder="${isDetailsDisabled ? 'Nhập tên sản phẩm...' : 'Nhập tên sản phẩm...'}" 
           required
         >
         
-        <!-- CỘT ĐƠN VỊ TÍNH: Nhập tay tự động VIẾT HOA TẤT CẢ, tối đa 10 kí tự -->
+        <!-- CỘT ĐƠN VỊ TÍNH: Cho phép nhập bình thường, tự động VIẾT HOA TẤT CẢ khi rời ô -->
         <input 
           type="text" 
           id="line-item-${l.lineId}-unit" 
@@ -2778,7 +2778,6 @@ function renderGRNForm(c) {
           value="${unitVal}" 
           ${(isView || isDetailsDisabled) ? 'readonly' : `
             onkeydown="handleGRNLineKeyDown(event, ${idx}, 'unit')" 
-            oninput="applyUpperCaseOnInput(this); updateLine('${l.lineId}', 'unit', this.value);"
             onchange="this.value = toUpperCaseStr(this.value.trim()); updateLine('${l.lineId}', 'unit', this.value.trim());"
           `}
           placeholder="CÁI, BỘ..."
@@ -2786,7 +2785,7 @@ function renderGRNForm(c) {
         
         <input type="text" id="line-item-${l.lineId}-warehouseCode" class="form-input" style="padding: 6px 8px; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; text-align: center;" value="${d.warehouseCode || '—'}" readonly title="Mã kho từ mục 01 xuống">
         
-        <!-- CỘT SỐ LƯỢNG NHẬP (Đã đổi thành handleGRNLineKeyDown) -->
+        <!-- CỘT SỐ LƯỢNG NHẬP -->
         <input 
           type="number" 
           id="line-item-${l.lineId}-receivedQty" 
@@ -2931,7 +2930,6 @@ function renderGRNForm(c) {
                 <button type="button" class="btn-action" style="padding: 8px 16px; font-size: 13px;" onclick="navigate('grn', 'edit', '${d.id}')">${Icons.edit} Sửa</button>
                 <button type="button" class="btn-action btn-action-del" style="padding: 8px 16px; font-size: 13px;" onclick="deleteItem('grn', '${d.id}')">${Icons.trash} Xóa</button>
               ` : ''}
-              <!-- NÚT IN TEM SẢN PHẨM HIỂN THỊ Ở TRẠNG THÁI VIEW -->
               <button type="button" class="btn-primary" onclick="printGRNProductLabels()" style="background: #f0a030; color: #000000; padding: 8px 16px; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
                 In Tem Sản Phẩm

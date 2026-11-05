@@ -461,8 +461,37 @@ function handleGRNLineKeyDown(event, currentIndex, currentField) {
   const totalLines = lineItems.length;
   if (totalLines === 0) return;
 
-  // Thứ tự chuyển đổi các cột
-  const fieldSequence = ['name', 'unit', 'receivedQty', 'unitCost', 'hireprice'];
+  const currentLine = lineItems[currentIndex];
+  const targetInput = event.target;
+
+  // 1. Cập nhật dữ liệu từ input hiện tại vào state.formData trước khi chuyển focus
+  if (currentLine && targetInput) {
+    if (currentField === 'name') {
+      const val = targetInput.value.trim();
+      currentLine.name = typeof toTitleCase === 'function' ? toTitleCase(val) : val;
+      targetInput.value = currentLine.name;
+    } else if (currentField === 'unit') {
+      const val = targetInput.value.trim().toUpperCase();
+      currentLine.unit = val;
+      targetInput.value = val;
+    } else if (currentField === 'unitCost' || currentField === 'hireprice') {
+      const numVal = typeof parseNumberInput === 'function' ? parseNumberInput(targetInput.value) : parseFloat(targetInput.value) || 0;
+      currentLine[currentField] = numVal;
+      targetInput.value = (numVal ?? 0).toLocaleString('vi-VN');
+    } else if (currentField === 'receivedQty') {
+      const numVal = parseFloat(targetInput.value) || 0;
+      currentLine.receivedQty = numVal;
+      currentLine.qtyImport = numVal;
+    }
+
+    // Tự động cập nhật tổng tiền
+    if (typeof updateLine === 'function') {
+      updateLine(currentLine.lineId, currentField, currentLine[currentField], ['receivedQty', 'unitCost', 'hireprice'].includes(currentField) ? 'number' : 'text');
+    }
+  }
+
+  // 2. Thứ tự nhập liệu: Tên Hàng -> Đơn Vị Tính -> Giá Nhập -> Giá Thuê (bỏ qua ô Mã kho readonly)
+  const fieldSequence = ['name', 'unit', 'unitCost', 'hireprice'];
 
   let nextIndex = currentIndex;
   let nextField = currentField;
@@ -471,21 +500,21 @@ function handleGRNLineKeyDown(event, currentIndex, currentField) {
     // Chưa đến dòng cuối: Nhảy xuống dòng tiếp theo trên CÙNG CỘT
     nextIndex = currentIndex + 1;
   } else {
-    // Dòng cuối cùng: Nhảy sang dòng ĐẦU TIÊN (index 0) của CỘT TIẾP THEO
+    // Đang ở dòng cuối cùng: Nhảy sang dòng ĐẦU TIÊN (index 0) của CỘT TIẾP THEO
     const currentFieldIndex = fieldSequence.indexOf(currentField);
     if (currentFieldIndex !== -1 && currentFieldIndex < fieldSequence.length - 1) {
       nextField = fieldSequence[currentFieldIndex + 1];
       nextIndex = 0;
     } else {
-      // Ô cuối cùng của dòng cuối -> Blur ra ngoài ngắt focus
-      if (event.target && typeof event.target.blur === 'function') {
-        event.target.blur();
+      // Ô cuối cùng (Giá Thuê) của dòng cuối -> Blur ra ngoài ngắt focus
+      if (targetInput && typeof targetInput.blur === 'function') {
+        targetInput.blur();
       }
       return;
     }
   }
 
-  // Chờ DOM cập nhật xong rồi mới focus & bôi đen ô tiếp theo
+  // 3. Chuyển focus và bôi đen nội dung ô tiếp theo
   requestAnimationFrame(() => {
     const nextLineObj = lineItems[nextIndex];
     if (!nextLineObj) return;
@@ -496,7 +525,7 @@ function handleGRNLineKeyDown(event, currentIndex, currentField) {
     if (nextInput) {
       nextInput.focus();
       if (typeof nextInput.select === 'function') {
-        nextInput.select(); // Bôi đen toàn bộ giá trị để nhập đè nhanh
+        nextInput.select();
       }
     }
   });
