@@ -460,30 +460,41 @@ function handleGRNLineKeyDown(event, currentIndex, currentField) {
   const totalLines = (state.formData?.lineItems || []).length;
   if (totalLines === 0) return;
 
-  // Luồng chuyển đổi thứ tự các cột khi hết dòng: Tên Hàng -> Đơn Vị -> Giá Nhập -> Giá Thuê -> Kết thúc
-  const fieldSequence = ['name', 'unit', 'unitCost', 'hireprice'];
+  // Luồng chuyển đổi thứ tự các cột khi hết dòng: Tên Hàng -> Đơn Vị -> SL Nhập -> Giá Nhập -> Giá Thuê -> Kết thúc
+  const fieldSequence = ['name', 'unit', 'receivedQty', 'unitCost', 'hireprice'];
+
+  let nextInputId = '';
 
   if (currentIndex < totalLines - 1) {
     // Nếu chưa phải dòng cuối: Xuống dòng tiếp theo của CỘT HIỆN TẠI
-    const nextInput = document.getElementById(`line-item-${state.formData.lineItems[currentIndex + 1].lineId}-${currentField}`);
-    if (nextInput) nextInput.focus();
+    nextInputId = `line-item-${state.formData.lineItems[currentIndex + 1].lineId}-${currentField}`;
   } else {
     // Nếu là DÒNG CUỐI CÙNG: Nhảy sang ô DÒNG ĐẦU TIÊN (index 0) của CỘT KẾ TIẾP
     const currentFieldIndex = fieldSequence.indexOf(currentField);
     
     if (currentFieldIndex !== -1 && currentFieldIndex < fieldSequence.length - 1) {
       const nextField = fieldSequence[currentFieldIndex + 1];
-      const nextInput = document.getElementById(`line-item-${state.formData.lineItems[0].lineId}-${nextField}`);
-      if (nextInput) {
-        nextInput.focus();
-        if (typeof nextInput.select === 'function') nextInput.select(); // bôi đen giá trị để tiện nhập đè
-      }
+      nextInputId = `line-item-${state.formData.lineItems[0].lineId}-${nextField}`;
     } else {
-      // Nếu là ô Giá Thuê ở DÒNG CUỐI CÙNG -> Blur ra ngoài không focus ô nào nữa
+      // Ô Giá Thuê ở dòng cuối cùng -> Blur ra ngoài
       if (event.target && typeof event.target.blur === 'function') {
         event.target.blur();
       }
+      return;
     }
+  }
+
+  // Dùng setTimeout để đảm bảo ô mới nhận Focus sau khi DOM render xong
+  if (nextInputId) {
+    setTimeout(() => {
+      const nextInput = document.getElementById(nextInputId);
+      if (nextInput) {
+        nextInput.focus();
+        if (typeof nextInput.select === 'function') {
+          nextInput.select(); // Bôi đen giá trị để người dùng gõ đè số mới tiện lợi
+        }
+      }
+    }, 50);
   }
 }
 

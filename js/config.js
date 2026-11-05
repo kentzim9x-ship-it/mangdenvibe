@@ -712,6 +712,30 @@ function toUpperCaseStr(str) {
   return str.toUpperCase();
 }
 
+// Tự động Title Case trực tiếp trên DOM (giữ nguyên khoảng trắng đang gõ & vị trí con trỏ)
+function applyTitleCaseOnInput(el) {
+  const start = el.selectionStart;
+  const end = el.selectionEnd;
+  
+  // Viết hoa chữ cái đầu tiên của từng từ mà không lowerCase toàn bộ chuỗi để tránh nuốt phím Space
+  const converted = el.value.replace(/(^|\s)\p{L}/gu, m => m.toUpperCase());
+  if (el.value !== converted) {
+    el.value = converted;
+    try { el.setSelectionRange(start, end); } catch (e) {}
+  }
+}
+
+// Tự động Upper Case trực tiếp cho Đơn Vị Tính
+function applyUpperCaseOnInput(el) {
+  const start = el.selectionStart;
+  const end = el.selectionEnd;
+  const converted = toUpperCaseStr(el.value);
+  if (el.value !== converted) {
+    el.value = converted;
+    try { el.setSelectionRange(start, end); } catch (e) {}
+  }
+}
+
 // ==========================================
 // HÀM BỔ TRỢ: TẢI FILE EXCEL HOẶC CHIA SẺ QUA ZALO
 // ==========================================

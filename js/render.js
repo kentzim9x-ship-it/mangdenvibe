@@ -2721,6 +2721,7 @@ function renderGRNForm(c) {
           value="${l.name || ''}" 
           ${(isView || isDetailsDisabled) ? 'readonly' : `
             onkeydown="handleGRNLineKeyDown(event, ${idx}, 'name')" 
+            oninput="applyTitleCaseOnInput(this); updateLine('${l.lineId}', 'name', this.value);"
             onchange="this.value = toTitleCase(this.value.trim()); updateLine('${l.lineId}', 'name', this.value.trim());"
           `} 
           placeholder="${isDetailsDisabled ? 'Nhập tên sản phẩm...' : 'Nhập tên sản phẩm...'}" 
@@ -2737,6 +2738,7 @@ function renderGRNForm(c) {
           value="${unitVal}" 
           ${(isView || isDetailsDisabled) ? 'readonly' : `
             onkeydown="handleGRNLineKeyDown(event, ${idx}, 'unit')" 
+            oninput="applyUpperCaseOnInput(this); updateLine('${l.lineId}', 'unit', this.value);"
             onchange="this.value = toUpperCaseStr(this.value.trim()); updateLine('${l.lineId}', 'unit', this.value.trim());"
           `}
           placeholder="CÁI, BỘ..."
@@ -2744,8 +2746,22 @@ function renderGRNForm(c) {
         
         <input type="text" id="line-item-${l.lineId}-warehouseCode" class="form-input" style="padding: 6px 8px; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; text-align: center;" value="${d.warehouseCode || '—'}" readonly title="Mã kho từ mục 01 xuống">
         
-        <input type="number" id="line-item-${l.lineId}-receivedQty" step="any" inputmode="decimal" class="form-input" style="padding: 6px 6px; text-align: right; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" value="${qtyVal}" ${(isView || isDetailsDisabled) ? 'readonly' : `onkeydown="handleLineItemKeyDown(event, 'grn', ${idx}, 'receivedQty')" onchange="updateLine('${l.lineId}', 'receivedQty', this.value, 'number'); updateLine('${l.lineId}', 'qtyImport', this.value, 'number');"`}>
+        <!-- CỘT SỐ LƯỢNG NHẬP (Đã đổi thành handleGRNLineKeyDown) -->
+        <input 
+          type="number" 
+          id="line-item-${l.lineId}-receivedQty" 
+          step="any" 
+          inputmode="decimal" 
+          class="form-input" 
+          style="padding: 6px 6px; text-align: right; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" 
+          value="${qtyVal}" 
+          ${(isView || isDetailsDisabled) ? 'readonly' : `
+            onkeydown="handleGRNLineKeyDown(event, ${idx}, 'receivedQty')" 
+            onchange="updateLine('${l.lineId}', 'receivedQty', this.value, 'number'); updateLine('${l.lineId}', 'qtyImport', this.value, 'number');"
+          `}
+        >
         
+        <!-- CỘT GIÁ NHẬP -->
         <input 
           type="text" 
           id="line-item-${l.lineId}-unitCost"
@@ -2761,6 +2777,7 @@ function renderGRNForm(c) {
           `}
         >
 
+        <!-- CỘT GIÁ THUÊ -->
         <input 
           type="text" 
           id="line-item-${l.lineId}-hireprice"
