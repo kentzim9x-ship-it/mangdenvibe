@@ -2006,8 +2006,8 @@ function renderSalesOrderForm(c) {
   }).join('');
 
   const gridLayout = isView
-    ? "10px 100px minmax(170px, 1.5fr) 60px 70px 65px 65px 85px 65px 65px 65px 120px"
-    : "10px 100px minmax(170px, 1.5fr) 60px 70px 65px 65px 85px 65px 65px 65px 120px 32px";
+    ? "10px 120px minmax(170px, 1.5fr) 60px 70px 65px 65px 85px 65px 65px 65px 100px"
+    : "10px 120px minmax(170px, 1.5fr) 60px 70px 65px 65px 85px 65px 65px 65px 100px 32px";
 
   const linesHtml = d.lineItems.map((l, idx) => {
     const mat = (db.materials || []).find(m => (l.sku && m.id === l.sku) || (l.name && m.name === l.name));
@@ -2528,7 +2528,7 @@ function renderReturnForm(c) {
     `<option value="${o.id}" ${d.orderId === o.id ? 'selected' : ''}>${o.id} - ${o.customer || 'Khách không tên'}</option>`
   ).join('');
 
-  const gridLayout = isView ? "10px 100px 1fr 60px 70px 65px 65px 100px 100px" : "10px 100px 1fr 60px 70px 65px 65px 100px 100px 32px";
+  const gridLayout = isView ? "10px 120px 1fr 70px 70px 70px 100px 130px" : "10px 120px 1fr 70px 70px 70px 100px 130px 32px";
 
   const linesHtml = d.lineItems.map((l, idx) => {
     const mat = (db.materials || []).find(m => m.id === l.sku || m.name === l.name);
@@ -2549,8 +2549,6 @@ function renderReturnForm(c) {
         <input type="text" id="line-item-${l.lineId}-warehouseCode" class="form-input" style="padding: 6px 8px; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; text-align: center;" value="${d.warehouseCode || '—'}" readonly title="Mã kho lấy từ mục 01 xuống">
         
         <input type="number" id="line-item-${l.lineId}-qtyReturned" step="any" inputmode="decimal" class="form-input" style="padding: 6px 6px; text-align: right; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" value="${l.qtyReturned ?? 1}" ${(isView || isDetailsDisabled) ? 'readonly' : `onkeydown="handleLineItemKeyDown(event, 'returns', ${idx}, 'qtyReturned')" onchange="updateLine('${l.lineId}', 'qtyReturned', this.value, 'number')"`}>
-        
-        <input type="text" id="line-item-${l.lineId}-stock" class="form-input" style="padding: 6px 6px; text-align: right; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; color: ${stockQty < 0 ? '#f87171' : 'var(--foreground)'};" value="${stockQty}" readonly title="Tồn thực tế">
         
         <input 
           type="text" 
@@ -2640,7 +2638,6 @@ function renderReturnForm(c) {
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Đơn Vị</span>
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Mã Kho</span>
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">SL Nhận Lại</span>
-              <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Tồn</span>
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Đơn giá</span>
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Thành tiền</span>
               ${!isView ? `<span></span>` : ''}
@@ -2725,7 +2722,7 @@ function renderGRNForm(c) {
           value="${l.name || ''}" 
           ${(isView || isDetailsDisabled) ? 'readonly' : `
             onkeydown="handleLineItemKeyDown(event, 'grn', ${idx}, 'name')" 
-            oninput="this.value = toTitleCase(this.value); updateLine('${l.lineId}', 'name', this.value);"
+            oninput="updateLine('${l.lineId}', 'name', this.value);"
             onchange="this.value = toTitleCase(this.value.trim()); updateLine('${l.lineId}', 'name', this.value.trim());"
           `} 
           placeholder="${isDetailsDisabled ? 'Nhập tên sản phẩm...' : 'Nhập tên sản phẩm...'}" 
