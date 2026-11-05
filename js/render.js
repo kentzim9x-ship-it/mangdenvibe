@@ -2259,76 +2259,83 @@ function renderSalesOrderForm(c) {
   };
 
   window.saveQuickCustomer = async function () {
-    const nameVal = (document.getElementById('quick-cust-name')?.value || '').trim();
-    const phoneVal = (document.getElementById('quick-cust-phone')?.value || '').trim();
-    const addressVal = (document.getElementById('quick-cust-address')?.value || '').trim();
+  const nameVal = (document.getElementById('quick-cust-name')?.value || '').trim();
+  const phoneVal = (document.getElementById('quick-cust-phone')?.value || '').trim();
+  const addressVal = (document.getElementById('quick-cust-address')?.value || '').trim();
 
-    if (!nameVal || !phoneVal) {
-      alert("Vui lòng nhập tên và số điện thoại khách hàng!");
-      return;
-    }
+  if (!nameVal || !phoneVal) {
+    alert("Vui lòng nhập tên và số điện thoại khách hàng!");
+    return;
+  }
 
-    // 1. Tạo ID tự động chuẩn cho khách hàng mới (KHxxxx)
-    const newId = typeof generateAutoId === 'function' ? generateAutoId('customers') : `KH${Date.now()}`;
-    const currentUser = typeof getAuthSession === 'function' ? (getAuthSession()?.user?.id || '') : '';
-    const todayStr = typeof getTodayDateStr === 'function' ? getTodayDateStr() : new Date().toISOString().split('T')[0];
-    const timeStr = new Date().toTimeString().split(' ')[0];
+  // 1. Tạo ID tự động chuẩn (KHxxxx)
+  const newId = typeof generateAutoId === 'function' ? generateAutoId('customers') : `KH${Date.now()}`;
+  
+  // 2. Ép kiểu user_id0 sang Số Nguyên (int8) để khớp với Schema Supabase
+  const rawUserId = typeof getAuthSession === 'function' ? getAuthSession()?.user?.id : null;
+  const userIdInt = !isNaN(parseInt(rawUserId)) ? parseInt(rawUserId) : null;
 
-    const newCust = {
-      id: newId,
-      name: nameVal,
-      contact: nameVal,
-      phone: phoneVal,
-      address: addressVal,
-      diachi: addressVal,
-      type: 'Khách vãng lai',
-      paymentTerms: 'Thanh toán ngay',
-      status: 'active',
-      date0: todayStr,
-      time0: timeStr,
-      user_id0: currentUser,
-      date2: todayStr,
-      time2: timeStr,
-      user_id2: currentUser
-    };
+  const todayStr = typeof getTodayDateStr === 'function' ? getTodayDateStr() : new Date().toISOString().split('T')[0];
+  const timeStr = new Date().toTimeString().split(' ')[0];
 
-    // 2. Cập nhật vào mảng local db.customers
-    if (!Array.isArray(db.customers)) db.customers = [];
-    db.customers.push(newCust);
-
-    // 3. Ghi dữ liệu vào Database sử dụng helper chung của dự án
-    try {
-      if (typeof saveToDatabase === 'function') {
-        await saveToDatabase('customers', newCust);
-      } else if (typeof saveItem === 'function') {
-        await saveItem('customers', newCust);
-      } else if (typeof supabaseClient !== 'undefined' && supabaseClient.from) {
-        await supabaseClient.from('customers').insert([newCust]);
-      } else if (window.supabase && typeof window.supabase.from === 'function') {
-        await window.supabase.from('customers').insert([newCust]);
-      }
-    } catch (err) {
-      console.error('Lỗi khi ghi dữ liệu khách hàng mới:', err);
-    }
-
-    // 4. Đóng drawer thêm nhanh
-    if (typeof closeQuickCustomerDrawer === 'function') {
-      closeQuickCustomerDrawer();
-    }
-
-    // 5. Cập nhật thông tin khách hàng mới vừa tạo vào Đơn bán hàng
-    if (state.formData) {
-      state.formData.customer = nameVal;
-      state.formData.phone = phoneVal;
-    }
-
-    // 6. Render lại form để cập nhật ô chọn khách hàng và lấy lại báo giá (nếu có)
-    if (typeof handleCustomerSelectInOrder === 'function') {
-      handleCustomerSelectInOrder(nameVal);
-    } else if (typeof render === 'function') {
-      render();
-    }
+  // 3. Khởi tạo đối tượng khớp chính xác 16 cột trong Schema Supabase của bảng customers
+  const newCust = {
+    id: newId,                             // text (PRIMARY KEY, NON-NULLABLE)
+    name: nameVal,                         // text (NON-NULLABLE)
+    type: 'Khách vãng lai',                // text
+    contact: nameVal,                      // text
+    email: null,                           // text
+    phone: phoneVal,                       // text
+    address: addressVal,                   // text
+    creditLimit: 0,                        // numeric
+    status: 'active',                      // text
+    paymentterms: 'Thanh toán ngay',       // text (chú ý: paymentterms viết liền)
+    user_id0: userIdInt,                   // int8 (phải là kiểu INT)
+    date0: todayStr,                       // date
+    time0: timeStr,                        // time
+    user_id2: userIdInt,                   // int8
+    date2: todayStr,                       // date
+    time2: timeStr                         // time
   };
+
+  // 4. Cập nhật vào mảng local db.customers
+  if (!Array.isArray(db.customers)) db.customers = [];
+  db.customers.push(newCust);
+
+  // 5. Thực hiện Insert vào Database Supabase
+  try {
+    if (typeof saveToDatabase === 'function') {
+      await saveToDatabase('customers', newCust);
+    } else if (typeof saveItem === 'function') {
+      await saveItem('customers', newCust);
+    } else if (typeof supabaseClient !== 'undefined' && supabaseClient.from) {
+      const { error } = await supabaseClient.from('customers').insert([newCust]);
+      if (error) console.error('Supabase insert error:', error);
+    } else if (window.supabase && typeof window.supabase.from === 'function') {
+      const { error } = await window.supabase.from('customers').insert([newCust]);
+      if (error) console.error('Supabase insert error:', error);
+    }
+  } catch (err) {
+    console.error('Lỗi khi ghi dữ liệu khách hàng mới:', err);
+  }
+
+  // 6. Đóng Drawer Thêm Nhanh Khách Hàng
+  if (typeof closeQuickCustomerDrawer === 'function') {
+    closeQuickCustomerDrawer();
+  }
+
+  // 7. Gán khách hàng mới vào Đơn bán hàng và render lại
+  if (state.formData) {
+    state.formData.customer = nameVal;
+    state.formData.phone = phoneVal;
+  }
+
+  if (typeof handleCustomerSelectInOrder === 'function') {
+    handleCustomerSelectInOrder(nameVal);
+  } else if (typeof render === 'function') {
+    render();
+  }
+};
 
   c.innerHTML = `
     <div style="max-width: 1050px;">
