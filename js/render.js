@@ -2270,7 +2270,7 @@ function renderSalesOrderForm(c) {
 
     // 1. Tạo ID tự động chuẩn cho khách hàng mới (KHxxxx)
     const newId = typeof generateAutoId === 'function' ? generateAutoId('customers') : `KH${Date.now()}`;
-    const currentUser = typeof getAuthSession === 'function' ? getAuthSession()?.user?.id || 'admin' : 'admin';
+    const currentUser = typeof getAuthSession === 'function' ? (getAuthSession()?.user?.id || '') : '';
     const todayStr = typeof getTodayDateStr === 'function' ? getTodayDateStr() : new Date().toISOString().split('T')[0];
     const timeStr = new Date().toTimeString().split(' ')[0];
 
@@ -2292,39 +2292,42 @@ function renderSalesOrderForm(c) {
       user_id2: currentUser
     };
 
-    // 2. Cập nhật vào mảng mảng local db.customers
+    // 2. Cập nhật vào mảng local db.customers
     if (!Array.isArray(db.customers)) db.customers = [];
     db.customers.push(newCust);
 
-    // 3. Thực hiện Insert dữ liệu vào Database (Supabase / API backend)
+    // 3. Ghi dữ liệu vào Database sử dụng helper chung của dự án
     try {
-      if (typeof supabase !== 'undefined' && supabase) {
-        const { data, error } = await supabase
-          .from('customers')
-          .insert([newCust]);
-
-        if (error) {
-          console.error('Lỗi insert khách hàng vào database:', error);
-        }
-      } else if (typeof saveToDatabase === 'function') {
+      if (typeof saveToDatabase === 'function') {
         await saveToDatabase('customers', newCust);
       } else if (typeof saveItem === 'function') {
         await saveItem('customers', newCust);
+      } else if (typeof supabaseClient !== 'undefined' && supabaseClient.from) {
+        await supabaseClient.from('customers').insert([newCust]);
+      } else if (window.supabase && typeof window.supabase.from === 'function') {
+        await window.supabase.from('customers').insert([newCust]);
       }
     } catch (err) {
       console.error('Lỗi khi ghi dữ liệu khách hàng mới:', err);
     }
 
-    // 4. Đóng drawer và gán khách hàng mới vào Đơn bán hàng
-    closeQuickCustomerDrawer();
-
-    if (d) {
-      d.customer = nameVal;
-      d.phone = phoneVal;
+    // 4. Đóng drawer thêm nhanh
+    if (typeof closeQuickCustomerDrawer === 'function') {
+      closeQuickCustomerDrawer();
     }
 
-    // 5. Render lại form Đơn bán hàng với thông tin khách hàng mới vừa tạo
-    render();
+    // 5. Cập nhật thông tin khách hàng mới vừa tạo vào Đơn bán hàng
+    if (state.formData) {
+      state.formData.customer = nameVal;
+      state.formData.phone = phoneVal;
+    }
+
+    // 6. Render lại form để cập nhật ô chọn khách hàng và lấy lại báo giá (nếu có)
+    if (typeof handleCustomerSelectInOrder === 'function') {
+      handleCustomerSelectInOrder(nameVal);
+    } else if (typeof render === 'function') {
+      render();
+    }
   };
 
   c.innerHTML = `
