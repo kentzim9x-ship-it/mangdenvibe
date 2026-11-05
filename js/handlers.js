@@ -1823,17 +1823,16 @@ async function handleSaveCustomer() {
     return;
   }
 
-  // 1. Lấy dữ liệu từ state.formData hoặc form inputs
+  // Khai báo biến session để lấy thông tin người dùng hiện tại
+  const session = typeof getAuthSession === 'function' ? getAuthSession() : null;
+
   const formData = state.formData || {};
-  
-  // Kiểm tra dữ liệu bắt buộc (ví dụ: tên, điện thoại)
   if (!formData.name || !formData.phone) {
     alert('Vui lòng nhập đầy đủ Tên và Số điện thoại khách hàng!');
     return;
   }
 
   try {
-    // 2. Thực hiện đẩy dữ liệu trực tiếp lên Supabase Database
     if (typeof supabaseClient !== 'undefined') {
       const payload = {
         id: formData.id || ('KH' + Date.now()),
@@ -1845,7 +1844,7 @@ async function handleSaveCustomer() {
         type: formData.type || 'Khách vãng lai',
         paymentterms: formData.paymentterms || 'Thanh toán ngay',
         status: 'active',
-        user_id0: session?.currentUser?.id || 'Hệ Thống',
+        user_id0: session?.currentUser?.id || session?.user?.id || 'Hệ Thống',
         date0: new Date().toISOString().split('T')[0],
         time0: new Date().toTimeString().split(' ')[0]
       };
@@ -1859,11 +1858,10 @@ async function handleSaveCustomer() {
 
       if (data && data[0]) {
         if (!db.customers) db.customers = [];
-        db.customers.unshift(data[0]); // Đưa vào mảng local sau khi db đã nhận
+        db.customers.unshift(data[0]);
       }
     }
 
-    // 3. Đóng form và render lại giao diện
     if (typeof closeDrawer === 'function') closeDrawer();
     if (typeof showToast === 'function') {
       showToast('Lưu khách hàng vào database thành công!', 'success');
