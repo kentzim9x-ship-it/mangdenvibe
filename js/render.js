@@ -2713,7 +2713,6 @@ function renderGRNForm(c) {
           ${idx + 1}.
         </span>
         
-        <!-- CỘT TÊN HÀNG: Nhập tay tự động viết hoa chữ cái đầu -->
         <input 
           type="text" 
           id="line-item-${l.lineId}-name" 
@@ -2721,8 +2720,7 @@ function renderGRNForm(c) {
           style="padding: 6px 8px; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" 
           value="${l.name || ''}" 
           ${(isView || isDetailsDisabled) ? 'readonly' : `
-            oninput="updateLine('${l.lineId}', 'name', this.value);"
-            onchange="this.value = toTitleCase(this.value.trim()); updateLine('${l.lineId}', 'name', this.value.trim());"
+            onblur="this.value = this.value.charAt(0).toUpperCase() + this.value.slice(1); updateLine('${l.lineId}', 'name', this.value);"
           `} 
           placeholder="${isDetailsDisabled ? 'Nhập tên sản phẩm...' : 'Nhập tên sản phẩm...'}" 
           required
