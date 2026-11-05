@@ -350,8 +350,8 @@ function updateLine(lineId, field, value, type = 'text') {
   const currentLineTotal = (qty * price * (1 - disc / 100)) * (1 + tax / 100);
 
   // Tìm ô hiển thị thành tiền trên dòng tương ứng
-  const lineRow = document.getElementById(`line-item-row-${lineId}`) || 
-                  document.querySelector(`tr[data-line-id="${lineId}"]`);
+  const lineRow = document.getElementById(`line-item-row-${lineId}`) ||
+    document.querySelector(`tr[data-line-id="${lineId}"]`);
 
   if (lineRow) {
     const totalCell = lineRow.querySelector('.line-total-val') || lineRow.querySelector('td:nth-last-child(2)');
@@ -905,6 +905,37 @@ async function saveForm(module) {
     const warehouseCode = rawData.warehouseCode || (db.warehouses[0] ? (db.warehouses[0].code || db.warehouses[0].id) : '');
     const lineItems = Array.isArray(rawData.lineItems) ? rawData.lineItems : [];
 
+    // =========================================================================
+    // 1. CẬP NHẬT TRẠNG THÁI HÀNG HÓA VỀ "Còn Hàng" TRONG CSDL BỘ NHỚ LOCAL (db)
+    // =========================================================================
+    if (lineItems.length > 0 && Array.isArray(db.materials)) {
+      lineItems.forEach(line => {
+        const mat = db.materials.find(m =>
+          (line.sku && m.id === line.sku) ||
+          (line.name && m.name.toLowerCase() === line.name.toLowerCase())
+        );
+        if (mat) {
+          mat.status = 'ok'; // Hoặc 'Còn Hàng' tùy quy chuẩn hiển thị trong hệ thống của bạn
+          mat.user_id2 = currentUserId;
+          mat.date2 = currentDate;
+          mat.time2 = currentTime;
+        }
+      });
+    }
+
+    // =========================================================================
+    // 2. CẬP NHẬT TRẠNG THÁI ĐƠN HÀNG BÁN VỀ "Hoàn Thành" TRONG CSDL BỘ NHỚ LOCAL
+    // =========================================================================
+    if (rawData.orderId && Array.isArray(db.orders)) {
+      const targetOrder = db.orders.find(o => String(o.id) === String(rawData.orderId));
+      if (targetOrder) {
+        targetOrder.status = 'completed'; // Hoặc 'Hoàn thành'
+        targetOrder.user_id2 = currentUserId;
+        targetOrder.date2 = currentDate;
+        targetOrder.time2 = currentTime;
+      }
+    }
+    // =========================================================================
     dbPayload.warehouseCode = warehouseCode;
     dbPayload.warehouse_code = warehouseCode;
     dbPayload.orderId = rawData.orderId || null;
@@ -1103,6 +1134,61 @@ async function saveForm(module) {
 
   const currentMode = state.mode;
   try {
+    // Nếu là phiếu nhận trả -> Đẩy task cập nhật Database Supabase chạy ngầm
+    if (module === 'returns') {
+      const lineItems = Array.isArray(rawData.lineItems) ? rawData.lineItems : [];
+
+      // Task 1: Cập nhật trạng thái từng sản phẩm về "ok" (Còn Hàng) trên Supabase
+      if (lineItems.length > 0) {
+        asyncBackgroundTasks.push(
+          (async () => {
+            try {
+              for (const line of lineItems) {
+                const mat = (db.materials || []).find(m =>
+                  (line.sku && m.id === line.sku) ||
+                  (line.name && m.name.toLowerCase() === line.name.toLowerCase())
+                );
+                if (mat) {
+                  await supabaseClient
+                    .from('materials')
+                    .update({
+                      status: 'ok',
+                      user_id2: currentUserId,
+                      date2: currentDate,
+                      time2: currentTime
+                    })
+                    .eq('id', mat.id);
+                }
+              }
+            } catch (err) {
+              console.error('Lỗi tự động cập nhật trạng thái mặt hàng khi nhận trả:', err);
+            }
+          })()
+        );
+      }
+
+      // Task 2: Cập nhật trạng thái Đơn Bán Hàng tương ứng về "completed" (Hoàn thành) trên Supabase
+      if (rawData.orderId) {
+        asyncBackgroundTasks.push(
+          (async () => {
+            try {
+              await supabaseClient
+                .from('orders')
+                .update({
+                  status: 'completed',
+                  user_id2: currentUserId,
+                  date2: currentDate,
+                  time2: currentTime
+                })
+                .eq('id', rawData.orderId);
+            } catch (err) {
+              console.error('Lỗi tự động cập nhật trạng thái đơn hàng bán khi nhận trả:', err);
+            }
+          })()
+        );
+      }
+    }
+
     if (asyncBackgroundTasks.length > 0) {
       Promise.all(asyncBackgroundTasks).catch(err => console.error('Lỗi task nền:', err));
     }
@@ -1331,7 +1417,7 @@ function initFormData(module, id) {
     if (module === 'returns') {
       const defaultWh = db.warehouses[0] ? (db.warehouses[0].code || db.warehouses[0].id) : '';
       state.formData = {
-        id: autoId, warehouseCode: defaultWh, orderId: '', customer: '', date: getTodayDateStr(), reason: 'Hàng thuê trả lại', notes: '', status: 'approved',
+        id: autoId, warehouseCode: defaultWh, orderId: '', customer: '', date: getTodayDateStr(), reason: 'Hàng thuê trả lại', notes: '', status: 'accepted',
         lineItems: [{ lineId: Date.now().toString(), sku: '', name: '', qtyReturned: 1, unitPrice: 0 }]
       };
     }
@@ -1417,7 +1503,7 @@ function handleReturnSalesOrderChange(soId) {
 function handleReturnCustomerChange(val) {
   const custName = val.trim();
   updateField('customer', custName);
-  
+
   // Tự động tìm SĐT tương ứng trong danh mục khách hàng
   const custObj = (db.customers || []).find(c => c.name.toLowerCase() === custName.toLowerCase());
   if (custObj && custObj.phone) {
@@ -1440,15 +1526,12 @@ function handleReturnPhoneChange(phoneVal) {
     return;
   }
 
-  // Tự động tìm khách hàng theo SĐT trong danh mục
+  // Tự động đối chiếu với danh sách Khách hàng
   const custObj = (db.customers || []).find(c => (c.phone || '').trim() === cleanPhone);
   if (custObj && custObj.name) {
-    updateField('customer', custObj.name);
-    if (noticeEl) noticeEl.style.display = 'none';
+    state.formData.customer = custObj.name;
   } else {
-    // Không tìm thấy khách hàng: Làm trống ô khách hàng và hiển thị thông báo
-    updateField('customer', '');
-    if (noticeEl) noticeEl.style.display = 'block';
+    state.formData.customer = '';
   }
   render();
 }
@@ -1772,8 +1855,8 @@ function handleSaleYnChangeInLine(lineId, isSaleChecked) {
   }
 
   // 3. Tìm sản phẩm trong Danh mục hàng hóa (db.materials)
-  const mat = (db.materials || []).find(m => 
-    (line.sku && m.id === line.sku) || 
+  const mat = (db.materials || []).find(m =>
+    (line.sku && m.id === line.sku) ||
     (line.name && m.name.toLowerCase() === line.name.toLowerCase())
   );
 

@@ -1070,7 +1070,7 @@ function renderReturnsList(c) {
   const kpiHtml = [
     { label: 'Tổng số phiếu', val: db.returns.length, color: 'var(--foreground)' },
     { label: 'Hoàn thành', val: db.returns.filter(r => ['processed', 'hoàn thành', 'đã xử lý'].includes((r.status || '').toLowerCase())).length, color: '#60a5fa' },
-    { label: 'Duyệt', val: db.returns.filter(r => ['approved', 'duyệt', 'đã duyệt'].includes((r.status || '').toLowerCase())).length, color: '#34d399' },
+    { label: 'Duyệt', val: db.returns.filter(r => ['accepted', 'duyệt', 'đã duyệt'].includes((r.status || '').toLowerCase())).length, color: '#34d399' },
     { label: 'Chờ duyệt', val: db.returns.filter(r => ['pending', 'chờ duyệt'].includes((r.status || '').toLowerCase())).length, color: 'var(--foreground)' },
     { label: 'Từ chối', val: db.returns.filter(r => ['rejected', 'từ chối'].includes((r.status || '').toLowerCase())).length, color: '#818cf8' }
   ].map(s => `
@@ -2602,23 +2602,22 @@ function renderReturnForm(c) {
               </datalist>
             </div>
 
-            <!-- CỘT SỐ ĐIỆN THOẠI BÊN CẠNH KHÁCH HÀNG -->
+            <!-- SỐ ĐIỆN THOẠI & THÔNG BÁO KHÔNG TÌM THẤY -->
             <div class="form-group">
               <label class="form-label">Số điện thoại</label>
               <input 
                 type="text" 
                 id="return-customer-phone"
                 class="form-input" 
-                value="${d.phone || d.customerPhone || ''}" 
+                value="${currentPhone}" 
                 ${(isView || hasOrder) ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : `
-                  onkeydown="if(event.key === 'Enter'){ event.preventDefault(); handleReturnPhoneChange(this.value); }"
-                  onblur="handleReturnPhoneChange(this.value)"
                   onchange="handleReturnPhoneChange(this.value)"
+                  onblur="handleReturnPhoneChange(this.value)"
                 `} 
                 placeholder="Nhập SĐT khách hàng..."
               >
-              <div id="return-phone-notice" style="font-size: 11px; color: #f0a030; font-family: var(--font-dm-mono); margin-top: 4px; display: none;">
-                ⚠ Khách hàng chưa có trong hệ thống
+              <div id="return-phone-notice" style="font-size: 11px; color: #f0a030; font-family: var(--font-dm-mono); margin-top: 4px; display: ${isPhoneNotFound ? 'block' : 'none'};">
+                ⚠ Không tìm thấy khách hàng trong hệ thống!
               </div>
             </div>
             <div class="form-group">
