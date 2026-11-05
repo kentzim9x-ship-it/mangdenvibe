@@ -455,30 +455,29 @@ function handleLineItemKeyDown(e, module, lineIndex, fieldName) {
 
 function handleGRNLineKeyDown(event, currentIndex, currentField) {
   if (event.key !== 'Enter') return;
-  event.preventDefault(); // Ngăn submit form mặc định khi nhấn Enter
+  event.preventDefault(); // Ngăn submit form mặc định
 
   const lineItems = state.formData?.lineItems || [];
   const totalLines = lineItems.length;
   if (totalLines === 0) return;
 
-  // Luồng chuyển đổi thứ tự các cột khi hết dòng: Tên Hàng -> Đơn Vị -> SL Nhập -> Giá Nhập -> Giá Thuê -> Kết thúc
+  // Thứ tự chuyển đổi các cột
   const fieldSequence = ['name', 'unit', 'receivedQty', 'unitCost', 'hireprice'];
 
   let nextIndex = currentIndex;
   let nextField = currentField;
 
   if (currentIndex < totalLines - 1) {
-    // Nếu chưa phải dòng cuối: Chuyển xuống dòng tiếp theo của CỘT HIỆN TẠI
+    // Chưa đến dòng cuối: Nhảy xuống dòng tiếp theo trên CÙNG CỘT
     nextIndex = currentIndex + 1;
   } else {
-    // Nếu là DÒNG CUỐI CÙNG: Nhảy sang ô DÒNG ĐẦU TIÊN (index 0) của CỘT KẾ TIẾP
+    // Dòng cuối cùng: Nhảy sang dòng ĐẦU TIÊN (index 0) của CỘT TIẾP THEO
     const currentFieldIndex = fieldSequence.indexOf(currentField);
-    
     if (currentFieldIndex !== -1 && currentFieldIndex < fieldSequence.length - 1) {
       nextField = fieldSequence[currentFieldIndex + 1];
       nextIndex = 0;
     } else {
-      // Nếu là ô Giá Thuê ở DÒNG CUỐI CÙNG -> Blur ra ngoài ngắt focus
+      // Ô cuối cùng của dòng cuối -> Blur ra ngoài ngắt focus
       if (event.target && typeof event.target.blur === 'function') {
         event.target.blur();
       }
@@ -486,8 +485,8 @@ function handleGRNLineKeyDown(event, currentIndex, currentField) {
     }
   }
 
-  // Chờ 50ms để các sự kiện updateLine / re-render hoàn tất rồi mới focus & bôi đen ô tiếp theo
-  setTimeout(() => {
+  // Chờ DOM cập nhật xong rồi mới focus & bôi đen ô tiếp theo
+  requestAnimationFrame(() => {
     const nextLineObj = lineItems[nextIndex];
     if (!nextLineObj) return;
 
@@ -497,10 +496,10 @@ function handleGRNLineKeyDown(event, currentIndex, currentField) {
     if (nextInput) {
       nextInput.focus();
       if (typeof nextInput.select === 'function') {
-        nextInput.select(); // Bôi đen toàn bộ số/chữ để tiện nhập đè
+        nextInput.select(); // Bôi đen toàn bộ giá trị để nhập đè nhanh
       }
     }
-  }, 50);
+  });
 }
 
 function addLineItem(module, focusNewName = false) {

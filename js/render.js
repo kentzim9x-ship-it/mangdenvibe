@@ -2026,38 +2026,37 @@ function renderSalesOrderForm(c) {
           ${idx + 1}.
         </span>
         
-        <!-- CỘT TÊN HÀNG -->
         <input 
           type="text" 
           id="line-item-${l.lineId}-name" 
           class="form-input" 
-          style="padding: 6px 8px; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" 
+          style="padding: 6px 8px;" 
           value="${l.name || ''}" 
           ${(isView || isDetailsDisabled) ? 'readonly' : `
             onkeydown="handleGRNLineKeyDown(event, ${idx}, 'name')" 
-            oninput="applyTitleCaseOnInput(this); updateLine('${l.lineId}', 'name', this.value);"
+            oninput="updateLine('${l.lineId}', 'name', this.value);"
             onchange="this.value = toTitleCase(this.value.trim()); updateLine('${l.lineId}', 'name', this.value.trim());"
           `} 
-          placeholder="${isDetailsDisabled ? 'Nhập tên sản phẩm...' : 'Nhập tên sản phẩm...'}" 
+          placeholder="Nhập tên sản phẩm..." 
           required
         >
         
-        <!-- CỘT ĐƠN VỊ TÍNH -->
+        <!-- SỬA THÀNH: -->
         <input 
           type="text" 
           id="line-item-${l.lineId}-unit" 
           class="form-input" 
           maxlength="10"
-          style="padding: 6px 8px; font-family: var(--font-dm-mono); text-align: center; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" 
+          style="padding: 6px 8px; font-family: var(--font-dm-mono); text-align: center; text-transform: uppercase;" 
           value="${unitVal}" 
           ${(isView || isDetailsDisabled) ? 'readonly' : `
             onkeydown="handleGRNLineKeyDown(event, ${idx}, 'unit')" 
-            oninput="applyUpperCaseOnInput(this); updateLine('${l.lineId}', 'unit', this.value);"
-            onchange="this.value = toUpperCaseStr(this.value.trim()); updateLine('${l.lineId}', 'unit', this.value.trim());"
+            oninput="updateLine('${l.lineId}', 'unit', this.value);"
+            onchange="this.value = this.value.trim().toUpperCase(); updateLine('${l.lineId}', 'unit', this.value.trim().toUpperCase());"
           `}
           placeholder="CÁI, BỘ..."
         >
-        
+                
         <input type="text" id="line-item-${l.lineId}-warehouseCode" class="form-input" style="padding: 6px 8px; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; text-align: center;" value="${d.warehouseCode || '—'}" readonly title="Mã kho từ mục 01 xuống">
         
         <!-- CỘT SỐ LƯỢNG NHẬP -->
