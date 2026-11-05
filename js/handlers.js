@@ -1840,7 +1840,7 @@ async function handleSaveCustomer() {
         contact: formData.contact || formData.name.trim(),
         phone: formData.phone.trim(),
         address: formData.address || '',
-        diachi: formData.address || '',
+        email: formData.email ||'',
         type: formData.type || 'Khách vãng lai',
         paymentterms: formData.paymentterms || 'Thanh toán ngay',
         status: 'active',
