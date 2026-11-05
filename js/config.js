@@ -712,19 +712,6 @@ function toUpperCaseStr(str) {
   return str.toUpperCase();
 }
 
-// Tự động Title Case trực tiếp trên DOM (giữ nguyên khoảng trắng đang gõ & vị trí con trỏ)
-function applyTitleCaseOnInput(el) {
-  const start = el.selectionStart;
-  const end = el.selectionEnd;
-  
-  // Viết hoa chữ cái đầu tiên của từng từ mà không lowerCase toàn bộ chuỗi để tránh nuốt phím Space
-  const converted = el.value.replace(/(^|\s)\p{L}/gu, m => m.toUpperCase());
-  if (el.value !== converted) {
-    el.value = converted;
-    try { el.setSelectionRange(start, end); } catch (e) {}
-  }
-}
-
 // Viết hoa chữ cái đầu từng từ trực tiếp trên ô Input (Giữ phím Space và dấu tiếng Việt mượt mà)
 function applyTitleCaseOnInput(el) {
   const start = el.selectionStart;
@@ -732,7 +719,7 @@ function applyTitleCaseOnInput(el) {
   const converted = el.value.replace(/(^|\s)\p{L}/gu, m => m.toUpperCase());
   if (el.value !== converted) {
     el.value = converted;
-    try { el.setSelectionRange(start, end); } catch (e) {}
+    try { el.setSelectionRange(start, end); } catch (e) { }
   }
 }
 
@@ -743,6 +730,52 @@ function applyUpperCaseOnInput(el) {
   const converted = toUpperCaseStr(el.value);
   if (el.value !== converted) {
     el.value = converted;
-    try { el.setSelectionRange(start, end); } catch (e) {}
+    try { el.setSelectionRange(start, end); } catch (e) { }
+  }
+}
+
+// ==========================================
+// HÀM BỔ TRỢ: TẢI FILE EXCEL HOẶC CHIA SẺ QUA ZALO
+// ==========================================
+async function downloadOrShareXLSX(workbook, fileName) {
+  if (typeof XLSX === 'undefined') {
+    showAlert('Thư viện XLSX chưa được tải, vui lòng kiểm tra lại kết nối!', 'Lỗi');
+    return;
+  }
+
+  const fullFileName = `${fileName}.xlsx`;
+
+  try {
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    // 1. DÀNH CHO MOBILE: MỞ BẢNG CHIA SẺ (ZALO / MESSENGER)
+    if (isMobile && navigator.canShare) {
+      const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const file = new File([blob], fullFileName, { type: blob.type });
+
+      if (navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: fullFileName,
+            text: `Gửi file Excel ${fullFileName}`
+          });
+          return;
+        } catch (shareErr) {
+          if (shareErr.name !== 'AbortError') {
+            console.warn('Lỗi chia sẻ file Excel:', shareErr);
+          }
+          return;
+        }
+      }
+    }
+
+    // 2. DÀNH CHO PC: TẢI TRỰC TIẾP FILE EXCEL VỀ MÁY
+    XLSX.writeFile(workbook, fullFileName);
+
+  } catch (err) {
+    console.error('Lỗi khi xuất file Excel:', err);
+    showAlert('Có lỗi xảy ra trong quá trình tạo file Excel!', 'Lỗi');
   }
 }
