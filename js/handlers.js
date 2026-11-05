@@ -453,6 +453,40 @@ function handleLineItemKeyDown(e, module, lineIndex, fieldName) {
   }
 }
 
+function handleGRNLineKeyDown(event, currentIndex, currentField) {
+  if (event.key !== 'Enter') return;
+  event.preventDefault(); // Ngăn submit form mặc định
+
+  const totalLines = (state.formData?.lineItems || []).length;
+  if (totalLines === 0) return;
+
+  // Luồng chuyển đổi thứ tự các cột khi hết dòng: Tên Hàng -> Đơn Vị -> Giá Nhập -> Giá Thuê -> Kết thúc
+  const fieldSequence = ['name', 'unit', 'unitCost', 'hireprice'];
+
+  if (currentIndex < totalLines - 1) {
+    // Nếu chưa phải dòng cuối: Xuống dòng tiếp theo của CỘT HIỆN TẠI
+    const nextInput = document.getElementById(`line-item-${state.formData.lineItems[currentIndex + 1].lineId}-${currentField}`);
+    if (nextInput) nextInput.focus();
+  } else {
+    // Nếu là DÒNG CUỐI CÙNG: Nhảy sang ô DÒNG ĐẦU TIÊN (index 0) của CỘT KẾ TIẾP
+    const currentFieldIndex = fieldSequence.indexOf(currentField);
+    
+    if (currentFieldIndex !== -1 && currentFieldIndex < fieldSequence.length - 1) {
+      const nextField = fieldSequence[currentFieldIndex + 1];
+      const nextInput = document.getElementById(`line-item-${state.formData.lineItems[0].lineId}-${nextField}`);
+      if (nextInput) {
+        nextInput.focus();
+        if (typeof nextInput.select === 'function') nextInput.select(); // bôi đen giá trị để tiện nhập đè
+      }
+    } else {
+      // Nếu là ô Giá Thuê ở DÒNG CUỐI CÙNG -> Blur ra ngoài không focus ô nào nữa
+      if (event.target && typeof event.target.blur === 'function') {
+        event.target.blur();
+      }
+    }
+  }
+}
+
 function addLineItem(module, focusNewName = false) {
   if (!state.formData) return;
   if (!Array.isArray(state.formData.lineItems)) state.formData.lineItems = [];
