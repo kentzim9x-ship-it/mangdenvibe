@@ -2021,7 +2021,7 @@ function renderSalesOrderForm(c) {
     const lineTotal = lineSub * (1 + tax / 100);
 
     return `
-      <div style="display: grid; grid-template-columns: ${gridLayout}; gap: 6px; padding: 10px 16px 10px 10px; border-bottom: 1px solid var(--border); align-items: center; ${isDetailsDisabled ? 'opacity: 0.5; pointer-events: none;' : ''}">
+      <div id="line-item-row-${l.lineId}" style="display: grid; grid-template-columns: ${gridLayout}; gap: 6px; padding: 10px 16px 10px 10px; border-bottom: 1px solid var(--border); align-items: center; ${isDetailsDisabled ? 'opacity: 0.5; pointer-events: none;' : ''}">
         <span style="font-family: var(--font-dm-mono, monospace); font-size: 10px; font-weight: 400; color: var(--muted-foreground); min-width: 14px; text-align: right; user-select: none;">
           ${idx + 1}.
         </span>
@@ -2040,11 +2040,11 @@ function renderSalesOrderForm(c) {
             id="line-item-${l.lineId}-sale_yn" 
             style="width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary);" 
             ${l.sale_yn === true ? 'checked' : ''} 
-            ${(isView || isDetailsDisabled) ? 'disabled' : `onchange="handleSaleYnChangeInLine('${l.lineId}', this.checked)"`}
+            ${(isView || isDetailsDisabled) ? 'disabled' : `onchange="if(typeof handleSaleYnChangeInLine === 'function'){ handleSaleYnChangeInLine('${l.lineId}', this.checked); } else { updateLine('${l.lineId}', 'sale_yn', this.checked); }"`}
           >
         </div>
         
-        <input type="number" id="line-item-${l.lineId}-qty" step="any" inputmode="decimal" class="form-input" style="padding: 6px 6px; text-align: right; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" value="${l.qty ?? 1}" ${(isView || isDetailsDisabled) ? 'readonly' : `onkeydown="handleLineItemKeyDown(event, 'sales-orders', ${idx}, 'qty')" onchange="updateLine('${l.lineId}', 'qty', this.value, 'number')"`}>
+        <input type="number" id="line-item-${l.lineId}-qty" step="any" inputmode="decimal" class="form-input" style="padding: 6px 6px; text-align: right; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" value="${l.qty ?? 1}" ${(isView || isDetailsDisabled) ? 'readonly' : `onkeydown="handleLineItemKeyDown(event, 'sales-orders', ${idx}, 'qty')" oninput="updateLine('${l.lineId}', 'qty', this.value, 'number')" onchange="updateLine('${l.lineId}', 'qty', this.value, 'number')"`}>
         
         <input 
           type="text" 
@@ -2057,15 +2057,16 @@ function renderSalesOrderForm(c) {
             onkeydown="handleLineItemKeyDown(event, 'sales-orders', ${idx}, 'unitPrice')"
             onfocus="this.value = parseNumberInput(this.value) || ''" 
             onblur="this.value = formatVNDInput(this.value)" 
+            oninput="updateLine('${l.lineId}', 'unitPrice', parseNumberInput(this.value), 'number')"
             onchange="updateLine('${l.lineId}', 'unitPrice', parseNumberInput(this.value), 'number')"
           `}
         >
         
-        <input type="number" id="line-item-${l.lineId}-discount" step="any" inputmode="decimal" class="form-input" style="padding: 6px 6px; text-align: right; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" value="${l.discount ?? 0}" ${(isView || isDetailsDisabled) ? 'readonly' : `onkeydown="handleLineItemKeyDown(event, 'sales-orders', ${idx}, 'discount')" onchange="updateLine('${l.lineId}', 'discount', this.value, 'number')"`}>
+        <input type="number" id="line-item-${l.lineId}-discount" step="any" inputmode="decimal" class="form-input" style="padding: 6px 6px; text-align: right; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" value="${l.discount ?? 0}" ${(isView || isDetailsDisabled) ? 'readonly' : `onkeydown="handleLineItemKeyDown(event, 'sales-orders', ${idx}, 'discount')" oninput="updateLine('${l.lineId}', 'discount', this.value, 'number')" onchange="updateLine('${l.lineId}', 'discount', this.value, 'number')"`}>
         
-        <input type="number" id="line-item-${l.lineId}-tax" step="any" inputmode="decimal" class="form-input" style="padding: 6px 6px; text-align: right; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" value="${l.tax ?? 0}" ${(isView || isDetailsDisabled) ? 'readonly' : `onkeydown="handleLineItemKeyDown(event, 'sales-orders', ${idx}, 'tax')" onchange="updateLine('${l.lineId}', 'tax', this.value, 'number')"`}>
+        <input type="number" id="line-item-${l.lineId}-tax" step="any" inputmode="decimal" class="form-input" style="padding: 6px 6px; text-align: right; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" value="${l.tax ?? 0}" ${(isView || isDetailsDisabled) ? 'readonly' : `onkeydown="handleLineItemKeyDown(event, 'sales-orders', ${idx}, 'tax')" oninput="updateLine('${l.lineId}', 'tax', this.value, 'number')" onchange="updateLine('${l.lineId}', 'tax', this.value, 'number')"`}>
         
-        <div style="font-family: var(--font-dm-mono); text-align: right; font-weight: 500; font-size: 12px;">${fmtUSD(lineTotal)}</div>
+        <div id="line-item-${l.lineId}-total" class="line-total-val" style="font-family: var(--font-dm-mono); text-align: right; font-weight: 500; font-size: 12px;">${fmtUSD(lineTotal)}</div>
         ${(!isView && !isDetailsDisabled) ? `<button type="button" style="background: none; border: none; cursor: pointer; color: var(--muted-foreground); display: flex; align-items: center; justify-content: center;" onclick="removeLineItem('${l.lineId}')">${Icons.trash}</button>` : ''}
       </div>
     `;

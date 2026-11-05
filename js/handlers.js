@@ -291,8 +291,15 @@ function updateLine(lineId, field, value, type = 'text') {
   const line = state.formData.lineItems.find(l => l.lineId === lineId);
   if (!line) return;
 
-  line[field] = (type === 'number') ? Number(value) : value;
+  // 1. Cập nhật giá trị vào object line (ép kiểu số nếu là qty, unitPrice, discount, tax)
+  if (['qty', 'unitPrice', 'discount', 'tax', 'qtyReturned', 'receivedQty', 'unitCost'].includes(field)) {
+    const numVal = parseFloat(value);
+    line[field] = isNaN(numVal) ? 0 : numVal;
+  } else {
+    line[field] = value;
+  }
 
+  // 2. Tính toán lại tổng tiền của từng dòng và tổng của cả đơn hàng
   let subtotal = 0, discountTotal = 0, taxTotal = 0, total = 0;
 
   state.formData.lineItems.forEach(l => {
@@ -303,10 +310,13 @@ function updateLine(lineId, field, value, type = 'text') {
       const price = Number(l.unitPrice) || 0;
       const disc = Number(l.discount) || 0;
       const tax = Number(l.tax) || 0;
-      
-      // Công thức: Thành tiền = (Số lượng * Đơn giá * (1 - %CK)) * (1 + %Thuế)
+
+      // Công thức: Thành tiền dòng = (Số lượng * Đơn giá * (1 - %CK)) * (1 + %Thuế)
       const lineSub = qty * price * (1 - disc / 100);
       lineTotal = lineSub * (1 + tax / 100);
+
+      // Lưu giá trị thành tiền vào chính dòng sản phẩm
+      l.total = lineTotal;
 
       subtotal += qty * price;
       discountTotal += qty * price * (disc / 100);
@@ -315,34 +325,8 @@ function updateLine(lineId, field, value, type = 'text') {
       const qty = Number(l.qtyReturned ?? l.receivedQty ?? l.qtyImport ?? 1) || 0;
       const price = Number(l.unitPrice ?? l.unitCost ?? 0);
       lineTotal = qty * price;
+      l.total = lineTotal;
       total += lineTotal;
-    }
-
-    // --- CẬP NHẬT GIAO DIỆN DÒNG CHI TIẾT (DOM) ---
-    // Cập nhật ô hiển thị Thành tiền thực tế của dòng ở cột Thành Tiền
-    const lineRow = document.getElementById(`line-item-row-${l.lineId}`) || 
-                    document.querySelector(`[data-line-id="${l.lineId}"]`);
-
-    if (lineRow) {
-      const totalCell = lineRow.querySelector('.line-total-cell') || lineRow.querySelector('td:last-child');
-      if (totalCell && typeof fmtUSD === 'function') {
-        totalCell.innerText = fmtUSD(lineTotal);
-      }
-    } else {
-      // Tìm theo input mã SKU / Tên hàng nếu không tìm thấy Row ID
-      const nameInput = document.getElementById(`line-item-${l.lineId}-name`) || 
-                        document.getElementById(`line-item-${l.lineId}-sku`);
-      if (nameInput) {
-        const tr = nameInput.closest('tr');
-        if (tr) {
-          const cells = tr.querySelectorAll('td');
-          // Cột Thành tiền thường là cột cuối cùng trong dòng (chỉ số length - 1 hoặc length - 2)
-          if (cells.length >= 9 && typeof fmtUSD === 'function') {
-            const totalTd = cells[cells.length - 2] || cells[cells.length - 1];
-            if (totalTd) totalTd.innerText = fmtUSD(lineTotal);
-          }
-        }
-      }
     }
   });
 
@@ -352,9 +336,37 @@ function updateLine(lineId, field, value, type = 'text') {
     state.formData.discountTotal = discountTotal;
     state.formData.tax = taxTotal;
     state.formData.total = total;
+  } else if (state.view === 'returns') {
+    state.formData.total = total;
+  } else if (state.view === 'grn') {
+    state.formData.totalValue = total;
   }
 
-  // Cập nhật khối tổng cộng bên dưới (Tạm tính, Chiết khấu, Tổng thuế, Tổng cộng)
+  // 3. Cập nhật trực tiếp giao diện (DOM) nhanh mà không làm mất con trỏ chuột (focus)
+  const qty = Number(line.qty) || 0;
+  const price = Number(line.unitPrice) || 0;
+  const disc = Number(line.discount) || 0;
+  const tax = Number(line.tax) || 0;
+  const currentLineTotal = (qty * price * (1 - disc / 100)) * (1 + tax / 100);
+
+  // Tìm ô hiển thị thành tiền trên dòng tương ứng
+  const lineRow = document.getElementById(`line-item-row-${lineId}`) || 
+                  document.querySelector(`tr[data-line-id="${lineId}"]`);
+
+  if (lineRow) {
+    const totalCell = lineRow.querySelector('.line-total-val') || lineRow.querySelector('td:nth-last-child(2)');
+    if (totalCell && typeof fmtUSD === 'function') {
+      totalCell.innerText = fmtUSD(currentLineTotal);
+    }
+  } else {
+    // Nếu không tìm thấy bằng Row ID, render lại giao diện để đảm bảo nhảy số chính xác
+    if (typeof render === 'function') {
+      render();
+      return;
+    }
+  }
+
+  // 4. Cập nhật lại khối Tổng tiền (Tạm tính, Chiết khấu, Tổng thuế, Tổng cộng) ở góc dưới
   const summaryDivs = document.querySelectorAll('div[style*="justify-content: space-between"]');
   summaryDivs.forEach(div => {
     const spans = div.querySelectorAll('span');
@@ -1553,11 +1565,13 @@ function handleSaleYnChangeInLine(lineId, isSaleChecked) {
   const line = state.formData.lineItems.find(l => l.lineId === lineId);
   if (!line) return;
 
+  // 1. Cập nhật trạng thái cờ Hàng bán
   line.sale_yn = Boolean(isSaleChecked);
 
   const currentCustomer = (state.formData.customer || '').trim();
-  const orderDate = state.formData.date || getTodayDateStr();
+  const orderDate = state.formData.date || (typeof getTodayDateStr === 'function' ? getTodayDateStr() : new Date().toISOString().split('T')[0]);
 
+  // 2. Tra cứu Bảng báo giá hợp lệ của khách hàng hiện tại (nếu có)
   let activeQuotation = null;
   if (currentCustomer) {
     activeQuotation = (db.quotations || [])
@@ -1574,8 +1588,13 @@ function handleSaleYnChangeInLine(lineId, isSaleChecked) {
       .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))[0];
   }
 
-  const mat = (db.materials || []).find(m => (line.sku && m.id === line.sku) || (line.name && m.name === line.name));
+  // 3. Tìm sản phẩm tương ứng trong danh mục hàng hóa (db.materials)
+  const mat = (db.materials || []).find(m => 
+    (line.sku && m.id === line.sku) || 
+    (line.name && m.name.toLowerCase() === line.name.toLowerCase())
+  );
 
+  // 4. Tìm dòng sản phẩm tương ứng trong Bảng báo giá (nếu tìm thấy báo giá)
   let qItem = null;
   if (activeQuotation && Array.isArray(activeQuotation.lineItems)) {
     qItem = activeQuotation.lineItems.find(q => {
@@ -1587,22 +1606,40 @@ function handleSaleYnChangeInLine(lineId, isSaleChecked) {
     });
   }
 
-  // CHỈ tự động cập nhật lại Đơn giá nếu người dùng chưa tự nhập đơn giá riêng
-  if (!line.unitPrice || line.unitPrice === 0) {
-    if (isSaleChecked) {
-      line.unitPrice = qItem ? Number(qItem.unitPrice ?? qItem.price ?? 0) : 0;
+  // 5. Cập nhật Đơn giá tự động dựa trên trạng thái tích chọn "Hàng bán"
+  if (isSaleChecked) {
+    // --- TRƯỜNG HỢP: HÀNG BÁN ---
+    if (qItem && (qItem.unitPrice !== undefined || qItem.price !== undefined)) {
+      // Ưu tiên Giá bán trong Báo giá
+      line.unitPrice = Number(qItem.unitPrice ?? qItem.price ?? 0);
+    } else if (mat) {
+      // Nếu không có báo giá, lấy Giá bán trong Danh mục hàng hóa (cost/price)
+      line.unitPrice = Number(mat.cost ?? mat.price ?? mat.unitPrice ?? 0);
     } else {
-      if (qItem && (qItem.hirePrice !== undefined && qItem.hirePrice !== null)) {
-        line.unitPrice = Number(qItem.hirePrice) || 0;
-      } else if (mat) {
-        line.unitPrice = Number(mat.unitPrice ?? mat.price ?? mat.cost ?? 0);
-      } else {
-        line.unitPrice = 0;
-      }
+      line.unitPrice = 0;
+    }
+  } else {
+    // --- TRƯỜNG HỢP: HÀNG THUÊ ---
+    if (qItem && (qItem.hirePrice !== undefined && qItem.hirePrice !== null)) {
+      // Ưu tiên Giá thuê trong Báo giá
+      line.unitPrice = Number(qItem.hirePrice) || 0;
+    } else if (mat && (mat.hireprice !== undefined || mat.hirePrice !== undefined)) {
+      // Nếu không có báo giá, lấy Giá thuê trong Danh mục hàng hóa (hireprice/hirePrice)
+      line.unitPrice = Number(mat.hireprice ?? mat.hirePrice ?? 0);
+    } else if (mat) {
+      // Fallback về giá vốn/đơn giá chung nếu chưa thiết lập giá thuê
+      line.unitPrice = Number(mat.unitPrice ?? mat.price ?? mat.cost ?? 0);
+    } else {
+      line.unitPrice = 0;
     }
   }
 
-  render();
+  // 6. Tính toán lại tổng tiền của dòng và của toàn bộ đơn hàng
+  if (typeof updateLine === 'function') {
+    updateLine(lineId, 'unitPrice', line.unitPrice);
+  } else {
+    if (typeof render === 'function') render();
+  }
 }
 
 // ==========================================
