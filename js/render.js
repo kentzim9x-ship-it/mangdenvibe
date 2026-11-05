@@ -2259,83 +2259,83 @@ function renderSalesOrderForm(c) {
   };
 
   window.saveQuickCustomer = async function () {
-  const nameVal = (document.getElementById('quick-cust-name')?.value || '').trim();
-  const phoneVal = (document.getElementById('quick-cust-phone')?.value || '').trim();
-  const addressVal = (document.getElementById('quick-cust-address')?.value || '').trim();
+    const nameVal = (document.getElementById('quick-cust-name')?.value || '').trim();
+    const phoneVal = (document.getElementById('quick-cust-phone')?.value || '').trim();
+    const addressVal = (document.getElementById('quick-cust-address')?.value || '').trim();
 
-  if (!nameVal || !phoneVal) {
-    alert("Vui lòng nhập tên và số điện thoại khách hàng!");
-    return;
-  }
-
-  // 1. Tạo ID tự động chuẩn (KHxxxx)
-  const newId = typeof generateAutoId === 'function' ? generateAutoId('customers') : `KH${Date.now()}`;
-  
-  // 2. Ép kiểu user_id0 sang Số Nguyên (int8) để khớp với Schema Supabase
-  const rawUserId = typeof getAuthSession === 'function' ? getAuthSession()?.user?.id : null;
-  const userIdInt = !isNaN(parseInt(rawUserId)) ? parseInt(rawUserId) : null;
-
-  const todayStr = typeof getTodayDateStr === 'function' ? getTodayDateStr() : new Date().toISOString().split('T')[0];
-  const timeStr = new Date().toTimeString().split(' ')[0];
-
-  // 3. Khởi tạo đối tượng khớp chính xác 16 cột trong Schema Supabase của bảng customers
-  const newCust = {
-    id: newId,                             // text (PRIMARY KEY, NON-NULLABLE)
-    name: nameVal,                         // text (NON-NULLABLE)
-    type: 'Khách vãng lai',                // text
-    contact: nameVal,                      // text
-    email: null,                           // text
-    phone: phoneVal,                       // text
-    address: addressVal,                   // text
-    creditLimit: 0,                        // numeric
-    status: 'active',                      // text
-    paymentterms: 'Thanh toán ngay',       // text (chú ý: paymentterms viết liền)
-    user_id0: userIdInt,                   // int8 (phải là kiểu INT)
-    date0: todayStr,                       // date
-    time0: timeStr,                        // time
-    user_id2: userIdInt,                   // int8
-    date2: todayStr,                       // date
-    time2: timeStr                         // time
-  };
-
-  // 4. Cập nhật vào mảng local db.customers
-  if (!Array.isArray(db.customers)) db.customers = [];
-  db.customers.push(newCust);
-
-  // 5. Thực hiện Insert vào Database Supabase
-  try {
-    if (typeof saveToDatabase === 'function') {
-      await saveToDatabase('customers', newCust);
-    } else if (typeof saveItem === 'function') {
-      await saveItem('customers', newCust);
-    } else if (typeof supabaseClient !== 'undefined' && supabaseClient.from) {
-      const { error } = await supabaseClient.from('customers').insert([newCust]);
-      if (error) console.error('Supabase insert error:', error);
-    } else if (window.supabase && typeof window.supabase.from === 'function') {
-      const { error } = await window.supabase.from('customers').insert([newCust]);
-      if (error) console.error('Supabase insert error:', error);
+    if (!nameVal || !phoneVal) {
+      alert("Vui lòng nhập tên và số điện thoại khách hàng!");
+      return;
     }
-  } catch (err) {
-    console.error('Lỗi khi ghi dữ liệu khách hàng mới:', err);
-  }
 
-  // 6. Đóng Drawer Thêm Nhanh Khách Hàng
-  if (typeof closeQuickCustomerDrawer === 'function') {
-    closeQuickCustomerDrawer();
-  }
+    // 1. Tạo ID tự động chuẩn (KHxxxx)
+    const newId = typeof generateAutoId === 'function' ? generateAutoId('customers') : `KH${Date.now()}`;
 
-  // 7. Gán khách hàng mới vào Đơn bán hàng và render lại
-  if (state.formData) {
-    state.formData.customer = nameVal;
-    state.formData.phone = phoneVal;
-  }
+    // 2. Ép kiểu user_id0 sang Số Nguyên (int8) để khớp với Schema Supabase
+    const rawUserId = typeof getAuthSession === 'function' ? getAuthSession()?.user?.id : null;
+    const userIdInt = !isNaN(parseInt(rawUserId)) ? parseInt(rawUserId) : null;
 
-  if (typeof handleCustomerSelectInOrder === 'function') {
-    handleCustomerSelectInOrder(nameVal);
-  } else if (typeof render === 'function') {
-    render();
-  }
-};
+    const todayStr = typeof getTodayDateStr === 'function' ? getTodayDateStr() : new Date().toISOString().split('T')[0];
+    const timeStr = new Date().toTimeString().split(' ')[0];
+
+    // 3. Khởi tạo đối tượng khớp chính xác 16 cột trong Schema Supabase của bảng customers
+    const newCust = {
+      id: newId,                             // text (PRIMARY KEY, NON-NULLABLE)
+      name: nameVal,                         // text (NON-NULLABLE)
+      type: 'Khách vãng lai',                // text
+      contact: nameVal,                      // text
+      email: null,                           // text
+      phone: phoneVal,                       // text
+      address: addressVal,                   // text
+      creditLimit: 0,                        // numeric
+      status: 'active',                      // text
+      paymentterms: 'Thanh toán ngay',       // text (chú ý: paymentterms viết liền)
+      user_id0: userIdInt,                   // int8 (phải là kiểu INT)
+      date0: todayStr,                       // date
+      time0: timeStr,                        // time
+      user_id2: userIdInt,                   // int8
+      date2: todayStr,                       // date
+      time2: timeStr                         // time
+    };
+
+    // 4. Cập nhật vào mảng local db.customers
+    if (!Array.isArray(db.customers)) db.customers = [];
+    db.customers.push(newCust);
+
+    // 5. Thực hiện Insert vào Database Supabase
+    try {
+      if (typeof saveToDatabase === 'function') {
+        await saveToDatabase('customers', newCust);
+      } else if (typeof saveItem === 'function') {
+        await saveItem('customers', newCust);
+      } else if (typeof supabaseClient !== 'undefined' && supabaseClient.from) {
+        const { error } = await supabaseClient.from('customers').insert([newCust]);
+        if (error) console.error('Supabase insert error:', error);
+      } else if (window.supabase && typeof window.supabase.from === 'function') {
+        const { error } = await window.supabase.from('customers').insert([newCust]);
+        if (error) console.error('Supabase insert error:', error);
+      }
+    } catch (err) {
+      console.error('Lỗi khi ghi dữ liệu khách hàng mới:', err);
+    }
+
+    // 6. Đóng Drawer Thêm Nhanh Khách Hàng
+    if (typeof closeQuickCustomerDrawer === 'function') {
+      closeQuickCustomerDrawer();
+    }
+
+    // 7. Gán khách hàng mới vào Đơn bán hàng và render lại
+    if (state.formData) {
+      state.formData.customer = nameVal;
+      state.formData.phone = phoneVal;
+    }
+
+    if (typeof handleCustomerSelectInOrder === 'function') {
+      handleCustomerSelectInOrder(nameVal);
+    } else if (typeof render === 'function') {
+      render();
+    }
+  };
 
   c.innerHTML = `
     <div style="max-width: 1050px;">
@@ -2513,19 +2513,19 @@ function renderReturnForm(c) {
     return `<option value="${wCode}" ${d.warehouseCode === wCode ? 'selected' : ''}>${wCode} - ${w.name}</option>`;
   }).join('');
 
-  // Danh sách khách hàng cho Datalist
-  const customerOptions = (db.customers || []).map(cust => 
+  const customerOptions = (db.customers || []).map(cust =>
     `<option value="${cust.name}">${cust.name}${cust.phone ? ' - ' + cust.phone : ''}</option>`
   ).join('');
 
-  // Lọc Đơn hàng bán: Nếu d.customer đã có giá trị -> Lọc theo d.customer; nếu không -> Lấy tất cả đơn hàng bán
-  const filteredSalesOrders = (db.salesOrders || []).filter(so => {
-    if (!d.customer || !d.customer.trim()) return true;
-    return (so.customer || '').toLowerCase().trim() === d.customer.toLowerCase().trim();
+  // Lọc danh sách Đơn Hàng Bán: Nếu đã chọn Khách Hàng -> Chỉ lấy các đơn của KH đó
+  const filteredOrders = (db.orders || []).filter(o => {
+    if (!d.customer) return true; // Nếu chưa chọn Khách Hàng -> Hiển thị tất cả đơn hàng
+    return o.customer && String(o.customer).trim().toLowerCase() === String(d.customer).trim().toLowerCase();
   });
 
-  const salesOrderOptions = filteredSalesOrders.map(so => 
-    `<option value="${so.id}" ${d.salesOrderId === so.id ? 'selected' : ''}>${so.id} - ${so.customer || 'Khách lẻ'}</option>`
+  // Tạo các thẻ <option> từ danh sách đã lọc
+  const orderOptions = filteredOrders.map(o =>
+    `<option value="${o.id}" ${d.orderId === o.id ? 'selected' : ''}>${o.id} - ${o.customer || 'Khách không tên'}</option>`
   ).join('');
 
   const gridLayout = isView ? "10px 120px 1fr 70px 70px 70px 100px 130px" : "10px 120px 1fr 70px 70px 70px 100px 130px 32px";
@@ -2572,11 +2572,18 @@ function renderReturnForm(c) {
 
   c.innerHTML = `
     <div style="max-width: 1050px;">
-      ${getBreadcrumb('Phiếu trả hàng', isView ? `Xem ${d.id}` : (state.mode === 'edit' ? `Chỉnh sửa ${d.id}` : 'Tạo phiếu trả hàng mới'), 'return')}
-      <form onsubmit="event.preventDefault(); saveForm('return');">
+      ${getBreadcrumb('Nhận Hàng Trả Lại', isView ? `Xem ${d.id}` : (isEdit ? `Chỉnh sửa ${d.id}` : 'Tạo phiếu nhận trả mới'), 'returns')}
+      <form onsubmit="event.preventDefault(); saveForm('returns');">
         <div class="section-panel">
-          <div class="section-header"><span class="section-num">01</span><span class="section-title">Thông tin trả hàng</span></div>
+          <div class="section-header"><span class="section-num">01</span><span class="section-title">Thông tin phiếu nhận trả</span></div>
           <div class="section-body grid-3">
+            <div class="form-group">
+              <label class="form-label">Đơn hàng bán (Tùy chọn)</label>
+              <select class="form-select" ${(isView || isEdit) ? 'disabled style="background: var(--muted); cursor: not-allowed;"' : 'onchange="handleOrderSelectInReturn(this.value)"'}>
+                <option value="">-- Không theo đơn hàng --</option>
+                ${orderOptions}
+              </select>
+            </div>
             <div class="form-group">
               <label class="form-label">Khách hàng *</label>
               <input 
@@ -2611,88 +2618,87 @@ function renderReturnForm(c) {
                 placeholder="Nhập SĐT khách hàng..."
               >
             </div>
-
-            <!-- ĐƠN HÀNG BÁN ĐƯỢC FILTER THEO KHÁCH HÀNG ĐÃ CHỌN (NẾU CÓ) -->
             <div class="form-group">
-              <label class="form-label">Chọn đơn hàng bán (nếu có)</label>
-              <select class="form-select" ${isView ? 'disabled style="background: var(--muted); cursor: not-allowed;"' : 'onchange="handleReturnSalesOrderChange(this.value)"'}>
-                <option value="">-- Tất cả đơn hàng ${d.customer ? 'của ' + d.customer : ''} --</option>
-                ${salesOrderOptions}
+              <label class="form-label">Mã kho *</label>
+              <select class="form-select" ${isView ? 'disabled style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'warehouseCode\', this.value)"'} required>
+                ${warehouseOptions}
               </select>
             </div>
-
             <div class="form-group">
-              <label class="form-label">Ngày trả hàng *</label>
+              <label class="form-label">Lý do *</label>
+              <select class="form-select" ${isView ? 'disabled style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'reason\', this.value)"'}>
+                ${['Hàng thuê trả lại', 'Hàng lỗi/hỏng', 'Đặt hàng thừa', 'Hủy đơn hàng', 'Khác'].map(w => `<option value="${w}" ${d.reason === w ? 'selected' : ''}>${w}</option>`).join('')}
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Ngày nhận trả *</label>
               <input type="date" class="form-input" value="${d.date || getTodayDateStr()}" ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'date\', this.value)"'} required>
             </div>
-            
             <div class="form-group">
               <label class="form-label">Trạng thái</label>
-              <select class="form-select" ${isView ? 'disabled style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'status\', this.value)"'}>
-                <option value="Đã nhận" ${d.status === 'Đã nhận' || d.status === 'received' ? 'selected' : ''}>Đã nhận</option>
-                <option value="Bản nháp" ${d.status === 'Bản nháp' || d.status === 'draft' ? 'selected' : ''}>Bản nháp</option>
-                <option value="Đã hoàn tiền" ${d.status === 'Đã hoàn tiền' || d.status === 'refunded' ? 'selected' : ''}>Đã hoàn tiền</option>
+              <select class="form-select" ${isView ? 'disabled style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'status\', this.value)"'}>                                                      
+                <option value="completed" ${d.status && ['completed', 'hoàn thành', 'đã xử lý'].includes((d.status || '').toLowerCase()) ? 'selected' : ''}>Hoàn thành</option>
+                <option value="accepted" ${(!d.status || ['accepted', 'duyệt', 'đã duyệt'].includes((d.status || '').toLowerCase())) ? 'selected' : ''}>Duyệt</option>
+                <option value="pending" ${d.status && ['pending', 'chờ duyệt'].includes((d.status || '').toLowerCase()) ? 'selected' : ''}>Chờ duyệt</option>
+                <option value="rejected" ${d.status && ['rejected', 'từ chối'].includes((d.status || '').toLowerCase()) ? 'selected' : ''}>Từ chối</option>
               </select>
             </div>
-
             <div class="form-group" style="grid-column: span 3;">
-              <label class="form-label">Ghi chú / Lý do trả</label>
-              <textarea class="form-textarea" rows="2" style="resize: vertical; ${isView ? 'background: var(--muted); cursor: not-allowed;' : ''}" ${isView ? 'readonly' : 'onchange="updateField(\'notes\', this.value)"'} placeholder="Nhập lý do trả hàng...">${d.notes || ''}</textarea>
+              <label class="form-label">Ghi chú nhập tay</label>
+              <textarea class="form-textarea" rows="2" style="resize: vertical; ${isView ? 'background: var(--muted); cursor: not-allowed;' : ''}" ${isView ? 'readonly' : 'onchange="updateField(\'notes\', this.value)"'} placeholder="Nhập ghi chú chi tiết...">${d.notes || ''}</textarea>
             </div>
           </div>
         </div>
 
         <div class="section-panel">
           <div class="section-header" style="justify-content: space-between;">
-            <div style="display:flex; gap:10px;"><span class="section-num">02</span><span class="section-title">Danh sách sản phẩm trả</span></div>
-            ${getAddLineButton('return', false, 'header')}
+            <div style="display:flex; gap:10px;"><span class="section-num">02</span><span class="section-title">Danh sách hàng nhận trả</span></div>
+            ${getAddLineButton('returns', isDetailsDisabled, 'header')}
           </div>
           <div style="overflow-x: auto;">
-            <div style="display: grid; grid-template-columns: ${gridLayout}; gap: 6px; padding: 10px 16px 10px 10px; background: var(--secondary); border-bottom: 1px solid var(--border); align-items: center; min-width: 800px; box-sizing: border-box;">
+            <!-- HEADER BẢNG: ĐỒNG BỘ MIN-WIDTH 850PX, GAP 6PX VÀ PADDING 10PX 16PX -->
+            <div style="display: grid; grid-template-columns: ${gridLayout}; gap: 6px; padding: 10px 16px 10px 10px; background: var(--secondary); border-bottom: 1px solid var(--border); align-items: center; min-width: 850px; box-sizing: border-box;">
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;"></span>
-              <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Mã hàng</span>
+              <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Mã Hàng</span>
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Tên Hàng</span>
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Đơn Vị</span>
-              <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">SL Trả</span>
+              <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Mã Kho</span>
+              <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">SL Nhận Lại</span>
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Đơn giá</span>
               <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Thành tiền</span>
               ${!isView ? `<span></span>` : ''}
             </div>
 
-            <div style="min-width: 800px;">
+            <!-- DANH SÁCH CÁC DÒNG SẢN PHẨM -->
+            <div style="min-width: 850px;">
               ${linesHtml}
             </div>
           </div>
 
-          <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 26px 10px 26px; flex-wrap: wrap; gap: 12px;">
-            <div style="width: 110px; flex-shrink: 0;">
-              ${getAddLineButton('return', false, 'footer')}
-            </div>
-
-            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 8px; min-width: 260px; height: 36px;">
-              <span class="form-label" style="font-weight: 600; margin: 0;">Tổng giá trị trả</span>
-              <span style="font-family: var(--font-dm-mono); font-size: 15px; color: var(--primary); font-weight: 500;">${fmtUSD(d.totalValue)}</span>
-            </div>
+          <!-- NÚT THÊM DÒNG RỘNG BẰNG CỘT MÃ HÀNG VÀ THẲNG HÀNG DỌC -->
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 26px 10px 26px; flex-wrap: wrap; gap: 12px;">
+              <div style="width: 110px; flex-shrink: 0;">
+                ${getAddLineButton('returns', isDetailsDisabled, 'footer')}
+              </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 8px; min-width: 260px; height: 36px;"><span class="form-label" style="font-weight: 600; margin:0;">Tổng hoàn tiền</span><span style="font-family: var(--font-dm-mono); font-size: 15px; color: #f87171; font-weight: 500;">${fmtUSD(d.total)}</span></div>
           </div>
         </div>
 
         <div class="action-bar" style="display: flex; justify-content: space-between; align-items: center;">
-          <button type="button" class="btn-cancel" style="padding: 8px 16px; font-size: 13px;" onclick="state.mode === 'edit' ? navigate('return', 'view', '${d.id}') : navigate('return')">
+          <button type="button" class="btn-cancel" style="padding: 8px 16px; font-size: 13px;" event.preventDefault(); onclick="state.mode === 'edit' ? navigate('returns', 'view', '${d.id}') : navigate('returns')">
             ${isView ? 'Quay Lại' : 'Hủy'}
           </button>
           <div style="display: flex; gap: 8px;">
-            ${isView ? `
-              ${hasPermission ? `
-                <button type="button" class="btn-action" style="padding: 8px 16px; font-size: 13px;" onclick="navigate('return', 'edit', '${d.id}')">${Icons.edit} Sửa</button>
-                <button type="button" class="btn-action btn-action-del" style="padding: 8px 16px; font-size: 13px;" onclick="deleteItem('return', '${d.id}')">${Icons.trash} Xóa</button>
-              ` : ''}
+            ${isView && hasPermission ? `
+              <button type="button" class="btn-action" style="padding: 8px 16px; font-size: 13px;" event.preventDefault(); onclick="navigate('returns', 'edit', '${d.id}')">${Icons.edit} Sửa</button>
+              <button type="button" class="btn-action btn-action-del" style="padding: 8px 16px; font-size: 13px;" onclick="deleteItem('returns', '${d.id}')">${Icons.trash} Xóa</button>
             ` : ''}
-            ${!isView ? `<button type="submit" class="btn-submit" style="padding: 8px 16px; font-size: 13px;">${state.mode === 'add' ? 'Tạo phiếu trả' : 'Cập nhật'}</button>` : ''}
+            ${!isView ? `<button type="submit" class="btn-submit" style="padding: 8px 16px; font-size: 13px;" ${isDetailsDisabled ? 'disabled style="opacity: 0.5; cursor: not-allowed; pointer-events: none;"' : ''}>${state.mode === 'add' ? 'Tạo phiếu nhận trả' : 'Cập nhật'}</button>` : ''}
           </div>
         </div>
       </form>
     </div>
-  `;
+    `;
 }
 
 function renderGRNForm(c) {
