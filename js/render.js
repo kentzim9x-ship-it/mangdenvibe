@@ -2543,7 +2543,7 @@ function renderReturnForm(c) {
         
         <input type="text" id="line-item-${l.lineId}-name" autocomplete="off" ${(isView || isDetailsDisabled) ? '' : 'list="global-materials-list"'} class="form-input" style="padding: 6px 8px; ${(isView || isDetailsDisabled) ? 'background: var(--muted); cursor: not-allowed;' : ''}" value="${l.name || ''}" ${(isView || isDetailsDisabled) ? 'readonly' : 'onkeydown="handleLineItemKeyDown(event, \'returns\', ' + idx + ', \'name\')" onchange="handleMaterialSelectInLine(\'' + l.lineId + '\', this.value)"'} placeholder="${isDetailsDisabled ? 'Chọn/nhập tên hàng...' : 'Chọn/nhập tên hàng...'}" required>
         
-        <input type="text" id="line-item-${l.lineId}-unit" class="form-input" style="padding: 6px 8px; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; text-align: center;" value="${unitName}" readonly title="Đơn vị tính lấy từ Material">
+        <input type="text" id="line-item-${l.lineId}-unit" class="form-input" style="padding: 6px 6px; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; text-align: center;" value="${unitName}" readonly title="Đơn vị tính lấy từ Material">
         
         <input type="text" id="line-item-${l.lineId}-warehouseCode" class="form-input" style="padding: 6px 8px; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; text-align: center;" value="${d.warehouseCode || '—'}" readonly title="Mã kho lấy từ mục 01 xuống">
         
@@ -2591,7 +2591,7 @@ function renderReturnForm(c) {
                 list="customer-list-return"
                 class="form-input" 
                 value="${d.customer || ''}" 
-                ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : `
+                ${(isView || hasOrder) ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : `
                   onchange="handleReturnCustomerChange(this.value)"
                 `} 
                 placeholder="Chọn hoặc nhập tên khách hàng..." 
@@ -2610,13 +2610,16 @@ function renderReturnForm(c) {
                 id="return-customer-phone"
                 class="form-input" 
                 value="${d.phone || d.customerPhone || ''}" 
-                ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : `
+                ${(isView || hasOrder) ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : `
                   onkeydown="if(event.key === 'Enter'){ event.preventDefault(); handleReturnPhoneChange(this.value); }"
                   onblur="handleReturnPhoneChange(this.value)"
                   onchange="handleReturnPhoneChange(this.value)"
                 `} 
                 placeholder="Nhập SĐT khách hàng..."
               >
+              <div id="return-phone-notice" style="font-size: 11px; color: #f0a030; font-family: var(--font-dm-mono); margin-top: 4px; display: none;">
+                ⚠ Khách hàng chưa có trong hệ thống
+              </div>
             </div>
             <div class="form-group">
               <label class="form-label">Mã kho *</label>

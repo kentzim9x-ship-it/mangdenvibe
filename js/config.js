@@ -391,7 +391,7 @@ function getBadgeClass(status) {
     'received': 'badge-amber', 'đã nhận': 'badge-amber',
     'maintenance': 'badge-amber', 'bảo trì': 'badge-amber',
     'low': 'badge-amber', 'sắp hết': 'badge-amber',
-    'Cho Thuê': 'badge-amber',
+    'Cho Thuê': 'badge-amber', 'rent': 'badge-amber', 
 
     // 🔘 XÁM (Ngừng hoạt động / Bản nháp)
     'inactive': 'badge-zinc', 'ngừng hoạt động': 'badge-zinc',

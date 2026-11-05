@@ -1433,14 +1433,86 @@ function handleReturnPhoneChange(phoneVal) {
   updateField('phone', cleanPhone);
   updateField('customerPhone', cleanPhone);
 
-  if (!cleanPhone) return;
+  const noticeEl = document.getElementById('return-phone-notice');
+
+  if (!cleanPhone) {
+    if (noticeEl) noticeEl.style.display = 'none';
+    return;
+  }
 
   // Tự động tìm khách hàng theo SĐT trong danh mục
   const custObj = (db.customers || []).find(c => (c.phone || '').trim() === cleanPhone);
   if (custObj && custObj.name) {
     updateField('customer', custObj.name);
-    render();
+    if (noticeEl) noticeEl.style.display = 'none';
+  } else {
+    // Không tìm thấy khách hàng: Làm trống ô khách hàng và hiển thị thông báo
+    updateField('customer', '');
+    if (noticeEl) noticeEl.style.display = 'block';
   }
+  render();
+}
+
+function handleOrderSelectInReturn(orderId) {
+  if (!state.formData || state.mode === 'view') return;
+
+  const safeOrderId = String(orderId || '').trim();
+  state.formData.orderId = safeOrderId;
+
+  // Nếu người dùng chọn "-- Không theo đơn hàng --" (Bỏ chọn đơn)
+  if (!safeOrderId) {
+    if (!state.formData.customer) {
+      state.formData.lineItems = [{
+        lineId: Date.now().toString(),
+        sku: '',
+        name: '',
+        qtyReturned: 1,
+        unitPrice: 0
+      }];
+    }
+    render();
+    return;
+  }
+
+  // Trường hợp chọn 1 Đơn hàng bán cụ thể
+  const targetOrder = (db.orders || []).find(o => String(o.id) === safeOrderId);
+
+  if (targetOrder) {
+    // Tự động gắn Khách hàng & SĐT từ Đơn hàng bán
+    state.formData.customer = targetOrder.customer || '';
+
+    if (targetOrder.phone || targetOrder.customerPhone) {
+      state.formData.phone = targetOrder.phone || targetOrder.customerPhone;
+      state.formData.customerPhone = targetOrder.phone || targetOrder.customerPhone;
+    } else {
+      const custObj = (db.customers || []).find(c => c.name === targetOrder.customer);
+      if (custObj && custObj.phone) {
+        state.formData.phone = custObj.phone;
+        state.formData.customerPhone = custObj.phone;
+      }
+    }
+
+    // Sao chép các dòng sản phẩm từ đơn bán hàng sang phiếu nhận trả
+    const rawLines = targetOrder.lineItems || targetOrder.lineitems || [];
+    if (Array.isArray(rawLines) && rawLines.length > 0) {
+      state.formData.lineItems = rawLines.map(item => {
+        // Kiểm tra sale_yn: true -> lấy đơn giá, false/khác -> gán bằng 0
+        const isSale = item.sale_yn === true || item.sale_yn === 'true';
+        const priceVal = isSale ? (Number(item.unitPrice || item.price) || 0) : 0;
+
+        return {
+          lineId: Date.now().toString() + Math.random().toString(36).substr(2, 4),
+          sku: item.sku || '',
+          name: item.name || '',
+          qtyReturned: Number(item.qty || item.quantity) || 1,
+          unitPrice: priceVal,
+          sale_yn: item.sale_yn
+        };
+      });
+    }
+  }
+
+  render();
 }
 
 function handleMaterialSelectInLine(lineId, selectedName) {
@@ -1666,61 +1738,6 @@ async function handleCustomerSelectInOrder(customerName) {
     }
   } else {
     state.formData.quotationId = null;
-  }
-
-  render();
-}
-
-function handleOrderSelectInReturn(orderId) {
-  if (!state.formData || state.mode === 'view') return;
-
-  const safeOrderId = String(orderId || '').trim();
-  state.formData.orderId = safeOrderId;
-
-  // Nếu người dùng chọn "-- Không theo đơn hàng --" (Bỏ chọn đơn)
-  if (!safeOrderId) {
-    if (!state.formData.customer) {
-      state.formData.lineItems = [{
-        lineId: Date.now().toString(),
-        sku: '',
-        name: '',
-        qtyReturned: 1,
-        unitPrice: 0
-      }];
-    }
-    render();
-    return;
-  }
-
-  // Trường hợp chọn 1 Đơn hàng bán cụ thể
-  const targetOrder = (db.orders || []).find(o => String(o.id) === safeOrderId);
-
-  if (targetOrder) {
-    // Tự động gắn Khách hàng & SĐT từ Đơn hàng bán
-    state.formData.customer = targetOrder.customer || '';
-
-    if (targetOrder.phone || targetOrder.customerPhone) {
-      state.formData.phone = targetOrder.phone || targetOrder.customerPhone;
-      state.formData.customerPhone = targetOrder.phone || targetOrder.customerPhone;
-    } else {
-      const custObj = (db.customers || []).find(c => c.name === targetOrder.customer);
-      if (custObj && custObj.phone) {
-        state.formData.phone = custObj.phone;
-        state.formData.customerPhone = custObj.phone;
-      }
-    }
-
-    // Sao chép các dòng sản phẩm từ đơn bán hàng sang phiếu nhận trả
-    const rawLines = targetOrder.lineItems || targetOrder.lineitems || [];
-    if (Array.isArray(rawLines) && rawLines.length > 0) {
-      state.formData.lineItems = rawLines.map(item => ({
-        lineId: Date.now().toString() + Math.random().toString(36).substr(2, 4),
-        sku: item.sku || '',
-        name: item.name || '',
-        qtyReturned: Number(item.qty || item.quantity) || 1,
-        unitPrice: Number(item.unitPrice || item.price) || 0
-      }));
-    }
   }
 
   render();
