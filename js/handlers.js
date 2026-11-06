@@ -2088,114 +2088,81 @@ function closeQuickCustomerDrawer() {
 }
 
 // 6. Lưu Khách hàng tạo nhanh
-function renderCustomerForm(c) {
-  const d = state.formData || {};
-  const isView = state.mode === 'view';
-  const hasPermission = checkModulePermission('customers');
+// 6. Lưu Khách hàng tạo nhanh
+async function saveQuickCustomer() {
+  const nameVal = (document.getElementById('quick-cust-name')?.value || '').trim();
+  const phoneVal = (document.getElementById('quick-cust-phone')?.value || '').trim();
+  const addressVal = (document.getElementById('quick-cust-address')?.value || '').trim();
 
-  c.innerHTML = `
-    <div style="max-width: 900px;">
-      ${getBreadcrumb('Khách hàng', isView ? `Xem ${d.id}` : (state.mode === 'edit' ? `Chỉnh sửa ${d.id}` : 'Thêm mới khách hàng'), 'customers')}
-      <form onsubmit="event.preventDefault(); saveForm('customers');">
-        <input type="hidden" value="${d.id || ''}">
+  if (!nameVal || !phoneVal) {
+    if (typeof showAlert === 'function') {
+      showAlert('Vui lòng nhập Tên và Số điện thoại khách hàng!', 'Cảnh báo');
+    } else {
+      alert('Vui lòng nhập Tên và Số điện thoại khách hàng!');
+    }
+    return;
+  }
 
-        <div class="section-panel">
-          <div class="section-header">
-            <span class="section-num">01</span>
-            <span class="section-title">Thông tin khách hàng</span>
-          </div>
-          <div class="section-body grid-3">
-            <div class="form-group" style="grid-column: span 2;">
-              <label class="form-label">Tên công ty / Khách hàng *</label>
-              <input type="text" class="form-input" value="${d.name || ''}" ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : `
-                oninput="this.value = toTitleCase(this.value); updateField('name', this.value.trim());"
-                onchange="this.value = toTitleCase(this.value.trim()); updateField('name', this.value.trim());"
-              `} placeholder="Nhập tên công ty hoặc tên khách hàng..." required>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Loại khách hàng</label>
-              <select class="form-select" ${isView ? 'disabled style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'type\', this.value)"'}>
-                ${['Khách vãng lai', 'Khách hàng tiềm năng', 'Khách hàng trung thành', 'Khách hàng cũ', 'Khách hàng tiêu cực'].map(t => `<option value="${t}" ${d.type === t ? 'selected' : ''}>${t}</option>`).join('')}
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Người liên hệ</label>
-              <input type="text" class="form-input" value="${d.contact || ''}" ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : `
-                oninput="this.value = toTitleCase(this.value); updateField('contact', this.value);"
-                onchange="this.value = toTitleCase(this.value.trim()); updateField('contact', this.value.trim());"
-              `} placeholder="Tên người đại diện...">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Email</label>
-              <input type="email" class="form-input" value="${d.email || ''}" ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'email\', this.value.trim())"'} placeholder="example@domain.com">
-            </div>
+  const session = typeof getAuthSession === 'function' ? getAuthSession() : null;
+  const currentUserId = session?.currentUser?.id || session?.user?.id || 'Hệ Thống';
+  const currentDate = typeof getTodayDateStr === 'function' ? getTodayDateStr() : new Date().toISOString().split('T')[0];
+  const currentTime = typeof getCurrentTimeStr === 'function' ? getCurrentTimeStr() : new Date().toTimeString().split(' ')[0];
 
-            <!-- Ô SỐ ĐIỆN THOẠI: BẮT BUỘC NHẬP + ĐỊNH DẠNG SĐT VIỆT NAM -->
-            <div class="form-group">
-              <label class="form-label">Số điện thoại *</label>
-              <input 
-                type="tel" 
-                inputmode="tel" 
-                class="form-input" 
-                id="customer-phone-input"
-                value="${d.phone || ''}" 
-                pattern="^(0[3|5|7|8|9])[0-9]{8}$"
-                title="Vui lòng nhập đúng định dạng số điện thoại Việt Nam (10 chữ số, bắt đầu bằng 03, 05, 07, 08, 09)"
-                ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'phone\', this.value.trim())"'} 
-                placeholder="090x xxx xxx" 
-                required
-              >
-            </div>
+  const newCust = {
+    id: typeof generateAutoId === 'function' ? generateAutoId('customers') : ('KH' + Date.now()),
+    name: nameVal,
+    contact: nameVal,
+    phone: phoneVal,
+    address: addressVal,
+    diachi: addressVal,
+    type: 'Khách vãng lai',
+    paymentterms: 'Thanh toán ngay',
+    paymentTerms: 'Thanh toán ngay',
+    status: 'active',
+    creditlimit: 0,
+    creditLimit: 0,
+    user_id0: currentUserId,
+    date0: currentDate,
+    time0: currentTime,
+    user_id2: currentUserId,
+    date2: currentDate,
+    time2: currentTime
+  };
 
-            <div class="form-group" style="grid-column: span 3;">
-              <label class="form-label">Địa chỉ</label>
-              <input type="text" class="form-input" value="${d.address || ''}" ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'address\', this.value.trim())"'} placeholder="Nhập địa chỉ trụ sở/giao hàng...">
-            </div>
-          </div>
-        </div>
+  try {
+    if (typeof supabaseClient !== 'undefined') {
+      const { data, error } = await supabaseClient
+        .from('customers')
+        .insert([newCust])
+        .select();
 
-        <div class="section-panel">
-          <div class="section-header">
-            <span class="section-num">02</span>
-            <span class="section-title">Điều khoản thương mại</span>
-          </div>
-          <div class="section-body grid-3">
-            <div class="form-group">
-              <label class="form-label">Hạn mức tín dụng (VNĐ)</label>
-              <input type="number" step="any" inputmode="numeric" class="form-input" value="${d.creditLimit ?? 0}" ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'creditLimit\', this.value, \'number\')"'} >
-            </div>
-            <div class="form-group">
-              <label class="form-label">Điều khoản thanh toán</label>
-              <select class="form-select" ${isView ? 'disabled style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'paymentTerms\', this.value)"'}>
-                ${['Thanh toán ngay', 'Thanh toán gối đầu', 'Thanh toán cuối tháng', 'Net 30', 'Net 60'].map(t => `<option value="${t}" ${d.paymentTerms === t ? 'selected' : ''}>${t}</option>`).join('')}
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Trạng thái</label>
-              <select class="form-select" ${isView ? 'disabled style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'status\', this.value)"'}>
-                <option value="active" ${d.status === 'active' ? 'selected' : ''}>Đang hoạt động</option>
-                <option value="inactive" ${d.status === 'inactive' ? 'selected' : ''}>Ngừng hoạt động</option>
-                <option value="suspended" ${d.status === 'suspended' ? 'selected' : ''}>Tạm khóa</option>
-              </select>
-            </div>
-          </div>
-        </div>
+      if (error) throw error;
+      if (data && data[0]) {
+        if (!db.customers) db.customers = [];
+        db.customers.unshift(data[0]);
+      }
+    } else {
+      if (!db.customers) db.customers = [];
+      db.customers.unshift(newCust);
+    }
 
-        <div class="action-bar" style="display: flex; justify-content: space-between; align-items: center;">
-          <button type="button" class="btn-cancel" style="padding: 8px 16px; font-size: 13px;" onclick="state.mode === 'edit' ? navigate('customers', 'view', '${d.id}') : navigate('customers')">
-            ${isView ? 'Quay Lại' : 'Hủy'}
-          </button>
-          <div style="display: flex; gap: 8px;">
-            ${isView && hasPermission ? `
-              <button type="button" class="btn-action" style="padding: 8px 16px; font-size: 13px;" onclick="navigate('customers', 'edit', '${d.id}')">${Icons.edit} Sửa</button>
-              <button type="button" class="btn-action btn-action-del" style="padding: 8px 16px; font-size: 13px;" onclick="deleteItem('customers', '${d.id}')">${Icons.trash} Xóa</button>
-            ` : ''}
-            ${!isView ? `<button type="submit" class="btn-submit" style="padding: 8px 16px; font-size: 13px;">${state.mode === 'add' ? 'Lưu khách hàng' : 'Cập nhật'}</button>` : ''}
-          </div>
-        </div>
-      </form>
-    </div>
-  `;
+    if (state.formData) {
+      state.formData.customer = nameVal;
+      state.formData.phone = phoneVal;
+    }
+
+    closeQuickCustomerDrawer();
+    if (typeof showToast === 'function') showToast('Thêm mới dữ liệu thành công!', 'success');
+    if (typeof render === 'function') render();
+
+  } catch (err) {
+    console.error('Lỗi khi thêm nhanh khách hàng vào Database:', err);
+    if (typeof showAlert === 'function') {
+      showAlert('Thêm khách hàng thất bại: ' + (err.message || err), 'Lỗi');
+    } else {
+      alert('Thêm khách hàng thất bại: ' + (err.message || err));
+    }
+  }
 }
 window.saveQuickCustomer = saveQuickCustomer;
 

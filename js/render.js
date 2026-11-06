@@ -1417,16 +1417,18 @@ function renderMaterialForm(c) {
                 required
               >
             </div>
-            <div class="form-group">
-              <label class="form-label">Danh mục</label>
-              <select class="form-select" ${isView ? 'disabled style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'category\', this.value)"'}>
-                ${['Áo', 'Quần', 'Váy', 'Phụ Kiện', 'Khác'].map(cat => `<option value="${cat}" ${d.category === cat ? 'selected' : ''}>${cat}</option>`).join('')}
-              </select>
-            </div>
+            <div class="section-panel">
+              <div class="form-group">
+                <label class="form-label">Danh mục</label>
+                <select class="form-select" ${isView ? 'disabled style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'category\', this.value)"'}>
+                  ${['Áo', 'Quần', 'Váy', 'Phụ Kiện', 'Khác'].map(cat => `<option value="${cat}" ${d.category === cat ? 'selected' : ''}>${cat}</option>`).join('')}
+                </select>
+              </div>
 
-            <div class="form-group" style="grid-column: span 2;>
-              <label class="form-label">Ghi chú</label>
-              <textarea class="form-textarea" style="resize: vertical; ${isView ? 'background: var(--muted); cursor: not-allowed;' : ''}" ${isView ? 'readonly' : 'onchange="updateField(\'notes\', this.value)"'} placeholder="Nhập chi tiết ghi chú sản phẩm...">${d.notes || ''}</textarea>
+              <div class="form-group" style="grid-column: span 2;>
+                <label class="form-label">Ghi chú</label>
+                <textarea class="form-textarea" rows="2" style="resize: vertical; ${isView ? 'background: var(--muted); cursor: not-allowed;' : ''}" ${isView ? 'readonly' : 'onchange="updateField(\'notes\', this.value)"'} placeholder="Nhập chi tiết ghi chú sản phẩm...">${d.notes || ''}</textarea>
+              </div>
             </div>
           </div>
         </div>
