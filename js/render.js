@@ -1424,7 +1424,7 @@ function renderMaterialForm(c) {
               </select>
             </div>
 
-            <div class="form-group" style="grid-column: span 2;">
+            <div class="form-group">
               <label class="form-label">Ghi chú</label>
               <textarea class="form-textarea" rows="2" style="resize: vertical; ${isView ? 'background: var(--muted); cursor: not-allowed;' : ''}" ${isView ? 'readonly' : 'onchange="updateField(\'notes\', this.value)"'} placeholder="Nhập chi tiết ghi chú sản phẩm...">${d.notes || ''}</textarea>
             </div>
@@ -1487,7 +1487,7 @@ function renderCustomerForm(c) {
   c.innerHTML = `
     <div style="max-width: 900px;">
       ${getBreadcrumb('Khách hàng', isView ? `Xem ${d.id}` : (state.mode === 'edit' ? `Chỉnh sửa ${d.id}` : 'Thêm mới khách hàng'), 'customers')}
-      <form onsubmit="event.preventDefault(); handleSaveCustomer();">
+      <form onsubmit="event.preventDefault(); saveForm('customers');">
         <input type="hidden" value="${d.id || ''}">
 
         <div class="section-panel">
@@ -2264,76 +2264,83 @@ function renderSalesOrderForm(c) {
     const addressVal = (document.getElementById('quick-cust-address')?.value || '').trim();
 
     if (!nameVal || !phoneVal) {
-      alert("Vui lòng nhập tên và số điện thoại khách hàng!");
+      if (typeof showAlert === 'function') {
+        showAlert('Vui lòng nhập Tên và Số điện thoại khách hàng!', 'Cảnh báo');
+      } else {
+        alert('Vui lòng nhập Tên và Số điện thoại khách hàng!');
+      }
       return;
     }
 
-    // 1. Tạo ID tự động chuẩn (KHxxxx)
-    const newId = typeof generateAutoId === 'function' ? generateAutoId('customers') : `KH${Date.now()}`;
+    const session = typeof getAuthSession === 'function' ? getAuthSession() : null;
+    const currentUserId = session?.currentUser?.id || session?.user?.id || 'Hệ Thống';
+    const currentDate = typeof getTodayDateStr === 'function' ? getTodayDateStr() : new Date().toISOString().split('T')[0];
+    const currentTime = typeof getCurrentTimeStr === 'function' ? getCurrentTimeStr() : new Date().toTimeString().split(' ')[0];
 
-    // 2. Ép kiểu user_id0 sang Số Nguyên (int8) để khớp với Schema Supabase
-    const rawUserId = typeof getAuthSession === 'function' ? getAuthSession()?.user?.id : null;
-    const userIdInt = !isNaN(parseInt(rawUserId)) ? parseInt(rawUserId) : null;
-
-    const todayStr = typeof getTodayDateStr === 'function' ? getTodayDateStr() : new Date().toISOString().split('T')[0];
-    const timeStr = new Date().toTimeString().split(' ')[0];
-
-    // 3. Khởi tạo đối tượng khớp chính xác 16 cột trong Schema Supabase của bảng customers
     const newCust = {
-      id: newId,                             // text (PRIMARY KEY, NON-NULLABLE)
-      name: nameVal,                         // text (NON-NULLABLE)
-      type: 'Khách vãng lai',                // text
-      contact: nameVal,                      // text
-      email: null,                           // text
-      phone: phoneVal,                       // text
-      address: addressVal,                   // text
-      creditLimit: 0,                        // numeric
-      status: 'active',                      // text
-      paymentterms: 'Thanh toán ngay',       // text (chú ý: paymentterms viết liền)
-      user_id0: userIdInt,                   // int8 (phải là kiểu INT)
-      date0: todayStr,                       // date
-      time0: timeStr,                        // time
-      user_id2: userIdInt,                   // int8
-      date2: todayStr,                       // date
-      time2: timeStr                         // time
+      id: typeof generateAutoId === 'function' ? generateAutoId('customers') : ('KH' + Date.now()),
+      name: nameVal,
+      contact: nameVal,
+      phone: phoneVal,
+      address: addressVal,
+      diachi: addressVal,
+      type: 'Khách vãng lai',
+      paymentterms: 'Thanh toán ngay',
+      paymentTerms: 'Thanh toán ngay',
+      status: 'active',
+      creditlimit: 0,
+      creditLimit: 0,
+      user_id0: currentUserId,
+      date0: currentDate,
+      time0: currentTime,
+      user_id2: currentUserId,
+      date2: currentDate,
+      time2: currentTime
     };
 
-    // 4. Cập nhật vào mảng local db.customers
-    if (!Array.isArray(db.customers)) db.customers = [];
-    db.customers.push(newCust);
-
-    // 5. Thực hiện Insert vào Database Supabase
     try {
-      if (typeof saveToDatabase === 'function') {
-        await saveToDatabase('customers', newCust);
-      } else if (typeof saveItem === 'function') {
-        await saveItem('customers', newCust);
-      } else if (typeof supabaseClient !== 'undefined' && supabaseClient.from) {
-        const { error } = await supabaseClient.from('customers').insert([newCust]);
-        if (error) console.error('Supabase insert error:', error);
-      } else if (window.supabase && typeof window.supabase.from === 'function') {
-        const { error } = await window.supabase.from('customers').insert([newCust]);
-        if (error) console.error('Supabase insert error:', error);
+      if (typeof supabaseClient !== 'undefined') {
+        const { data, error } = await supabaseClient
+          .from('customers')
+          .insert([newCust])
+          .select();
+
+        if (error) throw error;
+        if (data && data[0]) {
+          if (!db.customers) db.customers = [];
+          db.customers.unshift(data[0]);
+        }
+      } else {
+        if (!db.customers) db.customers = [];
+        db.customers.unshift(newCust);
       }
+
+      if (state.formData) {
+        state.formData.customer = nameVal;
+        state.formData.phone = phoneVal;
+      }
+
+      if (typeof closeQuickCustomerDrawer === 'function') {
+        closeQuickCustomerDrawer();
+      }
+
+      if (typeof showToast === 'function') {
+        showToast('Thêm mới dữ liệu thành công!', 'success');
+      }
+
+      if (typeof handleCustomerSelectInOrder === 'function') {
+        handleCustomerSelectInOrder(nameVal);
+      } else if (typeof render === 'function') {
+        render();
+      }
+
     } catch (err) {
-      console.error('Lỗi khi ghi dữ liệu khách hàng mới:', err);
-    }
-
-    // 6. Đóng Drawer Thêm Nhanh Khách Hàng
-    if (typeof closeQuickCustomerDrawer === 'function') {
-      closeQuickCustomerDrawer();
-    }
-
-    // 7. Gán khách hàng mới vào Đơn bán hàng và render lại
-    if (state.formData) {
-      state.formData.customer = nameVal;
-      state.formData.phone = phoneVal;
-    }
-
-    if (typeof handleCustomerSelectInOrder === 'function') {
-      handleCustomerSelectInOrder(nameVal);
-    } else if (typeof render === 'function') {
-      render();
+      console.error('Lỗi khi thêm nhanh khách hàng vào Database:', err);
+      if (typeof showAlert === 'function') {
+        showAlert('Thêm khách hàng thất bại: ' + (err.message || err), 'Lỗi');
+      } else {
+        alert('Thêm khách hàng thất bại: ' + (err.message || err));
+      }
     }
   };
 

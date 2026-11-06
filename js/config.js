@@ -302,7 +302,10 @@ function sortDescById(a, b) {
 function getUserFullName(userId) {
   if (!userId) return '—';
   const user = (db.users || []).find(u => String(u.id) === String(userId) || String(u.username) === String(userId));
-  return user ? (user.fullname || user.username || userId) : userId;
+  if (user) {
+    return user.fullname || user.full_name || user.username || String(userId);
+  }
+  return String(userId);
 }
 
 // Hàm hỗ trợ định dạng ngày VN (DD/MM/YYYY) nếu ngày lưu dạng YYYY-MM-DD
