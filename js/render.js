@@ -2378,7 +2378,10 @@ function renderSalesOrderForm(c) {
                     class="form-input" 
                     style="flex: 1; ${isView ? 'background: var(--muted); cursor: not-allowed;' : ''}" 
                     value="${initialPhone}" 
-                    ${isView ? 'readonly' : 'oninput="handleOrderPhoneInput(this.value)"'} 
+                    ${isView ? 'readonly' : `
+                      oninput="handleOrderPhoneInput(this.value)"
+                      onkeydown="if(event.key === 'Enter'){ event.preventDefault(); document.getElementById('so-check-phone-btn')?.focus(); }"
+                    `} 
                     placeholder="090x xxx xxx"
                   >
                   ${!isView ? `

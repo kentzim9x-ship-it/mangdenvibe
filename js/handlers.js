@@ -489,6 +489,13 @@ function handleGRNLineKeyDown(event, currentIndex, currentField) {
     }
   }
 
+  if (currentField === 'hireprice' && currentIndex === totalLines - 1) {
+    if (targetInput && typeof targetInput.blur === 'function') {
+      targetInput.blur();
+    }
+    return;
+  }
+
   // 2. Thứ tự nhập liệu: Tên Hàng -> Đơn Vị Tính -> Giá Nhập -> Giá Thuê
   const fieldSequence = ['name', 'unit', 'unitCost', 'hireprice'];
 
