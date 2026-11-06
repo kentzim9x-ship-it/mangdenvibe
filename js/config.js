@@ -298,23 +298,11 @@ function sortDescById(a, b) {
   return String(b.id || '').localeCompare(String(a.id || ''), undefined, { numeric: true, sensitivity: 'base' });
 }
 
+// Hàm chuyển đổi từ user_id sang fullname
 function getUserFullName(userId) {
-  if (userId === null || userId === undefined || userId === '') return '—';
-  
-  // Lấy mảng users từ db.userinfo hoặc db.users
-  const userList = db.userinfo || db.users || [];
-  
-  const user = userList.find(u => 
-    String(u.id) === String(userId) || 
-    String(u.user_id) === String(userId) || 
-    String(u.username) === String(userId)
-  );
-
-  if (user) {
-    return user.fullname || user.full_name || user.name || user.username || String(userId);
-  }
-  
-  return String(userId);
+  if (!userId) return '—';
+  const user = (db.users || []).find(u => String(u.id) === String(userId) || String(u.username) === String(userId));
+  return user ? (user.fullname || user.username || userId) : userId;
 }
 
 // Hàm hỗ trợ định dạng ngày VN (DD/MM/YYYY) nếu ngày lưu dạng YYYY-MM-DD
@@ -403,7 +391,7 @@ function getBadgeClass(status) {
     'received': 'badge-amber', 'đã nhận': 'badge-amber',
     'maintenance': 'badge-amber', 'bảo trì': 'badge-amber',
     'low': 'badge-amber', 'sắp hết': 'badge-amber',
-    'Cho Thuê': 'badge-amber', 'rent': 'badge-amber', 
+    'Cho Thuê': 'badge-amber', 'rent': 'badge-amber',
 
     // 🔘 XÁM (Ngừng hoạt động / Bản nháp)
     'inactive': 'badge-zinc', 'ngừng hoạt động': 'badge-zinc',

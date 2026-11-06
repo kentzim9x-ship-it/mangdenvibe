@@ -1424,9 +1424,15 @@ function renderMaterialForm(c) {
               </select>
             </div>
 
-            <div class="form-group" style="grid-column: span 2;>
-              <label class="form-label">Ghi chú</label>
-              <textarea class="form-textarea" rows="1" style="resize: vertical; ${isView ? 'background: var(--muted); cursor: not-allowed;' : ''}" ${isView ? 'readonly' : 'onchange="updateField(\'notes\', this.value)"'} placeholder="Nhập chi tiết ghi chú sản phẩm...">${d.notes || ''}</textarea>
+            <div class="form-group" style="grid-column: span 2;">
+              <label class="form-label">GHI CHÚ</label>
+              <input 
+                type="text" 
+                class="form-input" 
+                value="${d.notes || ''}" 
+                ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'notes\', this.value.trim())"'} 
+                placeholder="Nhập chi tiết ghi chú sản phẩm..."
+              >
             </div>
           </div>
         </div>
