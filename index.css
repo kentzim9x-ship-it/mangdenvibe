@@ -1080,6 +1080,108 @@ div[style*="overflow: auto"],
 /* RESPONSIVE MOBILE (< 768px) */
 @media (max-width: 768px) {
 
+  /* ==========================================
+   GIAO DIỆN & HIỆU ỨNG QUÉT MÃ QR CODE (SCANNER MODAL)
+   ========================================== */
+
+  /* Nút máy ảnh: Ẩn trên PC (Desktop), chỉ hiển thị trên Di động */
+  .qr-cam-btn-mobile {
+    display: none !important;
+  }
+
+  @media screen and (max-width: 768px) {
+    .qr-cam-btn-mobile {
+      display: inline-flex !important;
+    }
+  }
+
+  /* Modal Overlay Quét QR */
+  #qr-scanner-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(10, 12, 16, 0.92);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    box-sizing: border-box;
+  }
+
+  /* Khung Viền Góc QR Code (Square Corners) */
+  .qr-corner {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-color: var(--primary, #f0a030);
+    border-style: solid;
+    z-index: 11;
+    pointer-events: none;
+  }
+
+  .qr-corner-tl {
+    top: -2px;
+    left: -2px;
+    border-width: 3px 0 0 3px;
+  }
+
+  .qr-corner-tr {
+    top: -2px;
+    right: -2px;
+    border-width: 3px 3px 0 0;
+  }
+
+  .qr-corner-bl {
+    bottom: -2px;
+    left: -2px;
+    border-width: 0 0 3px 3px;
+  }
+
+  .qr-corner-br {
+    bottom: -2px;
+    right: -2px;
+    border-width: 0 3px 3px 0;
+  }
+
+  /* Tia Laser Quét QR Animation */
+  @keyframes qrScanAnimation {
+    0% {
+      top: 0%;
+      opacity: 0.8;
+    }
+
+    50% {
+      top: 95%;
+      opacity: 1;
+    }
+
+    100% {
+      top: 0%;
+      opacity: 0.8;
+    }
+  }
+
+  .qr-laser-line {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: linear-gradient(90deg,
+        rgba(240, 160, 48, 0) 0%,
+        var(--primary, #f0a030) 50%,
+        rgba(240, 160, 48, 0) 100%);
+    box-shadow: 0 0 12px var(--primary, #f0a030), 0 0 4px var(--primary, #f0a030);
+    animation: qrScanAnimation 2.2s infinite ease-in-out;
+    z-index: 10;
+    pointer-events: none;
+  }
+
   .top-customers-card {
     width: 100% !important;
     box-sizing: border-box;

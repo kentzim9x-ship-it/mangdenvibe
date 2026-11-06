@@ -3879,34 +3879,70 @@ async function printGRNProductLabels() {
 // ==========================================
 
 // Hàm khởi tạo và mở Modal Quét QR qua Camera
-function openQRScannerModal(onSuccessCallback) {
+function openQRScannerModal(onSuccessCallback, targetSearchField) {
+  // 1. Tự động xóa thông tin ô tìm kiếm cũ khi mở máy ảnh
+  if (targetSearchField === 'reportInv') {
+    state.reportInvSearch = '';
+  } else if (targetSearchField === 'materials') {
+    state.search = '';
+  }
+
   let modal = document.getElementById('qr-scanner-modal');
   if (!modal) {
     modal = document.createElement('div');
     modal.id = 'qr-scanner-modal';
     modal.style.cssText = `
       position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-      background: rgba(0, 0, 0, 0.85); z-index: 9999; display: flex;
-      flex-direction: column; align-items: center; justify-content: center; padding: 16px;
+      background: rgba(10, 12, 16, 0.92); backdrop-filter: blur(4px); z-index: 9999; display: flex;
+      flex-direction: column; align-items: center; justify-content: center; padding: 16px; box-sizing: border-box;
     `;
     document.body.appendChild(modal);
   }
 
   modal.innerHTML = `
-    <div style="background: var(--card, #1e222b); border: 1px solid var(--border, #2a2e39); width: 100%; max-width: 480px; border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+    <div style="background: var(--card, #1e222b); border: 1px solid var(--border, #2a2e39); width: 100%; max-width: 360px; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.6); position: relative;">
+      
+      <!-- Header -->
       <div style="display: flex; justify-content: space-between; align-items: center;">
-        <span style="font-weight: 600; font-size: 14px; color: var(--foreground, #fff); font-family: var(--font-dm-mono);">QUÉT MÃ QR SẢN PHẨM</span>
-        <button type="button" onclick="closeQRScannerModal()" style="background: none; border: none; color: #888; font-size: 20px; cursor: pointer;">✕</button>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #34d399; box-shadow: 0 0 8px #34d399;"></span>
+          <span style="font-weight: 600; font-size: 13px; color: var(--foreground, #fff); font-family: var(--font-dm-mono); letter-spacing: 0.05em;">QUÉT MÃ QR KHAI BÁO</span>
+        </div>
+        <button type="button" onclick="closeQRScannerModal()" style="background: none; border: none; color: #888; font-size: 22px; cursor: pointer; padding: 0; line-height: 1;">✕</button>
       </div>
-      <div id="qr-reader-container" style="width: 100%; height: 280px; background: #000; border-radius: 4px; overflow: hidden; position: relative;"></div>
-      <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
-        <label class="btn-action" style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 6px 12px; background: var(--secondary); border: 1px solid var(--border);">
+
+      <!-- Khung Quét Hình Vuông Chuẩn UI/UX -->
+      <div style="width: 100%; display: flex; justify-content: center; align-items: center; margin: 4px 0;">
+        <div style="position: relative; width: 240px; height: 240px; overflow: hidden; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: #000;">
+          
+          <!-- Element Chứa Camera Feed -->
+          <div id="qr-reader-container" style="width: 100%; height: 100%;"></div>
+
+          <!-- Overlay Khung Quét & Đường Laser quét -->
+          <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; box-sizing: border-box;">
+            <div class="qr-corner qr-corner-tl"></div>
+            <div class="qr-corner qr-corner-tr"></div>
+            <div class="qr-corner qr-corner-bl"></div>
+            <div class="qr-corner qr-corner-br"></div>
+            <div class="qr-laser-line"></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="text-align: center; font-size: 11px; color: var(--muted-foreground); font-family: var(--font-dm-mono);">
+        Căn chỉnh mã QR vào trung tâm khung vuông
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 4px;">
+        <label style="cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; padding: 8px 14px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 4px; color: var(--foreground); flex: 1; font-family: var(--font-jost);">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-          Tải ảnh QR
+          Chọn ảnh QR
           <input type="file" id="qr-file-input" accept="image/*" style="display: none;" onchange="handleQRImageUpload(event, '${onSuccessCallback}')">
         </label>
-        <button type="button" class="btn-cancel" onclick="closeQRScannerModal()" style="padding: 6px 16px; font-size: 12px;">Đóng</button>
+        <button type="button" onclick="closeQRScannerModal()" style="padding: 8px 16px; font-size: 12px; background: transparent; border: 1px solid var(--border); color: var(--muted-foreground); border-radius: 4px; cursor: pointer; font-family: var(--font-jost);">Thoát</button>
       </div>
+
     </div>
   `;
   modal.style.display = 'flex';
@@ -3915,17 +3951,17 @@ function openQRScannerModal(onSuccessCallback) {
     window.html5QrCodeScanner = new Html5Qrcode("qr-reader-container");
     window.html5QrCodeScanner.start(
       { facingMode: "environment" },
-      { fps: 10, qrbox: { width: 220, height: 220 } },
+      { fps: 15, qrbox: { width: 220, height: 220 } }, // Cấu hình chuẩn khung quét hình vuông 220x220
       (decodedText) => {
         closeQRScannerModal();
         if (window[onSuccessCallback]) window[onSuccessCallback](decodedText);
       },
       () => {}
     ).catch(err => {
-      console.warn("Không thể mở camera:", err);
+      console.warn("Không thể truy cập camera:", err);
     });
   } else {
-    alert("Thư viện quét mã QR đang được tải, vui lòng thử lại sau giây lát!");
+    alert("Thư viện quét mã QR đang được tải, vui lòng thử lại!");
   }
 }
 
@@ -3943,7 +3979,7 @@ function closeQRScannerModal() {
   }
 }
 
-// Xử lý quét trực tiếp từ ảnh tải lên
+// Xử lý đọc từ tệp ảnh QR
 function handleQRImageUpload(event, onSuccessCallback) {
   const file = event.target.files[0];
   if (!file) return;
@@ -3956,12 +3992,12 @@ function handleQRImageUpload(event, onSuccessCallback) {
         if (window[onSuccessCallback]) window[onSuccessCallback](decodedText);
       })
       .catch(err => {
-        alert("Không tìm thấy mã QR hợp lệ trong hình ảnh vừa chọn!");
+        alert("Không tìm thấy mã QR hợp lệ trong ảnh vừa chọn!");
       });
   }
 }
 
-// Hàm Callback gán dữ liệu tìm kiếm
+// Callbacks cập nhật dữ liệu quét
 function onScanReportInvSuccess(scannedCode) {
   state.reportInvSearch = scannedCode;
   state.page = 1;

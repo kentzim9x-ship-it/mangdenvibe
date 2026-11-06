@@ -461,10 +461,10 @@ function renderMaterialsList(c) {
       <div class="filter-search-container" style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
         ${getFilterBar([['all', 'Tất Cả'], ['ok', 'Còn Hàng'], ['rent', 'Cho Thuê'], ['out', 'Hết Hàng']])}
         <div class="mobile-search-action-group" style="display: flex; gap: 8px; flex-wrap: wrap; width: 100%; max-width: 550px;">
-          <div style="display: flex; align-items: center; gap: 8px; border: 1px solid var(--border); background: var(--card); padding: 0 12px; flex: 1; min-width: 200px; height: 38px; box-sizing: border-box; position: relative;">
+          <div style="display: flex; align-items: center; gap: 6px; border: 1px solid var(--border); background: var(--card); padding: 0 12px; border-radius: 2px; width: ${isMobile ? '100%' : '240px'}; height: ${isMobile ? '38px' : '31px'}; box-sizing: border-box; position: relative;">
             <span style="color: var(--muted-foreground); display: flex; align-items: center;">${Icons.search}</span>
-            <input type="text" id="global-search" placeholder="Tìm kiếm..." value="${state.search || ''}" oninput="state.search=this.value; state.page=1; render();" style="background: transparent; border: none; outline: none; color: var(--foreground); font-family: var(--font-jost); font-size: 13px; width: 100%; height: 100%; padding: 0;">
-            <span onclick="openQRScannerModal('onScanMaterialsSuccess')" title="Quét mã QR / Mã vạch" style="color: #f0a030; cursor: pointer; display: flex; align-items: center; padding: 2px;">
+            <input type="text" id="report-inv-search-input" placeholder="Tìm kiếm..." value="${state.reportInvSearch}" style="background: transparent; border: none; outline: none; color: var(--foreground); font-family: var(--font-jost); font-size: 13px; width: 100%; height: 100%; box-sizing: border-box; padding: 0;">
+            <span class="qr-cam-btn-mobile" onclick="openQRScannerModal('onScanReportInvSuccess', 'reportInv')" title="Quét mã QR" style="color: #f0a030; cursor: pointer; align-items: center; padding: 2px;">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
                 <circle cx="12" cy="13" r="4"></circle>
@@ -3112,10 +3112,10 @@ function renderReportInventory(c) {
           <span style="font-family: var(--font-dm-mono); font-size: 11px; text-transform: uppercase; color: var(--muted-foreground);">Báo Cáo Tồn Kho Chi Tiết & Định Giá</span>
           <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; width: ${isMobile ? '100%' : 'auto'}; flex-direction: ${isMobile ? 'column-reverse' : 'row'};">
             
-            <div style="display: flex; align-items: center; gap: 6px; border: 1px solid var(--border); background: var(--card); padding: 0 12px; border-radius: 2px; width: ${isMobile ? '100%' : '240px'}; height: ${isMobile ? '38px' : '31px'}; box-sizing: border-box; position: relative;">
+            <div style="display: flex; align-items: center; gap: 8px; border: 1px solid var(--border); background: var(--card); padding: 0 12px; flex: 1; min-width: 200px; height: 38px; box-sizing: border-box; position: relative;">
               <span style="color: var(--muted-foreground); display: flex; align-items: center;">${Icons.search}</span>
-              <input type="text" id="report-inv-search-input" placeholder="Tìm kiếm..." value="${state.reportInvSearch}" style="background: transparent; border: none; outline: none; color: var(--foreground); font-family: var(--font-jost); font-size: 13px; width: 100%; height: 100%; box-sizing: border-box; padding: 0;">
-              <span onclick="openQRScannerModal('onScanReportInvSuccess')" title="Quét mã QR / Mã vạch" style="color: #f0a030; cursor: pointer; display: flex; align-items: center; padding: 2px;">
+              <input type="text" id="global-search" placeholder="Tìm kiếm..." value="${state.search || ''}" oninput="state.search=this.value; state.page=1; render();" style="background: transparent; border: none; outline: none; color: var(--foreground); font-family: var(--font-jost); font-size: 13px; width: 100%; height: 100%; padding: 0;">
+              <span class="qr-cam-btn-mobile" onclick="openQRScannerModal('onScanMaterialsSuccess', 'materials')" title="Quét mã QR" style="color: #f0a030; cursor: pointer; align-items: center; padding: 2px;">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
                   <circle cx="12" cy="13" r="4"></circle>
