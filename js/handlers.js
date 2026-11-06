@@ -3873,3 +3873,103 @@ async function printGRNProductLabels() {
     }, 400);
   }, 300);
 }
+
+// ==========================================
+// THƯ VIỆN & MODAL QUÉT QR CODE / CAMERA
+// ==========================================
+
+// Hàm khởi tạo và mở Modal Quét QR qua Camera
+function openQRScannerModal(onSuccessCallback) {
+  let modal = document.getElementById('qr-scanner-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'qr-scanner-modal';
+    modal.style.cssText = `
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0, 0, 0, 0.85); z-index: 9999; display: flex;
+      flex-direction: column; align-items: center; justify-content: center; padding: 16px;
+    `;
+    document.body.appendChild(modal);
+  }
+
+  modal.innerHTML = `
+    <div style="background: var(--card, #1e222b); border: 1px solid var(--border, #2a2e39); width: 100%; max-width: 480px; border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-weight: 600; font-size: 14px; color: var(--foreground, #fff); font-family: var(--font-dm-mono);">QUÉT MÃ QR SẢN PHẨM</span>
+        <button type="button" onclick="closeQRScannerModal()" style="background: none; border: none; color: #888; font-size: 20px; cursor: pointer;">✕</button>
+      </div>
+      <div id="qr-reader-container" style="width: 100%; height: 280px; background: #000; border-radius: 4px; overflow: hidden; position: relative;"></div>
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+        <label class="btn-action" style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 6px 12px; background: var(--secondary); border: 1px solid var(--border);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+          Tải ảnh QR
+          <input type="file" id="qr-file-input" accept="image/*" style="display: none;" onchange="handleQRImageUpload(event, '${onSuccessCallback}')">
+        </label>
+        <button type="button" class="btn-cancel" onclick="closeQRScannerModal()" style="padding: 6px 16px; font-size: 12px;">Đóng</button>
+      </div>
+    </div>
+  `;
+  modal.style.display = 'flex';
+
+  if (typeof Html5Qrcode !== 'undefined') {
+    window.html5QrCodeScanner = new Html5Qrcode("qr-reader-container");
+    window.html5QrCodeScanner.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: { width: 220, height: 220 } },
+      (decodedText) => {
+        closeQRScannerModal();
+        if (window[onSuccessCallback]) window[onSuccessCallback](decodedText);
+      },
+      () => {}
+    ).catch(err => {
+      console.warn("Không thể mở camera:", err);
+    });
+  } else {
+    alert("Thư viện quét mã QR đang được tải, vui lòng thử lại sau giây lát!");
+  }
+}
+
+function closeQRScannerModal() {
+  const modal = document.getElementById('qr-scanner-modal');
+  if (window.html5QrCodeScanner) {
+    window.html5QrCodeScanner.stop().then(() => {
+      window.html5QrCodeScanner.clear();
+      if (modal) modal.style.display = 'none';
+    }).catch(() => {
+      if (modal) modal.style.display = 'none';
+    });
+  } else if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
+// Xử lý quét trực tiếp từ ảnh tải lên
+function handleQRImageUpload(event, onSuccessCallback) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  if (typeof Html5Qrcode !== 'undefined') {
+    const html5QrCode = new Html5Qrcode("qr-reader-container");
+    html5QrCode.scanFile(file, true)
+      .then(decodedText => {
+        closeQRScannerModal();
+        if (window[onSuccessCallback]) window[onSuccessCallback](decodedText);
+      })
+      .catch(err => {
+        alert("Không tìm thấy mã QR hợp lệ trong hình ảnh vừa chọn!");
+      });
+  }
+}
+
+// Hàm Callback gán dữ liệu tìm kiếm
+function onScanReportInvSuccess(scannedCode) {
+  state.reportInvSearch = scannedCode;
+  state.page = 1;
+  render();
+}
+
+function onScanMaterialsSuccess(scannedCode) {
+  state.search = scannedCode;
+  state.page = 1;
+  render();
+}
