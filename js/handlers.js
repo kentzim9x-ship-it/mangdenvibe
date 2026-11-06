@@ -506,18 +506,11 @@ function handleGRNLineKeyDown(event, currentIndex, currentField) {
     // Chưa đến dòng cuối: Nhảy xuống dòng tiếp theo trên CÙNG CỘT
     nextIndex = currentIndex + 1;
   } else {
-    // Đang ở dòng cuối cùng
+    // Đang ở dòng cuối cùng của các cột trước (Tên Hàng / ĐVT / Giá Nhập): Nhảy sang CỘT TIẾP THEO ở DÒNG ĐẦU TIÊN (index 0)
     const currentFieldIndex = fieldSequence.indexOf(currentField);
     if (currentFieldIndex !== -1 && currentFieldIndex < fieldSequence.length - 1) {
-      // Nhảy sang CỘT TIẾP THEO ở DÒNG ĐẦU TIÊN (index 0)
       nextField = fieldSequence[currentFieldIndex + 1];
       nextIndex = 0;
-    } else {
-      // ĐÃ Ở Ô GIÁ THUÊ CỦA DÒNG CUỐI CÙNG -> CHỈ THOÁT FOCUS (BLUR)
-      if (targetInput && typeof targetInput.blur === 'function') {
-        targetInput.blur();
-      }
-      return;
     }
   }
 
