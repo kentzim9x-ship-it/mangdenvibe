@@ -3103,7 +3103,7 @@ function renderReportInventory(c) {
       <div style="border: 1px solid var(--border); background: var(--card); overflow-x: auto;" id="inventory-report-table-box">
 
         <div style="padding: ${isMobile ? '12px 12px' : '13px 20px'}; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-          <span style="font-family: var(--font-dm-mono); font-size: 11px; text-transform: uppercase; color: var(--muted-foreground);">Báo Cáo Tồn Kho Chi Tiết & Định Giá</span>
+          <span style="font-family: var(--font-dm-mono); font-size: 11px; text-transform: uppercase; color: var(--muted-foreground);">Báo Cáo Tình Trạng Hàng Hóa</span>
           <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; width: ${isMobile ? '100%' : 'auto'}; flex-direction: ${isMobile ? 'column-reverse' : 'row'};">
             
             <div style="display: flex; align-items: center; gap: 6px; border: 1px solid var(--border); background: var(--card); padding: 0 12px; border-radius: 2px; width: ${isMobile ? '100%' : '240px'}; height: ${isMobile ? '38px' : '31px'}; box-sizing: border-box; position: relative;">
@@ -3119,30 +3119,33 @@ function renderReportInventory(c) {
 
             <!-- Tự động áp dụng getFilterBar trên PC và giữ giao diện mobile -->
             ${isMobile ? `
-              <div style="display: flex; gap: 4px; flex-wrap: wrap; width: 100%; justify-content: flex-start;">
-                ${filterOptions.map(([val, label]) => `
-                  <button 
-                    onclick="state.filter='${val}'; state.page=1; render();" 
-                    style="
-                      padding: 6px 10px; 
-                      font-family: var(--font-dm-mono); 
-                      font-size: 10px; 
-                      letter-spacing: 0.05em;
-                      text-transform: uppercase; 
-                      border-radius: 2px; 
-                      cursor: pointer;
-                      transition: all 0.2s ease;
-                      ${state.filter === val
+            <!-- Khung chứa cuộn ngang 1 dòng -->
+            <div class="filter-scroll-container">
+              ${filterOptions.map(([val, label]) => `
+                <button 
+                  onclick="state.filter='${val}'; state.page=1; render();" 
+                  style="
+                    padding: 6px 14px; 
+                    font-family: var(--font-dm-mono); 
+                    font-size: 11px; 
+                    letter-spacing: 0.05em;
+                    text-transform: uppercase; 
+                    border-radius: 2px; 
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    flex-shrink: 0;
+                    white-space: nowrap;
+                    ${state.filter === val
       ? 'background: #f0a030; color: #000000; border: 1px solid #f0a030;'
       : 'background: rgba(255, 255, 255, 0.03); color: var(--muted-foreground); border: 1px solid var(--border);'
     }
-                    "
-                  >
-                    ${label}
-                  </button>
-                `).join('')}
-              </div>
-            ` : getFilterBar(filterOptions)}
+                  "
+                >
+                  ${label}
+                </button>
+              `).join('')}
+            </div>
+          ` : getFilterBar(filterOptions)}
 
           </div>
         </div>

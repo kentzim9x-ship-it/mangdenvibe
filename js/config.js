@@ -28,7 +28,7 @@ const viewMeta = {
   'sales-orders': { tag: 'GIAO DỊCH', title: 'Đơn Bán Hàng' },
   returns: { tag: 'GIAO DỊCH', title: 'Nhận Hàng Trả Lại' },
   grn: { tag: 'GIAO DỊCH', title: 'Phiếu Nhập Kho' },
-  'report-inventory': { tag: 'BÁO CÁO', title: 'Báo Cáo Tồn Kho' },
+  'report-inventory': { tag: 'BÁO CÁO', title: 'Báo Cáo Tình Trạng Hàng Hóa' },
   'report-sales': { tag: 'BÁO CÁO', title: 'Báo Cáo Bán Hàng' },
 };
 

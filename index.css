@@ -1880,93 +1880,35 @@ div[style*="overflow: auto"],
     box-sizing: border-box !important;
   }
 
-  /*
-  .main-content table thead {
+  /* Container thanh bộ lọc cuộn ngang trên mobile */
+  .filter-scroll-container {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    /* Không cho xuống dòng */
+    overflow-x: auto !important;
+    /* Mở tính năng cuộn ngang */
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    /* Cuộn mượt trên iOS Safari */
+    width: 100% !important;
+    padding-bottom: 4px;
+    gap: 6px !important;
+    scrollbar-width: none;
+    /* Ẩn thanh cuộn trên Firefox */
+  }
+
+  /* Ẩn thanh cuộn trên Chrome/Safari để giao diện đẹp hơn */
+  .filter-scroll-container::-webkit-scrollbar {
     display: none !important;
+    height: 0 !important;
   }
 
-  .main-content table,
-  .main-content table tbody {
-    display: block !important;
-    width: 100% !important;
-    min-width: 0 !important;
+  /* Đảm bảo các nút bên trong giữ kích thước, không bị co lại */
+  .filter-scroll-container>button {
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
   }
-
-  .main-content table tr.hover-row,
-  .main-content table tr {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 8px !important;
-    background: var(--card) !important;
-    border: 1px solid var(--border) !important;
-    border-radius: 4px !important;
-    padding: 14px 16px !important;
-    margin-bottom: 12px !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-  }
-
-  .main-content table td {
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-    padding: 4px 0 !important;
-    border: none !important;
-    border-bottom: 1px dashed var(--border) !important;
-    font-size: 13px !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    box-sizing: border-box !important;
-  }
-
-  .main-content table td::before {
-    content: attr(data-label);
-    font-family: var(--font-dm-mono, monospace);
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--muted-foreground);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    text-align: left !important;
-    padding-right: 12px;
-    flex-shrink: 0;
-  }
-
-  .main-content table td>* {
-    text-align: right !important;
-  }
-
-  .main-content table td[data-label="Hành Động"] {
-    border-bottom: none !important;
-    padding-top: 8px !important;
-    margin-top: 4px !important;
-  }
-
-  .main-content table td[data-label="Hành Động"]::before {
-    content: "Thao tác";
-  }
-
-  .main-content table td[data-label="Hành Động"]>div {
-    display: flex !important;
-    justify-content: flex-end !important;
-    align-items: center !important;
-    gap: 8px !important;
-    width: auto !important;
-  }
-
-  .main-content table td[data-label="Hành Động"] .btn-action {
-    padding: 6px 10px !important;
-    font-size: 11px !important;
-    min-height: 32px !important;
-  }
-
-  div:has(> table),
-  .table-container,
-  .table-responsive {
-    overflow-x: visible !important;
-    padding-bottom: 0 !important;
-  }
-  */
 }
 
 @media (min-width: 769px) {
