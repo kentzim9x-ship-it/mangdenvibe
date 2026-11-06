@@ -1464,15 +1464,13 @@ function handleReturnSalesOrderChange(soId) {
   const so = (db.salesOrders || []).find(item => item.id === soId);
   if (so) {
     if (so.customer) updateField('customer', so.customer);
-    if (so.phone || so.customerPhone) {
-      updateField('phone', so.phone || so.customerPhone);
-      updateField('customerPhone', so.phone || so.customerPhone);
+    if (so.phone) {
+      updateField('phone', so.phone);
     } else {
       // Tìm phone trong DB khách hàng nếu trên đơn hàng không ghi SĐT
       const custObj = (db.customers || []).find(c => c.name === so.customer);
       if (custObj && custObj.phone) {
         updateField('phone', custObj.phone);
-        updateField('customerPhone', custObj.phone);
       }
     }
 
@@ -1508,7 +1506,6 @@ function handleReturnCustomerChange(val) {
   const custObj = (db.customers || []).find(c => c.name.toLowerCase() === custName.toLowerCase());
   if (custObj && custObj.phone) {
     updateField('phone', custObj.phone);
-    updateField('customerPhone', custObj.phone);
   }
   render();
 }
@@ -1517,7 +1514,6 @@ function handleReturnCustomerChange(val) {
 function handleReturnPhoneChange(phoneVal) {
   const cleanPhone = (phoneVal || '').trim();
   updateField('phone', cleanPhone);
-  updateField('customerPhone', cleanPhone);
 
   const noticeEl = document.getElementById('return-phone-notice');
 
@@ -1564,14 +1560,12 @@ function handleOrderSelectInReturn(orderId) {
     // Tự động gắn Khách hàng & SĐT từ Đơn hàng bán
     state.formData.customer = targetOrder.customer || '';
 
-    if (targetOrder.phone || targetOrder.customerPhone) {
-      state.formData.phone = targetOrder.phone || targetOrder.customerPhone;
-      state.formData.customerPhone = targetOrder.phone || targetOrder.customerPhone;
+    if (targetOrder.phone) {
+      state.formData.phone = targetOrder.phone;
     } else {
       const custObj = (db.customers || []).find(c => c.name === targetOrder.customer);
       if (custObj && custObj.phone) {
         state.formData.phone = custObj.phone;
-        state.formData.customerPhone = custObj.phone;
       }
     }
 

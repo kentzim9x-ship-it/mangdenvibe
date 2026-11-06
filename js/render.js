@@ -2493,7 +2493,7 @@ function renderReturnForm(c) {
     d.warehouseCode = db.warehouses[0].code || db.warehouses[0].id;
   }
 
-  const currentPhone = (d.phone || d.customerPhone || '').trim();
+  const currentPhone = (d.phone || '').trim();
   const matchedCustomer = currentPhone ? (db.customers || []).find(cust => (cust.phone || '').trim() === currentPhone) : null;
   const isPhoneNotFound = Boolean(currentPhone && !matchedCustomer);
 
@@ -2615,8 +2615,9 @@ function renderReturnForm(c) {
                 class="form-input" 
                 value="${currentPhone}" 
                 ${(isView || hasOrder) ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : `
-                  onchange="handleReturnPhoneChange(this.value)"
+                   onkeydown="if(event.key === 'Enter'){ event.preventDefault(); handleReturnPhoneChange(this.value); }"
                   onblur="handleReturnPhoneChange(this.value)"
+                  onchange="handleReturnPhoneChange(this.value)"
                 `} 
                 placeholder="Nhập SĐT khách hàng..."
               >
