@@ -3960,6 +3960,20 @@ async function printGRNProductLabels() {
 // HÀM MỞ MODAL QUÉT QR CHUẨN GIAO DIỆN MOBILE
 // ==========================================
 
+const html5QrCode = new Html5Qrcode("reader");
+
+const config = {
+  fps: 10,
+  qrbox: { width: 220, height: 220 },
+  aspectRatio: 1.0 // Cố định tỷ lệ 1:1 ngay từ lúc bắt đầu stream
+};
+
+html5QrCode.start(
+  { facingMode: "environment" },
+  config,
+  onScanSuccess
+);
+
 function openQRScannerModal(onSuccessCallback, targetSearchField) {
   // 1. Tự động xóa sạch ô tìm kiếm trước khi quét
   if (targetSearchField === 'reportInv') {
