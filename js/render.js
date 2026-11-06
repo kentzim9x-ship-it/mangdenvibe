@@ -2993,9 +2993,8 @@ function renderReportInventory(c) {
   const startIndex = (state.page - 1) * state.pageSize;
   const visibleList = filtered.slice(startIndex, startIndex + state.pageSize);
 
-  const totalVal = filtered.reduce((s, m) => s + getActualStock(m) * (m.cost || 0), 0);
-
-  const lowCount = filtered.filter(m => (m.status || '').toLowerCase() === 'low').length;
+  const totalVal = filtered.filter(m => (m.status || '').toLowerCase() === 'ok').length;
+  const lowCount = filtered.filter(m => (m.status || '').toLowerCase() === 'rent').length;
   const outCount = filtered.filter(m => (m.status || '').toLowerCase() === 'out').length;
 
   const categories = Array.from(new Set(materials.map(m => m.category)));
@@ -3039,9 +3038,7 @@ function renderReportInventory(c) {
     { title: 'Đơn Vị', width: '20px', align: 'center' },
     { title: 'Danh Mục', width: '40px', align: 'center' },
     { title: 'Vị Trí', width: '50px', align: 'center' },
-    { title: 'Tồn Đầu Kỳ', width: '20px', align: 'center' },
-    { title: 'Tồn Thực Tế', width: '20px', align: 'center' },
-    { title: 'Mức Cảnh Báo', width: '20px', align: 'center' },
+    { title: 'Giá Thuê', width: '20px', align: 'center' },
     { title: 'Giá Vốn', width: '20px', align: 'center' },
     { title: 'Trạng Thái', width: '50px', align: 'center' }
   ];
@@ -3054,8 +3051,6 @@ function renderReportInventory(c) {
 
   const renderRows = (list) => {
     return list.map(m => {
-      const tonThucTe = getActualStock(m);
-      const tonDauKy = m.stock ?? 0;
 
       return `
         <tr style="border-bottom: 1px solid var(--border);" class="hover-row" ondblclick="navigate('materials', '${hasPermission ? 'edit' : 'view'}', '${m.id}')" onclick="navigate('materials', 'view', '${m.id}')">
@@ -3064,9 +3059,7 @@ function renderReportInventory(c) {
           <td data-label="Đơn Vị" style="padding: 11px 16px; font-family: var(--font-dm-mono); font-size: 12px; text-align: center; color: var(--foreground);">${m.unit || '—'}</td>
           <td data-label="Danh Mục" style="padding: 11px 16px; font-family: var(--font-dm-mono); font-size: 11px; text-align: center; color: var(--muted-foreground);">${m.category || '—'}</td>
           <td data-label="Vị Trí" style="padding: 11px 16px; font-family: var(--font-dm-mono); font-size: 12px; text-align: center;">${m.location || '—'}</td>
-          <td data-label="Tồn Đầu Kỳ" style="padding: 11px 16px; font-family: var(--font-dm-mono); font-size: 12px; text-align: right; color: var(--muted-foreground);">${tonDauKy}</td>
-          <td data-label="Tồn Thực Tế" style="padding: 11px 16px; font-family: var(--font-dm-mono); font-size: 12px; text-align: right; font-weight: 600; color: var(--primary);">${tonThucTe}</td>
-          <td data-label="Mức Cảnh Báo" style="padding: 11px 16px; font-family: var(--font-dm-mono); font-size: 12px; text-align: right; color: var(--muted-foreground);">${m.reorder ?? 0}</td>
+          <td data-label="Giá Thuê" style="padding: 11px 16px; font-family: var(--font-dm-mono); font-size: 12px; text-align: right;">${fmtUSD(m.hireprice || 0)}</td>
           <td data-label="Giá Vốn" style="padding: 11px 16px; font-family: var(--font-dm-mono); font-size: 12px; text-align: right;">${fmtUSD(m.cost || 0)}</td>
           <td data-label="Trạng Thái" style="padding: 11px 16px; text-align: center;"><span class="badge ${getBadgeClass(m.status)}">${getStatusLabel(m.status)}</span></td>
         </tr>
@@ -3078,11 +3071,12 @@ function renderReportInventory(c) {
 
   const filterOptions = [
     ['all', 'TẤT CẢ'],
-    ['Rau củ', 'RAU CỦ'],
-    ['Hoa quả', 'HOA QUẢ'],
+    ['Áo', 'ÁO'],
+    ['Quần', 'QUẦN'],
+    ['Váy', 'VÁY'],
+    ['Phụ Kiện', 'PHỤ KIỆN']
     ['Khác', 'KHÁC']
   ];
-
   c.innerHTML = `
     <div style="display: flex; flex-direction: column; gap: 24px;">
       <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background-color: var(--border);" class="kpi-grid">
@@ -3155,7 +3149,7 @@ function renderReportInventory(c) {
 
         <div style="padding: 8px 20px 4px; display: flex; justify-content: flex-end; border-bottom: 1px solid var(--border); background: var(--secondary);">
           <span style="font-family: var(--font-dm-mono); font-size: 12px; color: var(--muted-foreground);" id="report-inv-summary-text">
-            Đang hiển thị <strong>${totalItems === 0 ? 0 : startIndex + 1}-${Math.min(startIndex + state.pageSize, totalItems)}/${totalItems}</strong> mặt hàng · Tổng giá trị: <strong style="color: var(--primary);">${fmtUSD(totalVal)}</strong> · Sắp hết: ${lowCount} · Hết hàng: ${outCount}
+            Đang hiển thị <strong>${totalItems === 0 ? 0 : startIndex + 1}-${Math.min(startIndex + state.pageSize, totalItems)}/${totalItems}</strong> mặt hàng · Tổng: <strong style="color: var(--primary);">${totalVal}</strong> · Cho Thuê: ${lowCount} · Hết hàng: ${outCount}
           </span>
         </div>
 
