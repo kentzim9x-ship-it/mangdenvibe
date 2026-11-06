@@ -3879,7 +3879,7 @@ async function printGRNProductLabels() {
 // ==========================================
 
 function openQRScannerModal(onSuccessCallback, targetSearchField) {
-  // 1. Reset sạch ô tìm kiếm trước khi bắt đầu quét
+  // 1. Tự động xóa thông tin ô tìm kiếm cũ khi bấm quét
   if (targetSearchField === 'reportInv') {
     state.reportInvSearch = '';
   } else if (targetSearchField === 'materials') {
@@ -3903,9 +3903,9 @@ function openQRScannerModal(onSuccessCallback, targetSearchField) {
     </button>
 
     <!-- Khung Camera Tràn Màn Hình -->
-    <div id="qr-reader-container" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;"></div>
+    <div id="qr-reader-container" style="width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; overflow: hidden;"></div>
 
-    <!-- Khung Viền Quét Bo Góc Màu Trắng Trung Tâm (Giống Ảnh Thiết Kế) -->
+    <!-- Khung Viền Quét Bo Góc Màu Trắng Đặt Chính Giữa Màn Hình -->
     <div class="qr-scan-frame-wrapper">
       <div class="qr-corner-white qr-corner-white-tl"></div>
       <div class="qr-corner-white qr-corner-white-tr"></div>
@@ -3918,9 +3918,11 @@ function openQRScannerModal(onSuccessCallback, targetSearchField) {
 
   if (typeof Html5Qrcode !== 'undefined') {
     window.html5QrCodeScanner = new Html5Qrcode("qr-reader-container");
+
+    // Đặt tham số qrbox khớp với kích thước 250px của khung viền trắng
     window.html5QrCodeScanner.start(
       { facingMode: "environment" },
-      { fps: 20, qrbox: { width: 240, height: 240 } },
+      { fps: 20, qrbox: { width: 250, height: 250 } },
       (decodedText) => {
         closeQRScannerModal();
         if (window[onSuccessCallback]) window[onSuccessCallback](decodedText);
@@ -3928,7 +3930,7 @@ function openQRScannerModal(onSuccessCallback, targetSearchField) {
       () => { }
     ).catch(err => {
       console.warn("Không thể truy cập camera:", err);
-      alert("Khái báo quyền camera bị từ chối hoặc thiết bị không hỗ trợ camera!");
+      alert("Không thể truy cập camera. Vui lòng cấp quyền truy cập trình duyệt!");
     });
   } else {
     alert("Thư viện quét mã QR đang tải, vui lòng thử lại!");

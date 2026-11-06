@@ -1091,10 +1091,23 @@ div[style*="overflow: auto"],
   }
 
   /* ==========================================
-   GIAO DIỆN MÀN HÌNH QUÉT QR CODE STYLE MOBILE CAMERA
+   GIAO DIỆN MÀN HÌNH QUÉT QR CODE FULLSCREEN (FIX CĂN GIỮA)
    ========================================== */
 
-  /* Modal tràn toàn màn hình di động */
+  /* Nút máy ảnh: Ẩn trên PC, chỉ hiển thị trên Mobile */
+  .qr-cam-btn-mobile {
+    display: none !important;
+  }
+
+  @media screen and (max-width: 768px) {
+    .qr-cam-btn-mobile {
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+  }
+
+  /* Modal tràn màn hình và CĂN GIỮA KHUNG SCAN */
   #qr-scanner-modal {
     position: fixed;
     top: 0;
@@ -1119,7 +1132,7 @@ div[style*="overflow: auto"],
     width: 38px;
     height: 38px;
     border-radius: 50%;
-    background: rgba(0, 0, 0, 0.45);
+    background: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -1128,21 +1141,26 @@ div[style*="overflow: auto"],
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    z-index: 20;
+    z-index: 100;
     transition: transform 0.15s ease, background 0.15s ease;
   }
 
   .qr-close-btn:active {
     transform: scale(0.92);
-    background: rgba(0, 0, 0, 0.65);
+    background: rgba(0, 0, 0, 0.7);
   }
 
-  /* Khung Viền Vuông Bo Góc Màu Trắng (Style App trong ảnh) */
+  /* Khung Viền Vuông Bo Góc Màu Trắng Căn Giữa Màn Hình */
   .qr-scan-frame-wrapper {
-    position: relative;
-    width: 260px;
-    height: 260px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 250px;
+    height: 250px;
     box-sizing: border-box;
+    z-index: 30;
+    pointer-events: none;
   }
 
   .qr-corner-white {
@@ -1151,7 +1169,7 @@ div[style*="overflow: auto"],
     height: 32px;
     border-color: #ffffff;
     border-style: solid;
-    z-index: 12;
+    z-index: 32;
     pointer-events: none;
   }
 
@@ -1183,7 +1201,7 @@ div[style*="overflow: auto"],
     border-bottom-right-radius: 16px;
   }
 
-  /* Tia Laser Quét QR Animation Màu Trắng / Cam Mềm */
+  /* Tia Laser Quét QR Animation */
   @keyframes qrScanAnimation {
     0% {
       top: 5%;
@@ -1212,8 +1230,21 @@ div[style*="overflow: auto"],
         rgba(255, 255, 255, 0) 100%);
     box-shadow: 0 0 10px #ffffff, 0 0 4px #ffffff;
     animation: qrScanAnimation 2.2s infinite ease-in-out;
-    z-index: 11;
+    z-index: 31;
     pointer-events: none;
+  }
+
+  /* Ẩn các phần tử nét đứt/bóng đen mặc định của html5-qrcode */
+  #qr-reader-container #qr-shaded-region,
+  #qr-reader-container div[style*="border"] {
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  #qr-reader-container video {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
   }
 
   .top-customers-card {
