@@ -3960,18 +3960,18 @@ async function printGRNProductLabels() {
 // HÀM MỞ MODAL QUÉT QR CHUẨN GIAO DIỆN MOBILE
 // ==========================================
 
-const html5QrCode = new Html5Qrcode("reader");
-
-const config = {
-  fps: 10,
-  qrbox: { width: 220, height: 220 },
-  aspectRatio: 1.0 // Cố định tỷ lệ 1:1 ngay từ lúc bắt đầu stream
-};
-
-html5QrCode.start(
+window.html5QrCodeScanner.start(
   { facingMode: "environment" },
-  config,
-  onScanSuccess
+  { 
+    fps: 20, 
+    qrbox: { width: 250, height: 250 },
+    aspectRatio: window.innerWidth / window.innerHeight // Cố định tỷ lệ quét khớp với viewport
+  },
+  (decodedText) => {
+    closeQRScannerModal();
+    if (window[onSuccessCallback]) window[onSuccessCallback](decodedText);
+  },
+  () => { }
 );
 
 function openQRScannerModal(onSuccessCallback, targetSearchField) {

@@ -1282,7 +1282,7 @@ div[style*="overflow: auto"],
     text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
   }
 
-  /* Ép Camera tràn toàn màn hình che phủ viền đen trình duyệt */
+  /* Khóa cố định tỷ lệ khung chứa Camera quét QR ngay từ khoảnh khắc Render */
   #qr-reader-container {
     width: 100vw !important;
     height: 100vh !important;
@@ -1291,21 +1291,22 @@ div[style*="overflow: auto"],
     top: 0 !important;
     left: 0 !important;
     overflow: hidden !important;
-    background: #000;
+    background: #000000 !important;
   }
 
+  /* Ép Video chèn vào luôn lấp đầy container và giữ đúng tỷ lệ không bị méo/giật */
   #qr-reader-container video {
     width: 100% !important;
     height: 100% !important;
     object-fit: cover !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
   }
 
-  /* Xóa bỏ hoàn toàn lớp phủ mờ đen mặc định của thư viện */
-  #qr-reader-container #qr-shaded-region,
-  #qr-reader-container div[style*="border"] {
-    border: none !important;
-    box-shadow: none !important;
-    background: transparent !important;
+  /* Vô hiệu hóa vùng che bóng tự động của html5-qrcode tránh tính toán trễ gây nhảy layout */
+  #qr-reader-container #qr-shaded-region {
+    display: none !important;
   }
 
   .scan-overlay {
