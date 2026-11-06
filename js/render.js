@@ -3074,7 +3074,7 @@ function renderReportInventory(c) {
     ['Áo', 'ÁO'],
     ['Quần', 'QUẦN'],
     ['Váy', 'VÁY'],
-    ['Phụ Kiện', 'PHỤ KIỆN']
+    ['Phụ Kiện', 'PHỤ KIỆN'],
     ['Khác', 'KHÁC']
   ];
   c.innerHTML = `
