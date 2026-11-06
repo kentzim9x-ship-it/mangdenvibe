@@ -3875,11 +3875,11 @@ async function printGRNProductLabels() {
 }
 
 // ==========================================
-// THƯ VIỆN & MODAL QUÉT QR CODE STYLE CAMERA FULLSCREEN
+// HÀM MỞ MODAL QUÉT QR CHUẨN GIAO DIỆN MOBILE
 // ==========================================
 
 function openQRScannerModal(onSuccessCallback, targetSearchField) {
-  // 1. Tự động xóa thông tin ô tìm kiếm cũ khi bấm quét
+  // 1. Tự động xóa sạch ô tìm kiếm trước khi quét
   if (targetSearchField === 'reportInv') {
     state.reportInvSearch = '';
   } else if (targetSearchField === 'materials') {
@@ -3894,18 +3894,21 @@ function openQRScannerModal(onSuccessCallback, targetSearchField) {
   }
 
   modal.innerHTML = `
-    <!-- Nút Đóng X Tròn ở Góc Phải Trên Màn Hình -->
-    <button type="button" class="qr-close-btn" onclick="closeQRScannerModal()" title="Thoát">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="18" y1="6" x2="6" y2="18"></line>
-        <line x1="6" y1="6" x2="18" y2="18"></line>
-      </svg>
-    </button>
+    <!-- Header Ngang Hàng: Nút <-- Bên Trái & Tiêu Đề Căn Giữa -->
+    <div class="qr-header-bar">
+      <button type="button" class="qr-back-btn" onclick="closeQRScannerModal()" title="Quay lại">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+      </button>
+      <span class="qr-header-title">Scan Your QR</span>
+    </div>
 
-    <!-- Khung Camera Tràn Màn Hình -->
+    <!-- Container Camera -->
     <div id="qr-reader-container" style="width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; overflow: hidden;"></div>
 
-    <!-- Khung Viền Quét Bo Góc Màu Trắng Đặt Chính Giữa Màn Hình -->
+    <!-- Khung Viền Quét Bo Góc Màu Trắng -->
     <div class="qr-scan-frame-wrapper">
       <div class="qr-corner-white qr-corner-white-tl"></div>
       <div class="qr-corner-white qr-corner-white-tr"></div>
@@ -3913,13 +3916,14 @@ function openQRScannerModal(onSuccessCallback, targetSearchField) {
       <div class="qr-corner-white qr-corner-white-br"></div>
       <div class="qr-laser-line-modern"></div>
     </div>
+
+    <!-- Dòng chữ SCANNING... phía dưới vùng scan -->
+    <div class="qr-scanning-text">SCANNING...</div>
   `;
   modal.style.display = 'flex';
 
   if (typeof Html5Qrcode !== 'undefined') {
     window.html5QrCodeScanner = new Html5Qrcode("qr-reader-container");
-
-    // Đặt tham số qrbox khớp với kích thước 250px của khung viền trắng
     window.html5QrCodeScanner.start(
       { facingMode: "environment" },
       { fps: 20, qrbox: { width: 250, height: 250 } },
@@ -3929,11 +3933,11 @@ function openQRScannerModal(onSuccessCallback, targetSearchField) {
       },
       () => { }
     ).catch(err => {
-      console.warn("Không thể truy cập camera:", err);
-      alert("Không thể truy cập camera. Vui lòng cấp quyền truy cập trình duyệt!");
+      console.warn("Không thể mở camera:", err);
+      alert("Không thể truy cập camera. Vui lòng kiểm tra quyền trình duyệt!");
     });
   } else {
-    alert("Thư viện quét mã QR đang tải, vui lòng thử lại!");
+    alert("Thư viện quét mã QR đang được tải, vui lòng thử lại!");
   }
 }
 

@@ -1091,10 +1091,10 @@ div[style*="overflow: auto"],
   }
 
   /* ==========================================
-   GIAO DIỆN MÀN HÌNH QUÉT QR CODE FULLSCREEN (FIX CĂN GIỮA)
+   GIAO DIỆN QUÉT QR HEADER & SCANNING STATUS
    ========================================== */
 
-  /* Nút máy ảnh: Ẩn trên PC, chỉ hiển thị trên Mobile */
+  /* Nút camera: Ẩn trên PC, chỉ hiển thị trên Mobile */
   .qr-cam-btn-mobile {
     display: none !important;
   }
@@ -1107,7 +1107,7 @@ div[style*="overflow: auto"],
     }
   }
 
-  /* Modal tràn màn hình và CĂN GIỮA KHUNG SCAN */
+  /* Modal tràn toàn màn hình */
   #qr-scanner-modal {
     position: fixed;
     top: 0;
@@ -1124,38 +1124,56 @@ div[style*="overflow: auto"],
     overflow: hidden;
   }
 
-  /* Nút X đóng ở góc phải trên màn hình */
-  .qr-close-btn {
+  /* Header Chứa Nút Mũi Tên Quay Lại & Tiêu Đề */
+  .qr-header-bar {
     position: absolute;
-    top: 24px;
-    right: 24px;
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 64px;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    box-sizing: border-box;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0) 100%);
+  }
+
+  /* Nút Mũi Tên Quay Lại (Góc Trái) */
+  .qr-back-btn {
+    position: absolute;
+    left: 20px;
+    background: none;
+    border: none;
     color: #ffffff;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    z-index: 100;
-    transition: transform 0.15s ease, background 0.15s ease;
+    padding: 8px;
+    margin: 0;
   }
 
-  .qr-close-btn:active {
-    transform: scale(0.92);
-    background: rgba(0, 0, 0, 0.7);
+  .qr-back-btn:active {
+    opacity: 0.7;
   }
 
-  /* Khung Viền Vuông Bo Góc Màu Trắng Căn Giữa Màn Hình */
+  /* Tiêu đề Scan Your QR Căn Giữa */
+  .qr-header-title {
+    color: #ffffff;
+    font-size: 17px;
+    font-weight: 600;
+    font-family: var(--font-jost, sans-serif);
+    letter-spacing: 0.02em;
+  }
+
+  /* Khung Viền Vuông Bo Góc Trắng Căn Giữa Màn Hình */
   .qr-scan-frame-wrapper {
     position: absolute;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%);
+    transform: translate(-50%, -55%);
     width: 250px;
     height: 250px;
     box-sizing: border-box;
@@ -1224,17 +1242,30 @@ div[style*="overflow: auto"],
     left: 10px;
     right: 10px;
     height: 2px;
-    background: linear-gradient(90deg,
-        rgba(255, 255, 255, 0) 0%,
-        #ffffff 50%,
-        rgba(255, 255, 255, 0) 100%);
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, #ffffff 50%, rgba(255, 255, 255, 0) 100%);
     box-shadow: 0 0 10px #ffffff, 0 0 4px #ffffff;
     animation: qrScanAnimation 2.2s infinite ease-in-out;
     z-index: 31;
     pointer-events: none;
   }
 
-  /* Ẩn các phần tử nét đứt/bóng đen mặc định của html5-qrcode */
+  /* Dòng chữ SCANNING... Ở Dưới Vùng Quét */
+  .qr-scanning-text {
+    position: absolute;
+    top: calc(50% + 105px);
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255, 255, 255, 0.9);
+    font-family: var(--font-dm-mono, monospace);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    z-index: 35;
+    pointer-events: none;
+  }
+
+  /* Ẩn các lớp phủ mặc định của thư viện */
   #qr-reader-container #qr-shaded-region,
   #qr-reader-container div[style*="border"] {
     border: none !important;
