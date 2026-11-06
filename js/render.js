@@ -1424,9 +1424,9 @@ function renderMaterialForm(c) {
               </select>
             </div>
 
-            <div class="form-group">
+            <div class="form-group" style="grid-column: span 2;>
               <label class="form-label">Ghi chú</label>
-              <textarea class="form-textarea" rows="2" style="resize: vertical; ${isView ? 'background: var(--muted); cursor: not-allowed;' : ''}" ${isView ? 'readonly' : 'onchange="updateField(\'notes\', this.value)"'} placeholder="Nhập chi tiết ghi chú sản phẩm...">${d.notes || ''}</textarea>
+              <textarea class="form-textarea" style="resize: vertical; ${isView ? 'background: var(--muted); cursor: not-allowed;' : ''}" ${isView ? 'readonly' : 'onchange="updateField(\'notes\', this.value)"'} placeholder="Nhập chi tiết ghi chú sản phẩm...">${d.notes || ''}</textarea>
             </div>
           </div>
         </div>
@@ -2288,7 +2288,6 @@ function renderSalesOrderForm(c) {
       paymentterms: 'Thanh toán ngay',
       paymentTerms: 'Thanh toán ngay',
       status: 'active',
-      creditlimit: 0,
       creditLimit: 0,
       user_id0: currentUserId,
       date0: currentDate,

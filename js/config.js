@@ -298,13 +298,22 @@ function sortDescById(a, b) {
   return String(b.id || '').localeCompare(String(a.id || ''), undefined, { numeric: true, sensitivity: 'base' });
 }
 
-// Hàm chuyển đổi từ user_id sang fullname
 function getUserFullName(userId) {
-  if (!userId) return '—';
-  const user = (db.users || []).find(u => String(u.id) === String(userId) || String(u.username) === String(userId));
+  if (userId === null || userId === undefined || userId === '') return '—';
+  
+  // Lấy mảng users từ db.userinfo hoặc db.users
+  const userList = db.userinfo || db.users || [];
+  
+  const user = userList.find(u => 
+    String(u.id) === String(userId) || 
+    String(u.user_id) === String(userId) || 
+    String(u.username) === String(userId)
+  );
+
   if (user) {
-    return user.fullname || user.full_name || user.username || String(userId);
+    return user.fullname || user.full_name || user.name || user.username || String(userId);
   }
+  
   return String(userId);
 }
 
