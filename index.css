@@ -1077,108 +1077,142 @@ div[style*="overflow: auto"],
   display: inline-flex !important;
 }
 
+.qr-cam-btn-mobile {
+  display: none !important;
+}
+
 /* RESPONSIVE MOBILE (< 768px) */
 @media (max-width: 768px) {
 
+  .qr-cam-btn-mobile {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
   /* ==========================================
-   GIAO DIỆN & HIỆU ỨNG QUÉT MÃ QR CODE (SCANNER MODAL)
+   GIAO DIỆN MÀN HÌNH QUÉT QR CODE STYLE MOBILE CAMERA
    ========================================== */
 
-  /* Nút máy ảnh: Ẩn trên PC (Desktop), chỉ hiển thị trên Di động */
-  .qr-cam-btn-mobile {
-    display: none !important;
-  }
-
-  @media screen and (max-width: 768px) {
-    .qr-cam-btn-mobile {
-      display: inline-flex !important;
-    }
-  }
-
-  /* Modal Overlay Quét QR */
+  /* Modal tràn toàn màn hình di động */
   #qr-scanner-modal {
     position: fixed;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: rgba(10, 12, 16, 0.92);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    height: 100dvh;
+    background: #000;
     z-index: 99999;
     display: flex;
     flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+  }
+
+  /* Nút X đóng ở góc phải trên màn hình */
+  .qr-close-btn {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    display: flex;
     align-items: center;
     justify-content: center;
-    padding: 16px;
+    cursor: pointer;
+    z-index: 20;
+    transition: transform 0.15s ease, background 0.15s ease;
+  }
+
+  .qr-close-btn:active {
+    transform: scale(0.92);
+    background: rgba(0, 0, 0, 0.65);
+  }
+
+  /* Khung Viền Vuông Bo Góc Màu Trắng (Style App trong ảnh) */
+  .qr-scan-frame-wrapper {
+    position: relative;
+    width: 260px;
+    height: 260px;
     box-sizing: border-box;
   }
 
-  /* Khung Viền Góc QR Code (Square Corners) */
-  .qr-corner {
+  .qr-corner-white {
     position: absolute;
-    width: 20px;
-    height: 20px;
-    border-color: var(--primary, #f0a030);
+    width: 32px;
+    height: 32px;
+    border-color: #ffffff;
     border-style: solid;
-    z-index: 11;
+    z-index: 12;
     pointer-events: none;
   }
 
-  .qr-corner-tl {
-    top: -2px;
-    left: -2px;
-    border-width: 3px 0 0 3px;
+  .qr-corner-white-tl {
+    top: 0;
+    left: 0;
+    border-width: 4px 0 0 4px;
+    border-top-left-radius: 16px;
   }
 
-  .qr-corner-tr {
-    top: -2px;
-    right: -2px;
-    border-width: 3px 3px 0 0;
+  .qr-corner-white-tr {
+    top: 0;
+    right: 0;
+    border-width: 4px 4px 0 0;
+    border-top-right-radius: 16px;
   }
 
-  .qr-corner-bl {
-    bottom: -2px;
-    left: -2px;
-    border-width: 0 0 3px 3px;
+  .qr-corner-white-bl {
+    bottom: 0;
+    left: 0;
+    border-width: 0 0 4px 4px;
+    border-bottom-left-radius: 16px;
   }
 
-  .qr-corner-br {
-    bottom: -2px;
-    right: -2px;
-    border-width: 0 3px 3px 0;
+  .qr-corner-white-br {
+    bottom: 0;
+    right: 0;
+    border-width: 0 4px 4px 0;
+    border-bottom-right-radius: 16px;
   }
 
-  /* Tia Laser Quét QR Animation */
+  /* Tia Laser Quét QR Animation Màu Trắng / Cam Mềm */
   @keyframes qrScanAnimation {
     0% {
-      top: 0%;
-      opacity: 0.8;
+      top: 5%;
+      opacity: 0.7;
     }
 
     50% {
-      top: 95%;
+      top: 90%;
       opacity: 1;
     }
 
     100% {
-      top: 0%;
-      opacity: 0.8;
+      top: 5%;
+      opacity: 0.7;
     }
   }
 
-  .qr-laser-line {
+  .qr-laser-line-modern {
     position: absolute;
-    left: 0;
-    width: 100%;
-    height: 3px;
+    left: 10px;
+    right: 10px;
+    height: 2px;
     background: linear-gradient(90deg,
-        rgba(240, 160, 48, 0) 0%,
-        var(--primary, #f0a030) 50%,
-        rgba(240, 160, 48, 0) 100%);
-    box-shadow: 0 0 12px var(--primary, #f0a030), 0 0 4px var(--primary, #f0a030);
+        rgba(255, 255, 255, 0) 0%,
+        #ffffff 50%,
+        rgba(255, 255, 255, 0) 100%);
+    box-shadow: 0 0 10px #ffffff, 0 0 4px #ffffff;
     animation: qrScanAnimation 2.2s infinite ease-in-out;
-    z-index: 10;
+    z-index: 11;
     pointer-events: none;
   }
 
