@@ -828,6 +828,88 @@ async function saveForm(module) {
     delete rawData.subtotal;
   }
 
+  // --- BỔ SUNG: TẠO THÔNG BÁO CHO ĐƠN BÁN HÀNG (sales-orders) ---
+  if (module === 'sales-orders') {
+    try {
+      const actorName = currentUserFullname;
+      const actionText = state.mode === 'add' ? 'Tạo mới' : 'Cập nhật';
+
+      const notifTitle = `Đơn Bán Hàng (${actionText})`;
+      const notifDetail = `${actorName} đã ${actionText.toLowerCase()} đơn bán hàng ${rawData.id} cho khách hàng ${rawData.customer || ''}`;
+
+      const now = new Date();
+      const dateStr = getTodayDateStr();
+      const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+
+      const notifPayload = {
+        id: 'NOTIF-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+        type: 'sales-orders',
+        title: notifTitle,
+        detail: notifDetail,
+        targetview: 'sales-orders',
+        itemid: String(rawData.id || ''),
+        time: timeStr,
+        date: dateStr,
+        created_at: now.toISOString(),
+        actor: actorName
+      };
+
+      asyncBackgroundTasks.push(
+        (async () => {
+          try {
+            const { error: notifErr } = await supabaseClient.from('notifications').insert([notifPayload]);
+            if (notifErr) console.error('Lỗi Supabase khi chèn notifications đơn hàng:', notifErr);
+          } catch (err) {
+            console.error('Lỗi tạo thông báo đơn hàng:', err);
+          }
+        })()
+      );
+    } catch (err) {
+      console.error('Lỗi chuẩn bị thông báo đơn hàng:', err);
+    }
+  }
+
+  // --- BỔ SUNG: TẠO THÔNG BÁO CHO PHIẾU NHẬN TRẢ LẠI (returns) ---
+  if (module === 'returns') {
+    try {
+      const actorName = currentUserFullname;
+      const actionText = state.mode === 'add' ? 'Tạo mới' : 'Cập nhật';
+
+      const notifTitle = `Phiếu Nhận Trả Lại (${actionText})`;
+      const notifDetail = `${actorName} đã ${actionText.toLowerCase()} phiếu nhận trả ${rawData.id} từ khách hàng ${rawData.customer || ''}`;
+
+      const now = new Date();
+      const dateStr = getTodayDateStr();
+      const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+
+      const notifPayload = {
+        id: 'NOTIF-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+        type: 'returns',
+        title: notifTitle,
+        detail: notifDetail,
+        targetview: 'returns',
+        itemid: String(rawData.id || ''),
+        time: timeStr,
+        date: dateStr,
+        created_at: now.toISOString(),
+        actor: actorName
+      };
+
+      asyncBackgroundTasks.push(
+        (async () => {
+          try {
+            const { error: notifErr } = await supabaseClient.from('notifications').insert([notifPayload]);
+            if (notifErr) console.error('Lỗi Supabase khi chèn notifications phiếu trả:', notifErr);
+          } catch (err) {
+            console.error('Lỗi tạo thông báo phiếu trả:', err);
+          }
+        })()
+      );
+    } catch (err) {
+      console.error('Lỗi chuẩn bị thông báo phiếu trả:', err);
+    }
+  }
+
   let dbPayload = { ...rawData };
   let supabasePayload = { ...rawData };
 

@@ -3152,7 +3152,7 @@ function renderReportInventory(c) {
 
         <div style="padding: 8px 20px 4px; display: flex; justify-content: flex-end; border-bottom: 1px solid var(--border); background: var(--secondary);">
           <span style="font-family: var(--font-dm-mono); font-size: 12px; color: var(--muted-foreground);" id="report-inv-summary-text">
-            Đang hiển thị <strong>${totalItems === 0 ? 0 : startIndex + 1}-${Math.min(startIndex + state.pageSize, totalItems)}/${totalItems}</strong> mặt hàng · Tổng: <strong style="color: var(--primary);">${totalVal}</strong> · Cho Thuê: ${lowCount} · Hết hàng: ${outCount}
+            Đang hiển thị <strong>${totalItems === 0 ? 0 : startIndex + 1}-${Math.min(startIndex + state.pageSize, totalItems)}/${totalItems}</strong> mặt hàng · Còn Hàng: <strong style="color: var(--primary);">${totalVal}</strong> · Cho Thuê: ${lowCount} · Hết hàng: ${outCount}
           </span>
         </div>
 

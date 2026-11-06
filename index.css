@@ -1090,6 +1090,25 @@ div[style*="overflow: auto"],
     justify-content: center !important;
   }
 
+  /* Khung quét cố định tỉ lệ vuông, tránh bị nhảy sang chữ nhật */
+  .scanner-box {
+    width: 260px;
+    /* Hoặc % tùy giao diện */
+    height: 260px;
+    aspect-ratio: 1 / 1;
+    position: relative;
+    overflow: hidden;
+    border-radius: 16px;
+    margin: 0 auto;
+  }
+
+  /* Ép video camera tràn vừa vặn khung vuông */
+  .scanner-box video {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+  }
+
   /* ==========================================
    GIAO DIỆN QUÉT QR CAMERA FULLSCREEN & TRONG SUỐT VIỀN
    ========================================== */
