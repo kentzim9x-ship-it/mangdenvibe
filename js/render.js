@@ -1382,6 +1382,32 @@ function renderMaterialForm(c) {
   const d = state.formData || {};
   const isView = state.mode === 'view';
   const hasPermission = checkModulePermission('materials');
+  d.lineItems = Array.isArray(d.lineItems) ? d.lineItems : (Array.isArray(d.lineitems) ? d.lineitems : []);
+
+  const gridLayout = isView
+    ? "10px 1.2fr 1.2fr 1.2fr 1fr 1.2fr"
+    : "10px 1.2fr 1.2fr 1.2fr 1fr 1.2fr";
+
+  const linesHtml = d.lineItems.map((l, idx) => {
+    const grnNo = l.grnNo || l.grn_no || l.grnCode || l.grn || '—';
+    const orderNo = l.orderNo || l.order_no || l.orderId || l.order || '—';
+    const returnNo = l.returnNo || l.return_no || l.returnId || l.return || '—';
+    const dateVal = l.date || '—';
+    const priceVal = Number(l.unitPrice ?? l.price ?? l.cost ?? 0);
+
+    return `
+      <div style="display: grid; grid-template-columns: ${gridLayout}; gap: 6px; padding: 10px 16px 10px 10px; border-bottom: 1px solid var(--border); align-items: center;">
+        <span style="font-family: var(--font-dm-mono, monospace); font-size: 10px; font-weight: 400; color: var(--muted-foreground); min-width: 14px; text-align: right; user-select: none;">
+          ${idx + 1}.
+        </span>
+        <input type="text" class="form-input" style="padding: 6px 8px; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; text-align: center;" value="${grnNo}" readonly title="Số phiếu nhập kho">
+        <input type="text" class="form-input" style="padding: 6px 8px; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; text-align: center;" value="${orderNo}" readonly title="Số đơn hàng bán">
+        <input type="text" class="form-input" style="padding: 6px 8px; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; text-align: center;" value="${returnNo}" readonly title="Số phiếu nhận trả lại">
+        <input type="text" class="form-input" style="padding: 6px 8px; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; text-align: center;" value="${fmtDateStr(dateVal)}" readonly title="Ngày phát sinh">
+        <div style="font-family: var(--font-dm-mono); text-align: right; font-weight: 500; font-size: 12px; padding-right: 8px;">${fmtUSD(priceVal)}</div>
+      </div>
+    `;
+  }).join('');
 
   c.innerHTML = `
     <div style="max-width: 900px;">
@@ -1470,6 +1496,27 @@ function renderMaterialForm(c) {
             <div class="form-group">
               <label class="form-label">Đơn giá (VNĐ)</label>
               <input type="number" step="any" inputmode="numeric" class="form-input" value="${d.cost ?? 0}" ${isView ? 'readonly style="background: var(--muted); cursor: not-allowed;"' : 'onchange="updateField(\'cost\', this.value, \'number\')"'} >
+            </div>
+          </div>
+        </div>
+
+        <div class="section-panel">
+          <div class="section-header">
+            <span class="section-num">03</span>
+            <span class="section-title">Chi tiết theo mặt hàng</span>
+          </div>
+          <div style="overflow-x: auto;">
+            <div style="display: grid; grid-template-columns: ${gridLayout}; gap: 6px; padding: 10px 16px 10px 10px; background: var(--secondary); border-bottom: 1px solid var(--border); align-items: center; min-width: 650px; box-sizing: border-box;">
+              <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;"></span>
+              <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Phiếu Nhập Kho</span>
+              <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Đơn Hàng Bán</span>
+              <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Nhận Trả Lại</span>
+              <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Ngày</span>
+              <span style="font-family: var(--font-dm-mono); font-size: 10px; color: var(--foreground); text-transform: uppercase; text-align: center;">Đơn Giá</span>
+            </div>
+
+            <div style="min-width: 650px;">
+              ${linesHtml || '<div style="padding: 20px; text-align: center; color: var(--muted-foreground); font-family: var(--font-dm-mono); font-size: 12px;">Chưa có dữ liệu nhật ký mặt hàng</div>'}
             </div>
           </div>
         </div>

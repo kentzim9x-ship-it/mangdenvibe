@@ -914,6 +914,10 @@ async function saveForm(module) {
   let supabasePayload = { ...rawData };
 
   if (module === 'materials') {
+    const mLines = Array.isArray(rawData.lineItems) ? rawData.lineItems : (Array.isArray(rawData.lineitems) ? rawData.lineitems : []);
+    dbPayload.lineItems = mLines;
+    dbPayload.lineitems = mLines;
+
     supabasePayload = {
       id: rawData.id,
       name: rawData.name,
@@ -925,6 +929,7 @@ async function saveForm(module) {
       status: rawData.status || 'ok',
       notes: rawData.notes || '',
       unit: rawData.unit || '',
+      lineitems: mLines,
       user_id0: rawData.user_id0,
       date0: rawData.date0,
       time0: rawData.time0,
@@ -986,9 +991,11 @@ async function saveForm(module) {
   if (module === 'returns') {
     const warehouseCode = rawData.warehouseCode || (db.warehouses[0] ? (db.warehouses[0].code || db.warehouses[0].id) : '');
     const lineItems = Array.isArray(rawData.lineItems) ? rawData.lineItems : [];
+    const returnDate = rawData.date || currentDate;
 
     // =========================================================================
     // 1. CẬP NHẬT TRẠNG THÁI HÀNG HÓA VỀ "Còn Hàng" TRONG CSDL BỘ NHỚ LOCAL (db)
+    //    ĐỒNG THỜI ĐẨY SỐ PHIẾU NHẬN TRẢ, NGÀY, ĐƠN GIÁ VÀO MỤC 03 (lineItems)
     // =========================================================================
     if (lineItems.length > 0 && Array.isArray(db.materials)) {
       lineItems.forEach(line => {
@@ -1001,6 +1008,19 @@ async function saveForm(module) {
           mat.user_id2 = currentUserId;
           mat.date2 = currentDate;
           mat.time2 = currentTime;
+
+          if (!Array.isArray(mat.lineItems)) {
+            mat.lineItems = Array.isArray(mat.lineitems) ? [...mat.lineitems] : [];
+          }
+
+          mat.lineItems.push({
+            grnNo: '',
+            orderNo: '',
+            returnNo: rawData.id,
+            date: returnDate,
+            unitPrice: Number(line.unitPrice || 0)
+          });
+          mat.lineitems = mat.lineItems;
         }
       });
     }
@@ -1038,6 +1058,7 @@ async function saveForm(module) {
     const warehouseCode = rawData.warehouseCode || rawData.warehousecode || (db.warehouses[0] ? (db.warehouses[0].code || db.warehouses[0].id) : '');
     const lineItems = Array.isArray(rawData.lineItems) ? rawData.lineItems : (Array.isArray(rawData.lineitems) ? rawData.lineitems : []);
     const totalValue = rawData.totalValue ?? rawData.totalvalue ?? 0;
+    const grnDate = rawData.date || currentDate;
 
     if (!Array.isArray(db.grns)) db.grns = [];
 
@@ -1062,6 +1083,15 @@ async function saveForm(module) {
         const costPrice = Number(l.unitCost ?? 0);
         const hirePriceVal = Number(l.hireprice ?? l.hirePrice ?? 0); // Lấy giá thuê từ dòng nhập kho
 
+        // Khởi tạo dòng nhật ký Mục 03 với số phiếu nhập, ngày, đơn giá bằng 0
+        const initialMaterialLines = [{
+          grnNo: rawData.id,
+          orderNo: '',
+          returnNo: '',
+          date: grnDate,
+          unitPrice: 0
+        }];
+
         const newMatObj = {
           id: newSku,
           name: l.name ? l.name.trim() : '',
@@ -1074,6 +1104,8 @@ async function saveForm(module) {
           hireprice: hirePriceVal, // Đẩy giá thuê vào danh mục hàng hóa
           status: 'ok',
           reserved: 0,
+          lineItems: initialMaterialLines,
+          lineitems: initialMaterialLines,
           user_id0: currentUserId,
           date0: currentDate,
           time0: currentTime,
@@ -1096,6 +1128,7 @@ async function saveForm(module) {
           hireprice: newMatObj.hireprice, // Đồng bộ lên Supabase
           status: newMatObj.status,
           reserved: 0,
+          lineitems: initialMaterialLines,
           user_id0: newMatObj.user_id0,
           date0: newMatObj.date0,
           time0: newMatObj.time0,
@@ -1138,8 +1171,9 @@ async function saveForm(module) {
   if (module === 'sales-orders') {
     const warehouseCode = rawData.warehouseCode || (db.warehouses[0] ? (db.warehouses[0].code || db.warehouses[0].id) : '');
     const lineItems = Array.isArray(rawData.lineItems) ? rawData.lineItems : [];
+    const orderDate = rawData.date || currentDate;
 
-    // Tự động cập nhật trạng thái trong danh mục hàng hóa (db.materials)
+    // Tự động cập nhật trạng thái trong danh mục hàng hóa (db.materials) và đẩy dòng thông tin đơn bán vào Mục 03 (lineItems)
     if (lineItems.length > 0 && Array.isArray(db.materials)) {
       const updatedMaterialsToSync = [];
 
@@ -1161,9 +1195,23 @@ async function saveForm(module) {
           db.materials[matIndex].date2 = currentDate;
           db.materials[matIndex].time2 = currentTime;
 
+          if (!Array.isArray(db.materials[matIndex].lineItems)) {
+            db.materials[matIndex].lineItems = Array.isArray(db.materials[matIndex].lineitems) ? [...db.materials[matIndex].lineitems] : [];
+          }
+
+          db.materials[matIndex].lineItems.push({
+            grnNo: '',
+            orderNo: rawData.id,
+            returnNo: '',
+            date: orderDate,
+            unitPrice: Number(l.unitPrice || 0)
+          });
+          db.materials[matIndex].lineitems = db.materials[matIndex].lineItems;
+
           updatedMaterialsToSync.push({
             id: db.materials[matIndex].id,
             status: newStatus,
+            lineitems: db.materials[matIndex].lineItems,
             user_id2: currentUserId,
             date2: currentDate,
             time2: currentTime
@@ -1180,6 +1228,7 @@ async function saveForm(module) {
                   .from('materials')
                   .update({
                     status: matItem.status,
+                    lineitems: matItem.lineitems,
                     user_id2: matItem.user_id2,
                     date2: matItem.date2,
                     time2: matItem.time2
@@ -1220,7 +1269,7 @@ async function saveForm(module) {
     if (module === 'returns') {
       const lineItems = Array.isArray(rawData.lineItems) ? rawData.lineItems : [];
 
-      // Task 1: Cập nhật trạng thái từng sản phẩm về "ok" (Còn Hàng) trên Supabase
+      // Task 1: Cập nhật trạng thái từng sản phẩm về "ok" (Còn Hàng) và đẩy nhật ký Mục 03 trên Supabase
       if (lineItems.length > 0) {
         asyncBackgroundTasks.push(
           (async () => {
@@ -1235,6 +1284,7 @@ async function saveForm(module) {
                     .from('materials')
                     .update({
                       status: 'ok',
+                      lineitems: mat.lineItems || mat.lineitems || [],
                       user_id2: currentUserId,
                       date2: currentDate,
                       time2: currentTime
@@ -1286,7 +1336,7 @@ async function saveForm(module) {
       if (error) throw error;
     }
 
-    if (['quotations', 'sales-orders', 'returns', 'grn'].includes(module)) {
+    if (['materials', 'quotations', 'sales-orders', 'returns', 'grn'].includes(module)) {
       const lines = rawData.lineItems || rawData.lineitems || [];
       dbPayload.lineItems = lines;
       dbPayload.lineitems = lines;
