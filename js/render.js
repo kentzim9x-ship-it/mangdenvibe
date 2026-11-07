@@ -2613,7 +2613,7 @@ function renderReturnForm(c) {
   const filteredOrders = (db.orders || []).filter(o => {
     // 1. Kiểm tra trạng thái đơn hàng (chỉ lấy đơn có trạng thái "Duyệt")
     const statusStr = (o.status || '').toLowerCase();
-    const isApproved = statusStr === 'approved' || statusStr === 'duyệt' || statusStr === 'đã duyệt';
+    const isApproved = statusStr === 'accepted' || statusStr === 'approved' || statusStr === 'duyệt' || statusStr === 'đã duyệt';
     if (!isApproved) return false;
 
     // 2. Nếu chưa chọn Khách Hàng -> Lấy toàn bộ đơn hàng bán có trạng thái Duyệt
