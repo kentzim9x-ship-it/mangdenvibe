@@ -1422,10 +1422,10 @@ function renderMaterialForm(c) {
         <span style="font-family: var(--font-dm-mono, monospace); font-size: 10px; font-weight: 400; color: var(--muted-foreground); min-width: 14px; text-align: right; user-select: none;">
           ${idx + 1}.
         </span>
-        <input type="text" class="form-input" style="padding: 6px 8px; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; text-align: center;" value="${grnNo}" readonly title="Số phiếu nhập kho">
-        <input type="text" class="form-input" style="padding: 6px 8px; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; text-align: center;" value="${orderNo}" readonly title="Số đơn hàng bán">
-        <input type="text" class="form-input" style="padding: 6px 8px; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; text-align: center;" value="${returnNo}" readonly title="Số phiếu nhận trả lại">
-        <input type="text" class="form-input" style="padding: 6px 8px; font-family: var(--font-dm-mono); background: var(--muted); cursor: not-allowed; text-align: center;" value="${fmtDateStr(dateVal)}" readonly title="Ngày phát sinh">
+        ${renderClickableCell(grnNo, 'grn')}
+        ${renderClickableCell(orderNo, 'sales-orders')}
+        ${renderClickableCell(returnNo, 'returns')}
+        <span style="font-family: var(--font-dm-mono); font-size: 12px; text-align: center; color: var(--foreground);">${fmtDateStr(dateVal)}</span>
         <div style="font-family: var(--font-dm-mono); text-align: right; font-weight: 500; font-size: 12px; padding-right: 8px;">${fmtUSD(priceVal)}</div>
       </div>
     `;
@@ -2609,21 +2609,19 @@ function renderReturnForm(c) {
     `<option value="${cust.name}">${cust.name}${cust.phone ? ' - ' + cust.phone : ''}</option>`
   ).join('');
 
-  // Lọc danh sách Đơn Hàng Bán: Thỏa mãn đồng thời trạng thái "Đã Duyệt" VÀ đúng Khách Hàng (nếu đã chọn)
-  const filteredOrders = (db.orders || []).filter(o => {
-    // 1. Kiểm tra trạng thái đơn hàng (Chỉ lấy đơn đã duyệt)
+  // Bước 1: Lọc ra toàn bộ đơn hàng bán có trạng thái là Duyệt (Approved)
+  const approvedOrders = (db.orders || []).filter(o => {
     const statusStr = (o.status || '').toLowerCase();
-    const isApproved = statusStr === 'approved' || statusStr === 'duyệt' || statusStr === 'đã duyệt';
-    if (!isApproved) return false;
+    return statusStr === 'approved' || statusStr === 'duyệt' || statusStr === 'đã duyệt';
+  });
 
-    // 2. Nếu chưa chọn Khách hàng -> Lấy tất cả đơn hàng đã duyệt
-    if (!d.customer) return true;
-
-    // 3. Nếu đã chọn Khách hàng -> Kiểm tra xem đơn hàng có thuộc về khách hàng đó không
+  // Bước 2: Nếu có thông tin khách hàng -> Lọc tiếp theo khách hàng từ danh sách đã duyệt ở Bước 1
+  const filteredOrders = approvedOrders.filter(o => {
+    if (!d.customer) return true; // Nếu chưa chọn Khách hàng -> Giữ nguyên danh sách đã duyệt
     return o.customer && String(o.customer).trim().toLowerCase() === String(d.customer).trim().toLowerCase();
   });
 
-  // Tạo các thẻ <option> từ danh sách đã lọc
+  // Tạo danh sách các thẻ <option> cho dropdown Đơn hàng bán
   const orderOptions = filteredOrders.map(o =>
     `<option value="${o.id}" ${d.orderId === o.id ? 'selected' : ''}>${o.id} - ${o.customer || 'Khách không tên'}</option>`
   ).join('');
