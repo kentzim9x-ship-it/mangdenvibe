@@ -2609,19 +2609,21 @@ function renderReturnForm(c) {
     `<option value="${cust.name}">${cust.name}${cust.phone ? ' - ' + cust.phone : ''}</option>`
   ).join('');
 
-  // Bước 1: Lọc ra toàn bộ đơn hàng bán có trạng thái là Duyệt (Approved)
-  const approvedOrders = (db.orders || []).filter(o => {
+  // Lọc danh sách Đơn Hàng Bán: Bắt buộc trạng thái Duyệt, sau đó lọc theo Khách Hàng (nếu có)
+  const filteredOrders = (db.orders || []).filter(o => {
+    // 1. Kiểm tra trạng thái đơn hàng (chỉ lấy đơn có trạng thái "Duyệt")
     const statusStr = (o.status || '').toLowerCase();
-    return statusStr === 'approved' || statusStr === 'duyệt' || statusStr === 'đã duyệt';
-  });
+    const isApproved = statusStr === 'approved' || statusStr === 'duyệt' || statusStr === 'đã duyệt';
+    if (!isApproved) return false;
 
-  // Bước 2: Nếu có thông tin khách hàng -> Lọc tiếp theo khách hàng từ danh sách đã duyệt ở Bước 1
-  const filteredOrders = approvedOrders.filter(o => {
-    if (!d.customer) return true; // Nếu chưa chọn Khách hàng -> Giữ nguyên danh sách đã duyệt
+    // 2. Nếu chưa chọn Khách Hàng -> Lấy toàn bộ đơn hàng bán có trạng thái Duyệt
+    if (!d.customer) return true;
+
+    // 3. Nếu đã chọn Khách Hàng -> Lấy toàn bộ đơn hàng bán có trạng thái Duyệt và đúng Khách Hàng đó
     return o.customer && String(o.customer).trim().toLowerCase() === String(d.customer).trim().toLowerCase();
   });
 
-  // Tạo danh sách các thẻ <option> cho dropdown Đơn hàng bán
+  // Tạo các thẻ <option> từ danh sách đã lọc
   const orderOptions = filteredOrders.map(o =>
     `<option value="${o.id}" ${d.orderId === o.id ? 'selected' : ''}>${o.id} - ${o.customer || 'Khách không tên'}</option>`
   ).join('');

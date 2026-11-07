@@ -4010,20 +4010,6 @@ async function printGRNProductLabels() {
 // HÀM MỞ MODAL QUÉT QR CHUẨN GIAO DIỆN MOBILE
 // ==========================================
 
-window.html5QrCodeScanner.start(
-  { facingMode: "environment" },
-  { 
-    fps: 20, 
-    qrbox: { width: 250, height: 250 },
-    aspectRatio: window.innerWidth / window.innerHeight // Cố định tỷ lệ quét khớp với viewport
-  },
-  (decodedText) => {
-    closeQRScannerModal();
-    if (window[onSuccessCallback]) window[onSuccessCallback](decodedText);
-  },
-  () => { }
-);
-
 function openQRScannerModal(onSuccessCallback, targetSearchField) {
   // 1. Tự động xóa sạch ô tìm kiếm trước khi quét
   if (targetSearchField === 'reportInv') {
