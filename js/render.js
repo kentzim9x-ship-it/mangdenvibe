@@ -1395,6 +1395,28 @@ function renderMaterialForm(c) {
     const dateVal = l.date || '—';
     const priceVal = Number(l.unitPrice ?? l.price ?? l.cost ?? 0);
 
+    const renderClickableCell = (code, moduleName) => {
+      if (!code || code === '—') return `<span style="color: var(--muted-foreground); text-align: center;">—</span>`;
+      return `
+        <span 
+          onclick="navigate('${moduleName}', 'view', '${code}')" 
+          title="Xem chi tiết ${code}"
+          style="
+            font-family: var(--font-dm-mono); 
+            font-size: 12px; 
+            color: var(--primary, #2563eb); 
+            font-weight: 600; 
+            text-align: center; 
+            cursor: pointer; 
+            text-decoration: underline; 
+            text-underline-offset: 2px;
+          "
+        >
+          ${code}
+        </span>
+      `;
+    };
+
     return `
       <div style="display: grid; grid-template-columns: ${gridLayout}; gap: 6px; padding: 10px 16px 10px 10px; border-bottom: 1px solid var(--border); align-items: center;">
         <span style="font-family: var(--font-dm-mono, monospace); font-size: 10px; font-weight: 400; color: var(--muted-foreground); min-width: 14px; text-align: right; user-select: none;">
@@ -2587,9 +2609,17 @@ function renderReturnForm(c) {
     `<option value="${cust.name}">${cust.name}${cust.phone ? ' - ' + cust.phone : ''}</option>`
   ).join('');
 
-  // Lọc danh sách Đơn Hàng Bán: Nếu đã chọn Khách Hàng -> Chỉ lấy các đơn của KH đó
+  // Lọc danh sách Đơn Hàng Bán: Thỏa mãn đồng thời trạng thái "Đã Duyệt" VÀ đúng Khách Hàng (nếu đã chọn)
   const filteredOrders = (db.orders || []).filter(o => {
-    if (!d.customer) return true; // Nếu chưa chọn Khách Hàng -> Hiển thị tất cả đơn hàng
+    // 1. Kiểm tra trạng thái đơn hàng (Chỉ lấy đơn đã duyệt)
+    const statusStr = (o.status || '').toLowerCase();
+    const isApproved = statusStr === 'approved' || statusStr === 'duyệt' || statusStr === 'đã duyệt';
+    if (!isApproved) return false;
+
+    // 2. Nếu chưa chọn Khách hàng -> Lấy tất cả đơn hàng đã duyệt
+    if (!d.customer) return true;
+
+    // 3. Nếu đã chọn Khách hàng -> Kiểm tra xem đơn hàng có thuộc về khách hàng đó không
     return o.customer && String(o.customer).trim().toLowerCase() === String(d.customer).trim().toLowerCase();
   });
 
