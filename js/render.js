@@ -2567,9 +2567,14 @@ function renderSalesOrderForm(c) {
 
 function renderReturnForm(c) {
   const d = state.formData || {};
+
+  const currentOrderId = d.orderId || d.order_id || '';
+  d.orderId = currentOrderId || null;
+  d.order_id = currentOrderId || null;
+
   const isView = state.mode === 'view';
   const isEdit = state.mode === 'edit';
-  const hasOrder = Boolean(d.orderId);
+  const hasOrder = Boolean(currentOrderId);
   const hasPermission = checkModulePermission('returns');
 
   d.lineItems = Array.isArray(d.lineItems) ? d.lineItems : [];
@@ -2624,9 +2629,16 @@ function renderReturnForm(c) {
   });
 
   // Tạo các thẻ <option> từ danh sách đã lọc
-  const orderOptions = filteredOrders.map(o =>
-    `<option value="${o.id}" ${d.orderId === o.id ? 'selected' : ''}>${o.id} - ${o.customer || 'Khách không tên'}</option>`
+  let orderOptions = filteredOrders.map(o =>
+    `<option value="${o.id}" ${currentOrderId === o.id ? 'selected' : ''}>${o.id} - ${o.customer || 'Khách không tên'}</option>`
   ).join('');
+
+  // Trường hợp phiếu xem/sửa đã có mã đơn hàng nhưng mã đó không nằm trong filteredOrders -> Thêm option dự phòng để hiển thị đúng
+  if (currentOrderId && !filteredOrders.some(o => String(o.id) === String(currentOrderId))) {
+    const matchedOrderObj = (db.orders || []).find(o => String(o.id) === String(currentOrderId));
+    const custDisplay = matchedOrderObj ? (matchedOrderObj.customer || d.customer || '') : (d.customer || '');
+    orderOptions += `<option value="${currentOrderId}" selected>${currentOrderId}${custDisplay ? ' - ' + custDisplay : ''}</option>`;
+  }
 
   const gridLayout = isView ? "10px 120px 1fr 70px 70px 70px 100px 130px" : "10px 120px 1fr 70px 70px 70px 100px 130px 32px";
 
